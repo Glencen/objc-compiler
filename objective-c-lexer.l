@@ -129,20 +129,9 @@ OCT      [0-7]
 
 "@interface"        { print_token(TOK_KEYWORD, yytext); }
 "@implementation"   { print_token(TOK_KEYWORD, yytext); }
-"@protocol"         { print_token(TOK_KEYWORD, yytext); }
 "@end"              { print_token(TOK_KEYWORD, yytext); }
 "@class"            { print_token(TOK_KEYWORD, yytext); }
 "@property"         { print_token(TOK_KEYWORD, yytext); }
-"@synthesize"       { print_token(TOK_KEYWORD, yytext); }
-"@dynamic"          { print_token(TOK_KEYWORD, yytext); }
-"@selector"         { print_token(TOK_KEYWORD, yytext); }
-"@try"              { print_token(TOK_KEYWORD, yytext); }
-"@catch"            { print_token(TOK_KEYWORD, yytext); }
-"@finally"          { print_token(TOK_KEYWORD, yytext); }
-"@throw"            { print_token(TOK_KEYWORD, yytext); }
-"@autoreleasepool"  { print_token(TOK_KEYWORD, yytext); }
-"@synchronized"     { print_token(TOK_KEYWORD, yytext); }
-"@encode"           { print_token(TOK_KEYWORD, yytext); }
 
 "YES"               { print_token(TOK_KEYWORD, yytext); }
 "NO"                { print_token(TOK_KEYWORD, yytext); }
@@ -160,13 +149,7 @@ OCT      [0-7]
 
 "int"               { print_token(TOK_KEYWORD, yytext); }
 "float"             { print_token(TOK_KEYWORD, yytext); }
-"double"            { print_token(TOK_KEYWORD, yytext); }
 "char"              { print_token(TOK_KEYWORD, yytext); }
-"void"              { print_token(TOK_KEYWORD, yytext); }
-"short"             { print_token(TOK_KEYWORD, yytext); }
-"long"              { print_token(TOK_KEYWORD, yytext); }
-"signed"            { print_token(TOK_KEYWORD, yytext); }
-"unsigned"          { print_token(TOK_KEYWORD, yytext); }
 "if"                { print_token(TOK_KEYWORD, yytext); }
 "else"              { print_token(TOK_KEYWORD, yytext); }
 "while"             { print_token(TOK_KEYWORD, yytext); }
@@ -178,18 +161,7 @@ OCT      [0-7]
 "break"             { print_token(TOK_KEYWORD, yytext); }
 "continue"          { print_token(TOK_KEYWORD, yytext); }
 "return"            { print_token(TOK_KEYWORD, yytext); }
-"goto"              { print_token(TOK_KEYWORD, yytext); }
-"struct"            { print_token(TOK_KEYWORD, yytext); }
-"union"             { print_token(TOK_KEYWORD, yytext); }
-"enum"              { print_token(TOK_KEYWORD, yytext); }
-"typedef"           { print_token(TOK_KEYWORD, yytext); }
-"sizeof"            { print_token(TOK_KEYWORD, yytext); }
-"static"            { print_token(TOK_KEYWORD, yytext); }
-"extern"            { print_token(TOK_KEYWORD, yytext); }
 "const"             { print_token(TOK_KEYWORD, yytext); }
-"volatile"          { print_token(TOK_KEYWORD, yytext); }
-"auto"              { print_token(TOK_KEYWORD, yytext); }
-"register"          { print_token(TOK_KEYWORD, yytext); }
 
 {CLASS_ID}          { print_token(TOK_CLASS_ID, yytext); }
 
@@ -199,7 +171,6 @@ OCT      [0-7]
 "-"                 { print_token(TOK_OPERATOR, yytext); }
 "*"                 { print_token(TOK_OPERATOR, yytext); }
 "/"                 { print_token(TOK_OPERATOR, yytext); }
-"%"                 { print_token(TOK_OPERATOR, yytext); }
 "++"                { print_token(TOK_OPERATOR, yytext); }
 "--"                { print_token(TOK_OPERATOR, yytext); }
 "="                 { print_token(TOK_OPERATOR, yytext); }
@@ -212,25 +183,10 @@ OCT      [0-7]
 "!"                 { print_token(TOK_OPERATOR, yytext); }
 "&&"                { print_token(TOK_OPERATOR, yytext); }
 "||"                { print_token(TOK_OPERATOR, yytext); }
-"&"                 { print_token(TOK_OPERATOR, yytext); }
-"|"                 { print_token(TOK_OPERATOR, yytext); }
-"^"                 { print_token(TOK_OPERATOR, yytext); }
-"~"                 { print_token(TOK_OPERATOR, yytext); }
-"<<"                { print_token(TOK_OPERATOR, yytext); }
-">>"                { print_token(TOK_OPERATOR, yytext); }
 "+="                { print_token(TOK_OPERATOR, yytext); }
 "-="                { print_token(TOK_OPERATOR, yytext); }
 "*="                { print_token(TOK_OPERATOR, yytext); }
 "/="                { print_token(TOK_OPERATOR, yytext); }
-"%="                { print_token(TOK_OPERATOR, yytext); }
-"&="                { print_token(TOK_OPERATOR, yytext); }
-"|="                { print_token(TOK_OPERATOR, yytext); }
-"^="                { print_token(TOK_OPERATOR, yytext); }
-"<<="               { print_token(TOK_OPERATOR, yytext); }
-">>="               { print_token(TOK_OPERATOR, yytext); }
-"->"                { print_token(TOK_OPERATOR, yytext); }
-"?"                 { print_token(TOK_OPERATOR, yytext); }
-":"                 { print_token(TOK_OPERATOR, yytext); }
 
 "("                 { print_token(TOK_DELIMITER, yytext); }
 ")"                 { print_token(TOK_DELIMITER, yytext); }
@@ -241,7 +197,7 @@ OCT      [0-7]
 ","                 { print_token(TOK_DELIMITER, yytext); }
 ";"                 { print_token(TOK_DELIMITER, yytext); }
 "."                 { print_token(TOK_DELIMITER, yytext); }
-"..."               { print_token(TOK_DELIMITER, yytext); }
+":"                 { print_token(TOK_DELIMITER, yytext); }
 
 #.*                 { print_token(TOK_PREPROCESSOR, yytext); }
 
