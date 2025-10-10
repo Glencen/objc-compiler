@@ -37,7 +37,6 @@ const char* token_type_name(token_type_t type);
 DIGIT    [0-9]
 LETTER   [a-zA-Z]
 ID       {LETTER}({LETTER}|{DIGIT}|_)*
-CLASS_ID [A-Z]({LETTER}|{DIGIT}|_)*
 WS       [ \t\r]+
 HEX      [0-9a-fA-F]
 OCT      [0-7]
@@ -221,8 +220,6 @@ OCT      [0-7]
 "return"            { print_token(TOK_KEYWORD, yytext); }
 "const"             { print_token(TOK_KEYWORD, yytext); }
 
-{CLASS_ID}          { print_token(TOK_CLASS_ID, yytext); }
-
 {ID}                { print_token(TOK_IDENTIFIER, yytext); }
 
 "+"                 { print_token(TOK_OPERATOR, yytext); }
@@ -273,7 +270,6 @@ const char* token_type_name(token_type_t type) {
     switch (type) {
         case TOK_KEYWORD: return "KEYWORD";
         case TOK_IDENTIFIER: return "IDENTIFIER";
-        case TOK_CLASS_ID: return "CLASS_ID";
         case TOK_OPERATOR: return "OPERATOR";
         case TOK_DELIMITER: return "DELIMITER";
         case TOK_INTEGER: return "INTEGER";
