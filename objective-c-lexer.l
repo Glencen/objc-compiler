@@ -5,9 +5,6 @@
 
 #define STRING_BUF_SIZE 1024
 
-char string_buf[STRING_BUF_SIZE];
-char *string_buf_ptr;
-
 typedef enum {
     TOK_KEYWORD,
     TOK_IDENTIFIER, 
@@ -52,6 +49,11 @@ OCT      [0-7]
 %x OBJC_DICT
 
 %%
+
+%{
+    static char string_buf[STRING_BUF_SIZE];
+    static char *string_buf_ptr;
+%}
 
 {WS}     {}
 
