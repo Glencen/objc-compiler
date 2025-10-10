@@ -21,6 +21,10 @@ typedef enum {
     TOK_CHAR,
     TOK_PREPROCESSOR,
     TOK_COMMENT,
+    TOK_OBJC_INTERFACE,
+    TOK_OBJC_IMPLEMENTATION,
+    TOK_OBJC_END,
+    TOK_OBJC_PROPERTY,
     TOK_UNKNOWN,
     TOK_ERROR
 } token_type_t;
