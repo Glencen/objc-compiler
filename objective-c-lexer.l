@@ -140,8 +140,8 @@ OCT      [0-7]
     print_token(TOK_NSSTRING, string_buf);
 }
 
-{DIGIT}+            { print_token(TOK_INTEGER, yytext); }
-0{OCT}+             { print_token(TOK_INTEGER, yytext); }
+[1-9]{DIGIT}*            { print_token(TOK_INTEGER, yytext); }
+0{OCT}*             { print_token(TOK_INTEGER, yytext); }
 0[xX]{HEX}+         { print_token(TOK_INTEGER, yytext); }
 
 {DIGIT}+\.{DIGIT}*([eE][-+]?{DIGIT}+)?   { print_token(TOK_FLOAT, yytext); }
