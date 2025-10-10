@@ -48,19 +48,21 @@ OCT      [0-7]
 %x COMMENT
 %x STRING
 %x NSSTRING
+%x OBJC_ARRAY
+%x OBJC_DICT
 
 %%
 
-{WS} {}
+{WS}     {}
 
-\n {}
+\n       {}
 
-\/\/.*  { 
-            print_token(TOK_COMMENT, yytext);
+\/\/.*   { 
+    print_token(TOK_COMMENT, yytext);
 }
 
-\/\*    { 
-            BEGIN(COMMENT);
+\/\*     { 
+    BEGIN(COMMENT);
 }
 
 <COMMENT>[^*\n]+ {}
@@ -74,12 +76,12 @@ OCT      [0-7]
     print_token(TOK_COMMENT, "/*...*/");
 }
 
-\"  {
+\"       {
     BEGIN(STRING);
     string_buf_ptr = string_buf;
 }
 
-@\" {
+@\"      {
     BEGIN(NSSTRING);
     string_buf_ptr = string_buf;
     *string_buf_ptr++ = '@';
