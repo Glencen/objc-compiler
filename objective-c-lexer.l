@@ -96,13 +96,30 @@ OCT      [0-7]
     }
 }
 
-<STRING,NSSTRING>\\[\\"nrt] {
+<STRING,NSSTRING>\\[\\"'nrt] {
     switch(yytext[1]) {
         case '\\': *string_buf_ptr++ = '\\'; break;
         case '"':  *string_buf_ptr++ = '"';  break;
         case 'n':  *string_buf_ptr++ = '\n'; break;
         case 'r':  *string_buf_ptr++ = '\r'; break;
         case 't':  *string_buf_ptr++ = '\t'; break;
+        case '\'': *string_buf_ptr++ = '\''; break;
+    }
+}
+
+<STRING,NSSTRING>\\x{HEX}{1,2} {
+    // Hex escape sequence
+    char hex_val = (char)strtol(yytext + 2, NULL, 16);
+    if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
+        *string_buf_ptr++ = hex_val;
+    }
+}
+
+<STRING,NSSTRING>\\[0-7]{1,3} {
+    // Octal escape sequence
+    char oct_val = (char)strtol(yytext + 1, NULL, 8);
+    if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
+        *string_buf_ptr++ = oct_val;
     }
 }
 
@@ -124,8 +141,8 @@ OCT      [0-7]
 }
 
 {DIGIT}+            { print_token(TOK_INTEGER, yytext); }
-0[xX]{HEX}+         { print_token(TOK_INTEGER, yytext); }
 0{OCT}+             { print_token(TOK_INTEGER, yytext); }
+0[xX]{HEX}+         { print_token(TOK_INTEGER, yytext); }
 
 {DIGIT}+\.{DIGIT}*([eE][-+]?{DIGIT}+)?   { print_token(TOK_FLOAT, yytext); }
 \.{DIGIT}+([eE][-+]?{DIGIT}+)?           { print_token(TOK_FLOAT, yytext); }
