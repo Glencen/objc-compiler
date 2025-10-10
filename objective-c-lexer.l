@@ -46,8 +46,6 @@ OCT      [0-7]
 %x COMMENT
 %x STRING
 %x NSSTRING
-%x OBJC_ARRAY
-%x OBJC_DICT
 
 %%
 
@@ -184,34 +182,10 @@ OCT      [0-7]
 
 "@["    { 
     print_token(TOK_OPERATOR, yytext);
-    BEGIN(OBJC_ARRAY);
 }
 
 "@{"    { 
     print_token(TOK_OPERATOR, yytext);
-    BEGIN(OBJC_DICT);
-}
-
-<OBJC_ARRAY>@\" {
-    string_buf_ptr = string_buf;
-    *string_buf_ptr++ = '@';
-    BEGIN(NSSTRING);
-}
-
-<OBJC_ARRAY>\] {
-    print_token(TOK_DELIMITER, yytext);
-    BEGIN(INITIAL);
-}
-
-<OBJC_DICT>@\" {
-    string_buf_ptr = string_buf;
-    *string_buf_ptr++ = '@';
-    BEGIN(NSSTRING);
-}
-
-<OBJC_DICT>\} {
-    print_token(TOK_DELIMITER, yytext);
-    BEGIN(INITIAL);
 }
 
 "YES"               { print_token(TOK_KEYWORD, yytext); }
