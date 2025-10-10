@@ -27,6 +27,8 @@ typedef enum {
 } token_type_t;
 
 void print_token(token_type_t type, const char* value);
+void print_token_int(token_type_t type, long value);
+void print_token_float(token_type_t type, double value);
 const char* token_type_name(token_type_t type);
 %}
 
@@ -141,13 +143,35 @@ OCT      [0-7]
     print_token(TOK_NSSTRING, string_buf);
 }
 
-[1-9]{DIGIT}*            { print_token(TOK_INTEGER, yytext); }
-0{OCT}*             { print_token(TOK_INTEGER, yytext); }
-0[xX]{HEX}+         { print_token(TOK_INTEGER, yytext); }
+[1-9]{DIGIT}*            { 
+    long value = strtol(yytext, NULL, 10);
+    print_token_int(TOK_INTEGER, value); 
+}
 
-{DIGIT}+\.{DIGIT}*([eE][-+]?{DIGIT}+)?   { print_token(TOK_FLOAT, yytext); }
-\.{DIGIT}+([eE][-+]?{DIGIT}+)?           { print_token(TOK_FLOAT, yytext); }
-{DIGIT}+[eE][-+]?{DIGIT}+                { print_token(TOK_FLOAT, yytext); }
+0{OCT}*             { 
+    long value = strtol(yytext, NULL, 8);
+    print_token_int(TOK_INTEGER, value); 
+}
+
+0[xX]{HEX}+         { 
+    long value = strtol(yytext, NULL, 16);
+    print_token_int(TOK_INTEGER, value); 
+}
+
+{DIGIT}+\.{DIGIT}*([eE][-+]?{DIGIT}+)?   { 
+    double value = strtod(yytext, NULL);
+    print_token_float(TOK_FLOAT, value); 
+}
+
+\.{DIGIT}+([eE][-+]?{DIGIT}+)?           { 
+    double value = strtod(yytext, NULL);
+    print_token_float(TOK_FLOAT, value); 
+}
+
+{DIGIT}+[eE][-+]?{DIGIT}+                { 
+    double value = strtod(yytext, NULL);
+    print_token_float(TOK_FLOAT, value); 
+}
 
 '([^'\\]|\\[\\"'nrt]|\\x[0-9a-fA-F]{1,2}|\\[0-7]{1,3})' { 
     print_token(TOK_CHAR, yytext); 
@@ -264,6 +288,14 @@ OCT      [0-7]
 
 void print_token(token_type_t type, const char* value) {
     printf("%-20s '%s'\n", token_type_name(type), value);
+}
+
+void print_token_int(token_type_t type, long value) {
+    printf("%-20s %ld\n", token_type_name(type), value);
+}
+
+void print_token_float(token_type_t type, double value) {
+    printf("%-20s %g\n", token_type_name(type), value);
 }
 
 const char* token_type_name(token_type_t type) {
