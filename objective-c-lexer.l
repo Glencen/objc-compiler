@@ -148,13 +148,46 @@ OCT      [0-7]
 \.{DIGIT}+([eE][-+]?{DIGIT}+)?           { print_token(TOK_FLOAT, yytext); }
 {DIGIT}+[eE][-+]?{DIGIT}+                { print_token(TOK_FLOAT, yytext); }
 
-'([^'\\]|\\.)'      { print_token(TOK_CHAR, yytext); }
+'([^'\\]|\\[\\"'nrt]|\\x[0-9a-fA-F]{1,2}|\\[0-7]{1,3})' { 
+    print_token(TOK_CHAR, yytext); 
+}
 
-"@interface"        { print_token(TOK_KEYWORD, yytext); }
-"@implementation"   { print_token(TOK_KEYWORD, yytext); }
-"@end"              { print_token(TOK_KEYWORD, yytext); }
-"@class"            { print_token(TOK_KEYWORD, yytext); }
-"@property"         { print_token(TOK_KEYWORD, yytext); }
+"@interface"        { print_token(TOK_OBJC_INTERFACE, yytext); }
+"@implementation"   { print_token(TOK_OBJC_IMPLEMENTATION, yytext); }
+"@end"              { print_token(TOK_OBJC_END, yytext); }
+"@property"         { print_token(TOK_OBJC_PROPERTY, yytext); }
+
+"@["    { 
+    print_token(TOK_OPERATOR, yytext);
+    BEGIN(OBJC_ARRAY);
+}
+
+"@{"    { 
+    print_token(TOK_OPERATOR, yytext);
+    BEGIN(OBJC_DICT);
+}
+
+<OBJC_ARRAY>@\" {
+    string_buf_ptr = string_buf;
+    *string_buf_ptr++ = '@';
+    BEGIN(NSSTRING);
+}
+
+<OBJC_ARRAY>\] {
+    print_token(TOK_DELIMITER, yytext);
+    BEGIN(INITIAL);
+}
+
+<OBJC_DICT>@\" {
+    string_buf_ptr = string_buf;
+    *string_buf_ptr++ = '@';
+    BEGIN(NSSTRING);
+}
+
+<OBJC_DICT>\} {
+    print_token(TOK_DELIMITER, yytext);
+    BEGIN(INITIAL);
+}
 
 "YES"               { print_token(TOK_KEYWORD, yytext); }
 "NO"                { print_token(TOK_KEYWORD, yytext); }
@@ -225,13 +258,13 @@ OCT      [0-7]
 #.*                 { print_token(TOK_PREPROCESSOR, yytext); }
 
 .                   { 
-                        print_token(TOK_UNKNOWN, yytext); 
-                    }
+    print_token(TOK_UNKNOWN, yytext); 
+}
 
 %%
 
 void print_token(token_type_t type, const char* value) {
-    printf("%-15s '%s'\n", token_type_name(type), value);
+    printf("%-20s '%s'\n", token_type_name(type), value);
 }
 
 const char* token_type_name(token_type_t type) {
@@ -248,6 +281,10 @@ const char* token_type_name(token_type_t type) {
         case TOK_CHAR: return "CHAR";
         case TOK_PREPROCESSOR: return "PREPROCESSOR";
         case TOK_COMMENT: return "COMMENT";
+        case TOK_OBJC_INTERFACE: return "OBJC_INTERFACE";
+        case TOK_OBJC_IMPLEMENTATION: return "OBJC_IMPLEMENTATION";
+        case TOK_OBJC_END: return "OBJC_END";
+        case TOK_OBJC_PROPERTY: return "OBJC_PROPERTY";
         case TOK_UNKNOWN: return "UNKNOWN";
         default: return "UNKNOWN";
     }
@@ -265,8 +302,8 @@ int main(int argc, char **argv) {
         printf("Enter Objective-C code (Ctrl+D to end):\n");
     }
     
-    printf("%-15s %s\n", "Token Type", "Value");
-    printf("%-15s %s\n", "----------", "-----");
+    printf("%-20s %s\n", "Token Type", "Value");
+    printf("%-20s %s\n", "--------------------", "-----");
     
     yylex();
     
