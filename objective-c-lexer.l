@@ -80,12 +80,14 @@ OCT      [0-7]
 \"       {
     BEGIN(STRING);
     string_buf_ptr = string_buf;
+    *string_buf_ptr++ = '"';
 }
 
 @\"      {
     BEGIN(NSSTRING);
     string_buf_ptr = string_buf;
     *string_buf_ptr++ = '@';
+    *string_buf_ptr++ = '"';
 }
 
 <STRING,NSSTRING>[^"\\\n]+ {
@@ -135,12 +137,14 @@ OCT      [0-7]
 }
 
 <STRING>\" {
+    *string_buf_ptr++ = '"';
     *string_buf_ptr = '\0';
     BEGIN(INITIAL);
     print_token(TOK_STRING, string_buf);
 }
 
 <NSSTRING>\" {
+    *string_buf_ptr++ = '"';
     *string_buf_ptr = '\0';
     BEGIN(INITIAL);
     print_token(TOK_NSSTRING, string_buf);
