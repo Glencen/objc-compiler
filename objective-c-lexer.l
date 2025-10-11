@@ -129,6 +129,11 @@ OCT      [0-7]
     print_token(TOK_ERROR, "Unclosed string");
 }
 
+<STRING,NSSTRING><<EOF>> {
+    BEGIN(INITIAL);
+    print_token(TOK_ERROR, "Unclosed string");
+}
+
 <STRING>\" {
     *string_buf_ptr = '\0';
     BEGIN(INITIAL);
