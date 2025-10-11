@@ -180,6 +180,14 @@ OCT      [0-7]
     print_token(TOK_CHAR, yytext); 
 }
 
+'[^'\n]*'                                {
+    print_token(TOK_ERROR, "Invalid char constant");
+}
+
+'[^'\n]*\n                               {
+    print_token(TOK_ERROR, "Unclosed char constant");
+}
+
 "@interface"        { print_token(TOK_OBJC_INTERFACE, yytext); }
 "@implementation"   { print_token(TOK_OBJC_IMPLEMENTATION, yytext); }
 "@end"              { print_token(TOK_OBJC_END, yytext); }
@@ -295,6 +303,7 @@ const char* token_type_name(token_type_t type) {
         case TOK_OBJC_END: return "OBJC_END";
         case TOK_OBJC_PROPERTY: return "OBJC_PROPERTY";
         case TOK_UNKNOWN: return "UNKNOWN";
+        case TOK_ERROR: return "ERROR";
         default: return "UNKNOWN";
     }
 }
