@@ -113,6 +113,24 @@ if_stmt     :   IF '(' expr ')' stmt
             |   IF '(' expr ')' compound_stmt ELSE compound_stmt
             ;
 
+switch_stmt :   : SWITCH '(' expr ')' '{' case_list '}'
+                | SWITCH '(' expr ')' '{' case_list default_case '}'
+                | SWITCH '(' expr ')' '{' default_case '}'
+                | SWITCH '(' expr ')' '{' default_case case_list '}'
+                ;
+
+case_list   :   case_list case_stmt
+            |   case_stmt
+            ;
+
+case_stmt   :   CASE expr ':' stmt_list
+            |   CASE expr ':' '{' stmt_list '}'
+            ;
+
+default_case:   DEFAULT ':' stmt_list
+            |   DEFAULT ':' '{' stmt_list '}'
+            ;
+
 expr_list   :   expr_list expr
             |   expr
             ;
