@@ -8,7 +8,6 @@
 typedef enum {
     TOK_KEYWORD,
     TOK_IDENTIFIER, 
-    TOK_CLASS_ID,
     TOK_OPERATOR,
     TOK_DELIMITER,
     TOK_INTEGER,
