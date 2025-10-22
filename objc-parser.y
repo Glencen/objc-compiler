@@ -81,6 +81,12 @@ stmt_list   :   stmt_list stmt
 
 stmt        :   decl
             |   simple_stmt
+            |   compound_stmt
+            |   if_stmt
+            |   switch_stmt
+            |   for_stmt
+            |   while_stmt
+            |   do_while_stmt
             ;
 
 simple_stmt :   expr
@@ -94,6 +100,10 @@ simple_stmt :   expr
 
 return_stmt :   RETURN expr_list
             |   RETURN
+            ;
+
+compound_stmt
+            :   '{' stmt_list '}'
             ;
 
 expr_list   :   expr_list expr
