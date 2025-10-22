@@ -92,4 +92,8 @@ simple_stmt :   expr
             |   expr '=' expr
             ;
 
+return_stmt :   RETURN expr_list
+            |   RETURN
+            ;
+
 %%
