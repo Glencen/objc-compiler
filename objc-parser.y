@@ -184,7 +184,7 @@ expr        :   INT_LIT
             |   expr AND expr
             |   expr OR expr
             |   '!' expr
-            |   '-' expr    %prec UMINUS\
+            |   '-' expr    %prec UMINUS
             ;
 
 
