@@ -83,4 +83,13 @@ stmt        :   decl
             |   simple_stmt
             ;
 
+simple_stmt :   expr
+            |   expr INC
+            |   expr DEC
+            |   return_stmt
+            |   BREAK ';'
+            |   CONTINUE ';'
+            |   expr '=' expr
+            ;
+
 %%
