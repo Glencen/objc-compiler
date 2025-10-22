@@ -75,4 +75,12 @@ void yyerror(char const* s) {
 program     :   stmt_list
             ;
 
+stmt_list   :   stmt_list stmt
+            |   stmt
+            ;
+
+stmt        :   decl
+            |   simple_stmt
+            ;
+
 %%
