@@ -96,4 +96,33 @@ return_stmt :   RETURN expr_list
             |   RETURN
             ;
 
+expr_list   :   expr_list expr
+            |   expr
+            ;
+
+expr        :   INT_LIT
+            |   FLOAT_LIT
+            |   C_STRING_LIT
+            |   NSSTRING_LIT
+            |   CHAR_LIT
+            |   BOOL_LIT
+            |   OBJECT_LIT
+            |   expr '+' expr
+            |   expr '-' expr
+            |   expr '*' expr
+            |   expr '/' expr
+            |   expr EQUAL expr
+            |   expr NEQUAL expr
+            |   expr '>' expr
+            |   expr '<' expr
+            |   expr LESS_EQUAL expr
+            |   expr GREATER_EQUAL expr
+            |   expr AND expr
+            |   expr OR expr
+            |   '!' expr
+            |   '-' expr    %prec UMINUS\
+            ;
+
+
+
 %%
