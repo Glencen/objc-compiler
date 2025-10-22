@@ -72,4 +72,7 @@ void yyerror(char const* s) {
 
 %%
 
+program     :   stmt_list
+            ;
+
 %%
