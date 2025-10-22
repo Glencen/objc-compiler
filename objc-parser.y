@@ -151,6 +151,15 @@ for_iteration
             |
             ;
 
+while_stmt  : WHILE '(' expr ')' stmt
+            | WHILE '(' expr ')' compound_stmt
+            ;
+
+do_while_stmt
+            : DO stmt WHILE '(' expr ')' ';'
+            | DO compound_stmt WHILE '(' expr ')' ';'
+            ;
+
 expr_list   :   expr_list expr
             |   expr
             ;
