@@ -131,6 +131,25 @@ default_case:   DEFAULT ':' stmt_list
             |   DEFAULT ':' '{' stmt_list '}'
             ;
 
+for_stmt    : FOR '(' for_init ';' for_condition ';' for_iteration ')' stmt
+            | FOR '(' for_init ';' for_condition ';' for_iteration ')' compound_stmt
+            ;
+
+for_init    : expr
+            | decl
+            |
+            ;
+
+for_condition
+            : expr
+            |
+            ;
+
+for_iteration
+            : expr
+            |
+            ;
+
 expr_list   :   expr_list expr
             |   expr
             ;
