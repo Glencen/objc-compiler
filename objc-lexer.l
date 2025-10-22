@@ -311,27 +311,3 @@ const char* token_type_name(token_type_t type) {
         default: return "UNKNOWN";
     }
 }
-
-int main(int argc, char **argv) {
-    if (argc > 1) {
-        FILE *file = fopen(argv[1], "r");
-        if (!file) {
-            fprintf(stderr, "Error: Cannot open file %s\n", argv[1]);
-            return 1;
-        }
-        yyin = file;
-    } else {
-        printf("Enter Objective-C code (Ctrl+D to end):\n");
-    }
-    
-    printf("%-20s %s\n", "Token Type", "Value");
-    printf("%-20s %s\n", "--------------------", "-----");
-    
-    yylex();
-    
-    if (argc > 1) {
-        fclose(yyin);
-    }
-    
-    return 0;
-}
