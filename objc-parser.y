@@ -106,6 +106,13 @@ compound_stmt
             :   '{' stmt_list '}'
             ;
 
+if_stmt     :   IF '(' expr ')' stmt
+            |   IF '(' expr ')' stmt ELSE stmt
+            |   IF '(' expr ')' compound_stmt ELSE stmt
+            |   IF '(' expr ')' stmt ELSE compound_stmt
+            |   IF '(' expr ')' compound_stmt ELSE compound_stmt
+            ;
+
 expr_list   :   expr_list expr
             |   expr
             ;
