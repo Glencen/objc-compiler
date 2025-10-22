@@ -114,11 +114,11 @@ if_stmt     :   IF '(' expr ')' stmt
             |   IF '(' expr ')' compound_stmt ELSE compound_stmt
             ;
 
-switch_stmt :   : SWITCH '(' expr ')' '{' case_list '}'
-                | SWITCH '(' expr ')' '{' case_list default_case '}'
-                | SWITCH '(' expr ')' '{' default_case '}'
-                | SWITCH '(' expr ')' '{' default_case case_list '}'
-                ;
+switch_stmt :   SWITCH '(' expr ')' '{' case_list '}'
+            |   SWITCH '(' expr ')' '{' case_list default_case '}'
+            |   SWITCH '(' expr ')' '{' default_case '}'
+            |   SWITCH '(' expr ')' '{' default_case case_list '}'
+            ;
 
 case_list   :   case_list case_stmt
             |   case_stmt
@@ -132,32 +132,32 @@ default_case:   DEFAULT ':' stmt_list
             |   DEFAULT ':' '{' stmt_list '}'
             ;
 
-for_stmt    : FOR '(' for_init ';' for_condition ';' for_iteration ')' stmt
-            | FOR '(' for_init ';' for_condition ';' for_iteration ')' compound_stmt
+for_stmt    :   FOR '(' for_init ';' for_condition ';' for_iteration ')' stmt
+            |   FOR '(' for_init ';' for_condition ';' for_iteration ')' compound_stmt
             ;
 
-for_init    : expr
-            | decl
+for_init    :   expr
+            |   decl
             |
             ;
 
 for_condition
-            : expr
+            :   expr
             |
             ;
 
 for_iteration
-            : expr
+            :   expr
             |
             ;
 
-while_stmt  : WHILE '(' expr ')' stmt
-            | WHILE '(' expr ')' compound_stmt
+while_stmt  :   WHILE '(' expr ')' stmt
+            |   WHILE '(' expr ')' compound_stmt
             ;
 
 do_while_stmt
-            : DO stmt WHILE '(' expr ')' ';'
-            | DO compound_stmt WHILE '(' expr ')' ';'
+            :   DO stmt WHILE '(' expr ')' ';'
+            |   DO compound_stmt WHILE '(' expr ')' ';'
             ;
 
 expr_list   :   expr_list expr
