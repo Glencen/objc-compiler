@@ -109,9 +109,6 @@ compound_stmt
 
 if_stmt     :   IF '(' expr ')' stmt
             |   IF '(' expr ')' stmt ELSE stmt
-            |   IF '(' expr ')' compound_stmt ELSE stmt
-            |   IF '(' expr ')' stmt ELSE compound_stmt
-            |   IF '(' expr ')' compound_stmt ELSE compound_stmt
             ;
 
 switch_stmt :   SWITCH '(' expr ')' '{' case_list '}'
