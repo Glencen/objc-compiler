@@ -160,6 +160,29 @@ do_while_stmt
             |   DO compound_stmt WHILE '(' expr ')' ';'
             ;
 
+decl        :   var_decl
+            |   const_decl
+            ;
+
+var_decl    :   type_spec declarator_list ';'
+            ;
+
+const_decl  :   CONST type_spec declarator_list ';'
+            ;
+
+type_spec   :   type_name
+            |   type_name '*'
+            ;
+
+declarator_list
+            :   declarator_list ',' declarator
+            |   declarator
+            ;
+
+declarator  :   ID
+            |   ID '=' expr
+            ;
+
 expr_list   :   expr_list expr
             |   expr
             ;
