@@ -194,6 +194,7 @@ expr        :   INT_LIT
             |   CHAR_LIT
             |   BOOL_LIT
             |   OBJECT_LIT
+            |   ID
             |   expr '+' expr
             |   expr '-' expr
             |   expr '*' expr
