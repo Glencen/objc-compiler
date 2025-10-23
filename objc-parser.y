@@ -56,8 +56,8 @@ void yyerror(char const* s) {
 %token	<bool_lit>		BOOL_LIT
 %token	<identifier>	ID
 %token	<char_lit>		CHAR_LIT
-%token  <c_string>      C_STRING_LIT
-%token  <nsstring>      NSSTRING_LIT
+%token  <c_str_lit>     C_STRING_LIT
+%token  <nsstring_lit>  NSSTRING_LIT
 %token  <objc_object>   OBJECT_LIT
 
 %right	'='
