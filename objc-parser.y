@@ -130,7 +130,6 @@ default_case:   DEFAULT ':' stmt_list
             ;
 
 for_stmt    :   FOR '(' for_init ';' for_condition ';' for_iteration ')' stmt
-            |   FOR '(' for_init ';' for_condition ';' for_iteration ')' compound_stmt
             ;
 
 for_init    :   expr
