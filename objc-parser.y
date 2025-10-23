@@ -76,7 +76,6 @@ program     :   stmt_list
             ;
 
 stmt_list   :   stmt_list stmt
-            |   stmt
             |
             ;
 
