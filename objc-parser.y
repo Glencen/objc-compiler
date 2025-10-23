@@ -187,6 +187,16 @@ expr_list   :   expr_list ',' expr
             |   expr
             ;
 
+type_name   :   INT
+            |   FLOAT
+            |   CHAR
+            |   BOOL
+            |   NSSTRING
+            |   NSNUMBER
+            |   NSARRAY
+            |   NSDICTIONARY
+            ;
+
 expr        :   INT_LIT
             |   FLOAT_LIT
             |   C_STRING_LIT
