@@ -122,11 +122,9 @@ case_list   :   case_list case_stmt
             ;
 
 case_stmt   :   CASE expr ':' stmt_list
-            |   CASE expr ':' '{' stmt_list '}'
             ;
 
 default_case:   DEFAULT ':' stmt_list
-            |   DEFAULT ':' '{' stmt_list '}'
             ;
 
 for_stmt    :   FOR '(' for_init ';' for_condition ';' for_iteration ')' stmt
