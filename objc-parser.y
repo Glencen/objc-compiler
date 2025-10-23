@@ -24,6 +24,9 @@ void yyerror(char const* s) {
     char *objc_object;
 }
 
+%nonassoc NO_ELSE
+%nonassoc ELSE
+
 %token IMPORT
 %token CONST
 %token VAR
@@ -106,7 +109,7 @@ compound_stmt
             :   '{' stmt_list '}'
             ;
 
-if_stmt     :   IF '(' expr ')' stmt
+if_stmt     :   IF '(' expr ')' stmt    %prec NO_ELSE
             |   IF '(' expr ')' stmt ELSE stmt
             ;
 
