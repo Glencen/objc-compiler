@@ -81,7 +81,7 @@ stmt_list   :   stmt_list stmt
             ;
 
 stmt        :   decl
-            |   simple_stmt
+            |   simple_stmt ';'
             |   compound_stmt
             |   if_stmt
             |   switch_stmt
