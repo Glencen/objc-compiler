@@ -183,7 +183,7 @@ declarator  :   ID
             |   ID '=' expr
             ;
 
-expr_list   :   expr_list expr
+expr_list   :   expr_list ',' expr
             |   expr
             ;
 
