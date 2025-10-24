@@ -242,6 +242,10 @@ OCT      [0-7]
     print_token(TOK_OPERATOR, yytext);
 }
 
+"@public"           { print_token(TOK_KEYWORD, yytext); }
+"@private"          { print_token(TOK_KEYWORD, yytext); }
+"@protected"        { print_token(TOK_KEYWORD, yytext); }
+
 "YES"               { print_token(TOK_KEYWORD, yytext); }
 "NO"                { print_token(TOK_KEYWORD, yytext); }
 "nil"               { print_token(TOK_KEYWORD, yytext); }
