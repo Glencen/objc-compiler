@@ -78,7 +78,6 @@ OCT      [0-7]
 \"       {
     BEGIN(STRING);
     string_buf_ptr = string_buf;
-    *string_buf_ptr++ = '"';
 }
 
 @        { print_token(TOK_ATSIGN, yytext); }
@@ -130,7 +129,6 @@ OCT      [0-7]
 }
 
 <STRING>\" {
-    *string_buf_ptr++ = '"';
     *string_buf_ptr = '\0';
     BEGIN(INITIAL);
     print_token(TOK_STRING, string_buf);
