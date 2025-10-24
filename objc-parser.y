@@ -42,6 +42,13 @@ void yyerror(char const* s) {
 %token FOR
 %token WHILE
 %token DO
+%token INTERFACE
+%token IMPLEMENTATION
+%token END
+%token PROPERTY
+%token PLUS
+%token MINUS
+%token ATSIGN
 
 %token FOUNDATION // библиотека
 
@@ -90,6 +97,11 @@ stmt        :   decl
             |   for_stmt
             |   while_stmt
             |   do_while_stmt
+            |   interface_decl
+            |   implementation_decl
+            |   property_decl
+            |   method_decl
+            |   method_impl
             ;
 
 simple_stmt :   expr
@@ -215,6 +227,68 @@ expr        :   INT_LIT
             |   '-' expr    %prec UMINUS
             ;
 
+interface_decl
+            :   ATSIGN INTERFACE ID '{' interface_body '}' ATSIGN END ';'
+            |   ATSIGN INTERFACE ID ':' ID '{' interface_body '}' ATSIGN END ';'
+            ;
 
+interface_body
+            :   interface_body property_decl
+            |   interface_body method_decl
+            |
+            ;
+
+implementation_decl
+            :   ATSIGN IMPLEMENTATION ID '{' implementation_body '}' ATSIGN END ';'
+            ;
+
+implementation_body
+            :   implementation_body property_decl
+            |   implementation_body method_decl
+            |   implementation_body var_decl
+            |
+            ;
+
+property_decl
+            :   ATSIGN PROPERTY '(' property_attrs ')' type_spec declarator_list ';'
+            |   ATSIGN PROPERTY type_spec declarator_list ';'
+            ;
+
+property_attrs
+            :   property_attr
+            |   property_attrs ',' property_attr
+            ;
+
+property_attr
+            :   ID
+            |   ID '=' ID
+            ;
+
+method_decl :   method_sign ':'
+            ;
+
+method_impl :   method_sign compound_stmt
+            ;
+
+method_sign :   method_type '(' type_name ')' method_sel
+            |   method_type method_sel
+            ;
+
+method_type :   PLUS
+            |   MINUS
+            ;
+
+method_sel  :   ID
+            |   ID ':' method_param method_sel_part
+            |   ID method_sel_part
+            ;
+
+method_sel_part
+            :   ':' method_param method_sel_part
+            |
+            ;
+
+method_param:   '(' type_name ')' ID
+            ;
 
 %%
