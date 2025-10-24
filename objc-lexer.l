@@ -44,6 +44,7 @@ OCT      [0-7]
 
 %x COMMENT
 %x STRING
+%x CHAR
 
 %%
 
@@ -164,16 +165,68 @@ OCT      [0-7]
     print_token_float(TOK_FLOAT, value); 
 }
 
-'([^'\\]|\\[\\"'nrt]|\\x[0-9a-fA-F]{1,2}|\\[0-7]{1,3})' { 
-    print_token(TOK_CHAR, yytext); 
+\'       {
+    BEGIN(CHAR);
+    string_buf_ptr = string_buf;
+    // Не записываем открывающую кавычку в буфер
 }
 
-'[^'\n]*'                                {
-    print_token(TOK_ERROR, "Invalid char constant");
+<CHAR>[^'\\\n] {
+    // Одиночный символ без экранирования
+    if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
+        *string_buf_ptr++ = yytext[0];
+    }
 }
 
-'[^'\n]*\n                               {
+<CHAR>\\[\\"'nrt] {
+    // Экранированный символ
+    switch(yytext[1]) {
+        case '\\': *string_buf_ptr++ = '\\'; break;
+        case '"':  *string_buf_ptr++ = '"';  break;
+        case 'n':  *string_buf_ptr++ = '\n'; break;
+        case 'r':  *string_buf_ptr++ = '\r'; break;
+        case 't':  *string_buf_ptr++ = '\t'; break;
+        case '\'': *string_buf_ptr++ = '\''; break;
+    }
+}
+
+<CHAR>\\x{HEX}{1,2} {
+    // Hex escape sequence
+    char hex_val = (char)strtol(yytext + 2, NULL, 16);
+    if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
+        *string_buf_ptr++ = hex_val;
+    }
+}
+
+<CHAR>\\[0-7]{1,3} {
+    // Octal escape sequence
+    char oct_val = (char)strtol(yytext + 1, NULL, 8);
+    if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
+        *string_buf_ptr++ = oct_val;
+    }
+}
+
+<CHAR>\n {
+    BEGIN(INITIAL);
     print_token(TOK_ERROR, "Unclosed char constant");
+}
+
+<CHAR><<EOF>> {
+    BEGIN(INITIAL);
+    print_token(TOK_ERROR, "Unclosed char constant");
+}
+
+<CHAR>\' {
+    // Не записываем закрывающую кавычку в буфер
+    *string_buf_ptr = '\0';
+    BEGIN(INITIAL);
+    if (string_buf_ptr - string_buf == 1) {
+        // Одиночный символ
+        print_token(TOK_CHAR, string_buf);
+    } else {
+        // Пустая строка или несколько символов
+        print_token(TOK_ERROR, "Invalid char constant");
+    }
 }
 
 "interface"        { print_token(TOK_OBJC_INTERFACE, yytext); }
