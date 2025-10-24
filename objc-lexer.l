@@ -13,10 +13,10 @@ typedef enum {
     TOK_INTEGER,
     TOK_FLOAT,
     TOK_STRING,
-    TOK_NSSTRING,
     TOK_CHAR,
     TOK_PREPROCESSOR,
     TOK_COMMENT,
+    TOK_ATSIGN,
     TOK_OBJC_INTERFACE,
     TOK_OBJC_IMPLEMENTATION,
     TOK_OBJC_END,
@@ -44,7 +44,6 @@ OCT      [0-7]
 
 %x COMMENT
 %x STRING
-%x NSSTRING
 
 %%
 
@@ -82,14 +81,9 @@ OCT      [0-7]
     *string_buf_ptr++ = '"';
 }
 
-@\"      {
-    BEGIN(NSSTRING);
-    string_buf_ptr = string_buf;
-    *string_buf_ptr++ = '@';
-    *string_buf_ptr++ = '"';
-}
+@        { print_token(TOK_ATSIGN, yytext); }
 
-<STRING,NSSTRING>[^"\\\n]+ {
+<STRING>[^"\\\n]+ {
     char *p = yytext;
     while (*p) {
         if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
@@ -98,7 +92,7 @@ OCT      [0-7]
     }
 }
 
-<STRING,NSSTRING>\\[\\"'nrt] {
+<STRING>\\[\\"'nrt] {
     switch(yytext[1]) {
         case '\\': *string_buf_ptr++ = '\\'; break;
         case '"':  *string_buf_ptr++ = '"';  break;
@@ -109,7 +103,7 @@ OCT      [0-7]
     }
 }
 
-<STRING,NSSTRING>\\x{HEX}{1,2} {
+<STRING>\\x{HEX}{1,2} {
     // Hex escape sequence
     char hex_val = (char)strtol(yytext + 2, NULL, 16);
     if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
@@ -117,7 +111,7 @@ OCT      [0-7]
     }
 }
 
-<STRING,NSSTRING>\\[0-7]{1,3} {
+<STRING>\\[0-7]{1,3} {
     // Octal escape sequence
     char oct_val = (char)strtol(yytext + 1, NULL, 8);
     if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
@@ -125,12 +119,12 @@ OCT      [0-7]
     }
 }
 
-<STRING,NSSTRING>\n {
+<STRING>\n {
     BEGIN(INITIAL);
     print_token(TOK_ERROR, "Unclosed string");
 }
 
-<STRING,NSSTRING><<EOF>> {
+<STRING><<EOF>> {
     BEGIN(INITIAL);
     print_token(TOK_ERROR, "Unclosed string");
 }
@@ -140,13 +134,6 @@ OCT      [0-7]
     *string_buf_ptr = '\0';
     BEGIN(INITIAL);
     print_token(TOK_STRING, string_buf);
-}
-
-<NSSTRING>\" {
-    *string_buf_ptr++ = '"';
-    *string_buf_ptr = '\0';
-    BEGIN(INITIAL);
-    print_token(TOK_NSSTRING, string_buf);
 }
 
 [1-9]{DIGIT}*            { 
@@ -191,10 +178,10 @@ OCT      [0-7]
     print_token(TOK_ERROR, "Unclosed char constant");
 }
 
-"@interface"        { print_token(TOK_OBJC_INTERFACE, yytext); }
-"@implementation"   { print_token(TOK_OBJC_IMPLEMENTATION, yytext); }
-"@end"              { print_token(TOK_OBJC_END, yytext); }
-"@property"         { print_token(TOK_OBJC_PROPERTY, yytext); }
+"interface"        { print_token(TOK_OBJC_INTERFACE, yytext); }
+"implementation"   { print_token(TOK_OBJC_IMPLEMENTATION, yytext); }
+"end"              { print_token(TOK_OBJC_END, yytext); }
+"property"         { print_token(TOK_OBJC_PROPERTY, yytext); }
 
 "@["    { 
     print_token(TOK_OPERATOR, yytext);
@@ -297,10 +284,10 @@ const char* token_type_name(token_type_t type) {
         case TOK_INTEGER: return "INTEGER";
         case TOK_FLOAT: return "FLOAT";
         case TOK_STRING: return "STRING";
-        case TOK_NSSTRING: return "NSSTRING";
         case TOK_CHAR: return "CHAR";
         case TOK_PREPROCESSOR: return "PREPROCESSOR";
         case TOK_COMMENT: return "COMMENT";
+        case TOK_ATSIGN: return "ATSIGN";
         case TOK_OBJC_INTERFACE: return "OBJC_INTERFACE";
         case TOK_OBJC_IMPLEMENTATION: return "OBJC_IMPLEMENTATION";
         case TOK_OBJC_END: return "OBJC_END";
