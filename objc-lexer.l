@@ -168,18 +168,15 @@ OCT      [0-7]
 \'       {
     BEGIN(CHAR);
     string_buf_ptr = string_buf;
-    // Не записываем открывающую кавычку в буфер
 }
 
 <CHAR>[^'\\\n] {
-    // Одиночный символ без экранирования
     if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
         *string_buf_ptr++ = yytext[0];
     }
 }
 
 <CHAR>\\[\\"'nrtb0a] {
-    // Экранированный символ
     switch(yytext[1]) {
         case '\\': *string_buf_ptr++ = '\\'; break;
         case '"':  *string_buf_ptr++ = '"';  break;
@@ -220,14 +217,11 @@ OCT      [0-7]
 }
 
 <CHAR>\' {
-    // Не записываем закрывающую кавычку в буфер
     *string_buf_ptr = '\0';
     BEGIN(INITIAL);
     if (string_buf_ptr - string_buf == 1) {
-        // Одиночный символ
         print_token(TOK_CHAR, string_buf);
     } else {
-        // Пустая строка или несколько символов
         print_token(TOK_ERROR, "Invalid char constant");
     }
 }
