@@ -208,6 +208,10 @@ OCT      [0-7]
 "int"               { print_token(TOK_KEYWORD, yytext); }
 "float"             { print_token(TOK_KEYWORD, yytext); }
 "char"              { print_token(TOK_KEYWORD, yytext); }
+"NSString"          { print_token(TOK_KEYWORD, yytext); }
+"NSNumber"          { print_token(TOK_KEYWORD, yytext); }
+"NSArray"           { print_token(TOK_KEYWORD, yytext); }
+"NSDictionary"      { print_token(TOK_KEYWORD, yytext); }
 "if"                { print_token(TOK_KEYWORD, yytext); }
 "else"              { print_token(TOK_KEYWORD, yytext); }
 "while"             { print_token(TOK_KEYWORD, yytext); }
