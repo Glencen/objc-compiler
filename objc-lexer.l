@@ -36,7 +36,7 @@ const char* token_type_name(token_type_t type);
 %option noinput
 
 DIGIT    [0-9]
-LETTER   [a-zA-Z]
+LETTER   [a-zA-Z_]
 ID       {LETTER}({LETTER}|{DIGIT}|_)*
 WS       [ \t\r]+
 HEX      [0-9a-fA-F]
