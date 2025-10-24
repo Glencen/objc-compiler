@@ -176,7 +176,7 @@ OCT      [0-7]
     }
 }
 
-<CHAR>\\[\\"'nrtb0a] {
+<CHAR>\\[\\"'nrtba] {
     switch(yytext[1]) {
         case '\\': *string_buf_ptr++ = '\\'; break;
         case '"':  *string_buf_ptr++ = '"';  break;
@@ -185,7 +185,6 @@ OCT      [0-7]
         case 't':  *string_buf_ptr++ = '\t'; break;
         case '\'': *string_buf_ptr++ = '\''; break;
         case 'b':  *string_buf_ptr++ = '\b'; break;
-        case '0':  *string_buf_ptr++ = '\0'; break;
         case 'a':  *string_buf_ptr++ = '\a'; break;
     }
 }
