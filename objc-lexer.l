@@ -1,7 +1,9 @@
 %{
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <cstring>
+#include <iomanip>
 
 #define STRING_BUF_SIZE 1024
 
@@ -25,7 +27,7 @@ typedef enum {
     TOK_ERROR
 } token_type_t;
 
-void print_token(token_type_t type, const char* value);
+void print_token(token_type_t type, const std::string& value);
 void print_token_int(token_type_t type, long value);
 void print_token_float(token_type_t type, double value);
 const char* token_type_name(token_type_t type);
@@ -34,6 +36,7 @@ const char* token_type_name(token_type_t type);
 %option noyywrap
 %option nounput
 %option noinput
+%option never-interactive
 
 DIGIT    [0-9]
 LETTER   [a-zA-Z_]
@@ -49,8 +52,7 @@ OCT      [0-7]
 %%
 
 %{
-    static char string_buf[STRING_BUF_SIZE];
-    static char *string_buf_ptr;
+    static std::string string_buf;
 %}
 
 {WS}     {}
@@ -78,45 +80,36 @@ OCT      [0-7]
 
 \"       {
     BEGIN(STRING);
-    string_buf_ptr = string_buf;
+    string_buf.clear();
 }
 
 @        { print_token(TOK_ATSIGN, yytext); }
 
 <STRING>[^"\\\n]+ {
-    char *p = yytext;
-    while (*p) {
-        if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
-            *string_buf_ptr++ = *p++;
-        }
-    }
+    string_buf += yytext;
 }
 
 <STRING>\\[\\"'nrt] {
     switch(yytext[1]) {
-        case '\\': *string_buf_ptr++ = '\\'; break;
-        case '"':  *string_buf_ptr++ = '"';  break;
-        case 'n':  *string_buf_ptr++ = '\n'; break;
-        case 'r':  *string_buf_ptr++ = '\r'; break;
-        case 't':  *string_buf_ptr++ = '\t'; break;
-        case '\'': *string_buf_ptr++ = '\''; break;
+        case '\\': string_buf += '\\'; break;
+        case '"':  string_buf += '"';  break;
+        case 'n':  string_buf += '\n'; break;
+        case 'r':  string_buf += '\r'; break;
+        case 't':  string_buf += '\t'; break;
+        case '\'': string_buf += '\''; break;
     }
 }
 
 <STRING>\\x{HEX}{1,2} {
     // Hex escape sequence
-    char hex_val = (char)strtol(yytext + 2, NULL, 16);
-    if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
-        *string_buf_ptr++ = hex_val;
-    }
+    char hex_val = (char)std::strtol(yytext + 2, NULL, 16);
+    string_buf += hex_val;
 }
 
 <STRING>\\[0-7]{1,3} {
     // Octal escape sequence
-    char oct_val = (char)strtol(yytext + 1, NULL, 8);
-    if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
-        *string_buf_ptr++ = oct_val;
-    }
+    char oct_val = (char)std::strtol(yytext + 1, NULL, 8);
+    string_buf += oct_val;
 }
 
 <STRING>\n {
@@ -130,79 +123,72 @@ OCT      [0-7]
 }
 
 <STRING>\" {
-    *string_buf_ptr = '\0';
     BEGIN(INITIAL);
     print_token(TOK_STRING, string_buf);
 }
 
 [1-9]{DIGIT}*            { 
-    long value = strtol(yytext, NULL, 10);
+    long value = std::strtol(yytext, NULL, 10);
     print_token_int(TOK_INTEGER, value); 
 }
 
 0{OCT}*             { 
-    long value = strtol(yytext, NULL, 8);
+    long value = std::strtol(yytext, NULL, 8);
     print_token_int(TOK_INTEGER, value); 
 }
 
 0[xX]{HEX}+         { 
-    long value = strtol(yytext, NULL, 16);
+    long value = std::strtol(yytext, NULL, 16);
     print_token_int(TOK_INTEGER, value); 
 }
 
 {DIGIT}+\.{DIGIT}*([eE][-+]?{DIGIT}+)?   { 
-    double value = strtod(yytext, NULL);
+    double value = std::strtod(yytext, NULL);
     print_token_float(TOK_FLOAT, value); 
 }
 
 \.{DIGIT}+([eE][-+]?{DIGIT}+)?           { 
-    double value = strtod(yytext, NULL);
+    double value = std::strtod(yytext, NULL);
     print_token_float(TOK_FLOAT, value); 
 }
 
 {DIGIT}+[eE][-+]?{DIGIT}+                { 
-    double value = strtod(yytext, NULL);
+    double value = std::strtod(yytext, NULL);
     print_token_float(TOK_FLOAT, value); 
 }
 
 \'       {
     BEGIN(CHAR);
-    string_buf_ptr = string_buf;
+    string_buf.clear();
 }
 
 <CHAR>[^'\\\n] {
-    if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
-        *string_buf_ptr++ = yytext[0];
-    }
+    string_buf += yytext[0];
 }
 
 <CHAR>\\[\\"'nrtba] {
     switch(yytext[1]) {
-        case '\\': *string_buf_ptr++ = '\\'; break;
-        case '"':  *string_buf_ptr++ = '"';  break;
-        case 'n':  *string_buf_ptr++ = '\n'; break;
-        case 'r':  *string_buf_ptr++ = '\r'; break;
-        case 't':  *string_buf_ptr++ = '\t'; break;
-        case '\'': *string_buf_ptr++ = '\''; break;
-        case 'b':  *string_buf_ptr++ = '\b'; break;
-        case 'a':  *string_buf_ptr++ = '\a'; break;
+        case '\\': string_buf += '\\'; break;
+        case '"':  string_buf += '"';  break;
+        case 'n':  string_buf += '\n'; break;
+        case 'r':  string_buf += '\r'; break;
+        case 't':  string_buf += '\t'; break;
+        case '\'': string_buf += '\''; break;
+        case 'b':  string_buf += '\b'; break;
+        case 'a':  string_buf += '\a'; break;
     }
 }
 
 <CHAR>\\x{HEX}{1,2} {
     // Hex escape sequence
-    char hex_val = (char)strtol(yytext + 2, NULL, 16);
-    if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
-        *string_buf_ptr++ = hex_val;
-    }
+    char hex_val = (char)std::strtol(yytext + 2, NULL, 16);
+    string_buf += hex_val;
 }
 
 <CHAR>\\[0-7]{1,3} {
     // Octal escape sequence
-    char oct_val = (char)strtol(yytext + 1, NULL, 8);
-    if (string_buf_ptr < string_buf + STRING_BUF_SIZE - 1) {
-        *string_buf_ptr++ = oct_val;
-    }
+    char oct_val = (char)std::strtol(yytext + 1, NULL, 8);
+    string_buf += oct_val;
 }
 
 <CHAR>\n {
@@ -216,9 +202,8 @@ OCT      [0-7]
 }
 
 <CHAR>\' {
-    *string_buf_ptr = '\0';
     BEGIN(INITIAL);
-    if (string_buf_ptr - string_buf == 1) {
+    if (string_buf.length() == 1) {
         print_token(TOK_CHAR, string_buf);
     } else {
         print_token(TOK_ERROR, "Invalid char constant");
@@ -318,16 +303,16 @@ OCT      [0-7]
 
 %%
 
-void print_token(token_type_t type, const char* value) {
-    printf("%-20s '%s'\n", token_type_name(type), value);
+void print_token(token_type_t type, const std::string& value) {
+    std::cout << std::left << std::setw(20) << token_type_name(type) << " '" << value << "'" << std::endl;
 }
 
 void print_token_int(token_type_t type, long value) {
-    printf("%-20s %ld\n", token_type_name(type), value);
+    std::cout << std::left << std::setw(20) << token_type_name(type) << " " << value << std::endl;
 }
 
 void print_token_float(token_type_t type, double value) {
-    printf("%-20s %g\n", token_type_name(type), value);
+    std::cout << std::left << std::setw(20) << token_type_name(type) << " " << value << std::endl;
 }
 
 const char* token_type_name(token_type_t type) {
