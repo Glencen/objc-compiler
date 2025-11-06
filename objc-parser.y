@@ -11,6 +11,130 @@ void yyerror(char const* s) {
     cout << s << endl;
 }
 
+enum ExprType {
+    Int, Float, Char, Bool, String, Object, Id,
+    Plus, Minus, Mul, Div,
+    As, LT, GT, EQ, NE, LE, GE,
+    And, Or, Not, UMinus
+};
+
+enum StmtType {
+    ExprStmt, IfStmt, PrintStmt, ReturnStmt, BreakStmt, ContinueStmt,
+    ForStmt, WhileStmt, DoWhileStmt, SwitchStmt,
+    DeclStmt, CompoundStmt, InterfaceDecl, ImplementationDecl,
+    PropertyDecl, MethodDecl, MethodImpl
+};
+
+struct Expression {
+    ExprType type;
+    int intValue;
+    float floatValue;
+    char charValue;
+    bool boolValue;
+    char* strValue;
+    char* idName;
+    char* objcObject;
+    Expression* left;
+    Expression* right;
+};
+
+struct ExpressionList {
+    Expression* first;
+    Expression* last;
+};
+
+struct Declarator {
+    char* id;
+    Expression* value;
+    Declarator* next;
+};
+
+struct VarDecl {
+    char* typeName;
+    Declarator* declarators;
+};
+
+struct ConstDecl {
+    char* typeName;
+    Declarator* declarators;
+};
+
+struct PropertyAttr {
+    char* name;
+    char* value;
+    PropertyAttr* next;
+};
+
+struct PropertyDecl {
+    char* typeName;
+    Declarator* declarators;
+    PropertyAttr* attrs;
+};
+
+struct Statement;
+struct StatementList {
+    Statement* first;
+    Statement* last;
+};
+
+struct CaseStmt {
+    Expression* expr;
+    StatementList* body;
+    CaseStmt* next;
+};
+
+struct DefaultStmt {
+    StatementList* body;
+};
+
+struct Statement {
+    StmtType type;
+    Expression* expr;
+    StatementList* block;
+    Statement* next;
+    Statement* elseBlock;
+    CaseStmt* cases;
+    DefaultStmt* defaultCase;
+    Statement* init;
+    Statement* condition;
+    Statement* iteration;
+};
+
+struct MethodParam {
+    char* typeName;
+    char* name;
+    MethodParam* next;
+};
+
+struct MethodSign {
+    char type;
+    char* selectorName;
+    MethodParam* params;
+};
+
+struct MethodDecl {
+    MethodSign* sign;
+};
+
+struct MethodImpl {
+    MethodSign* sign;
+    StatementList* body;
+};
+
+struct InterfaceDecl {
+    char* name;
+    char* parent;
+    PropertyDecl* properties;
+    MethodDecl* methods;
+};
+
+struct ImplementationDecl {
+    char* name;
+    PropertyDecl* properties;
+    MethodDecl* methods;
+    VarDecl* varDecls;
+};
+
 %}
 
 %union {
@@ -22,6 +146,29 @@ void yyerror(char const* s) {
     char *c_str_lit;
     char *nsstring_lit;
     char *objc_object;
+
+    Expression* expr;
+    ExpressionList* exprList;
+
+    Declarator* declarator;
+    VarDecl* varDecl;
+    ConstDecl* constDecl;
+    PropertyAttr* propertyAttr;
+    PropertyDecl* propertyDecl;
+
+    Statement* stmt;
+    StatementList* stmtList;
+
+    CaseStmt* caseStmt;
+    DefaultStmt* defaultStmt;
+
+    MethodParam* methodParam;
+    MethodSign* methodSign;
+    MethodDecl* methodDecl;
+    MethodImpl* methodImpl;
+
+    InterfaceDecl* interfaceDecl;
+    ImplementationDecl* implementationDecl;
 }
 
 %nonassoc NO_ELSE
