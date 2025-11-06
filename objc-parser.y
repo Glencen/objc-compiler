@@ -36,6 +36,7 @@ void yyerror(char const* s) {
 %token CONTINUE
 %token IF
 %token ELSE
+%toke ELSE_IF
 %token SWITCH
 %token CASE
 %token DEFAULT
@@ -123,6 +124,7 @@ compound_stmt
 
 if_stmt     :   IF '(' expr ')' stmt    %prec NO_ELSE
             |   IF '(' expr ')' stmt ELSE stmt
+            |   IF '(' expr ')' stmt ELSE_IF '(' expr ')' stmt ELSE stmt
             ;
 
 switch_stmt :   SWITCH '(' expr ')' '{' case_list '}'
