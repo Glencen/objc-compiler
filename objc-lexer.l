@@ -210,10 +210,10 @@ OCT      [0-7]
     }
 }
 
-"interface"        { print_token(TOK_OBJC_INTERFACE, yytext); }
-"implementation"   { print_token(TOK_OBJC_IMPLEMENTATION, yytext); }
-"end"              { print_token(TOK_OBJC_END, yytext); }
-"property"         { print_token(TOK_OBJC_PROPERTY, yytext); }
+"@interface"        { print_token(TOK_OBJC_INTERFACE, yytext); }
+"@implementation"   { print_token(TOK_OBJC_IMPLEMENTATION, yytext); }
+"@end"              { print_token(TOK_OBJC_END, yytext); }
+"@property"         { print_token(TOK_OBJC_PROPERTY, yytext); }
 
 "@["    { 
     print_token(TOK_OPERATOR, yytext);
