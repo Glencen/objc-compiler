@@ -297,7 +297,7 @@ OCT      [0-7]
 
 #.*                 { print_token(TOK_PREPROCESSOR, yytext); }
 
-.                   { 
+<*>.                   { 
     print_token(TOK_UNKNOWN, yytext); 
 }
 
