@@ -70,12 +70,7 @@ void yyerror(char const* s) {
 %token  <nsstring_lit>  NSSTRING_LIT
 %token  <objc_object>   OBJECT_LIT
 
-%token PLUS_EQ
-%token MINUS_EQ
-%token MUL_EQ
-%token DIV_EQ
-
-%right	'='
+%right	'=' PLUS_EQ MINUS_EQ MUL_EQ DIV_EQ
 %left	OR
 %left	AND
 %left 	EQUAL NEQUAL '<' LESS_EQUAL '>' GREATER_EQUAL
