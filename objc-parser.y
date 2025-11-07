@@ -111,6 +111,7 @@ simple_stmt :   expr
             |   BREAK ';'
             |   CONTINUE ';'
             |   expr '=' expr
+            |   expr '=' array_literal
             ;
 
 return_stmt :   RETURN expr_list
@@ -178,6 +179,7 @@ const_decl  :   CONST type_spec declarator_list ';'
 
 type_spec   :   type_name
             |   type_name '*'
+            |   array_type_spec
             ;
 
 declarator_list
@@ -187,6 +189,10 @@ declarator_list
 
 declarator  :   ID
             |   ID '=' expr
+            |   ID '=' array_literal
+            |   ID '[' expr ']'
+            |   ID '[' expr ']' '=' array_literal
+            |   ID '[' ']' '=' array_literal
             ;
 
 expr_list   :   expr_list ',' expr
@@ -225,6 +231,10 @@ expr        :   INT_LIT
             |   expr OR expr
             |   '!' expr
             |   '-' expr    %prec UMINUS
+            |   array_access
+            |   array_literal
+            |   nsarray_literal
+            |   nsdictionary_literal
             ;
 
 interface_decl
@@ -289,6 +299,38 @@ method_sel_part
             ;
 
 method_param:   '(' type_name ')' ID
+            ;
+
+array_type_spec
+            :   type_name '[' ']'
+            |   type_name '[' expr ']'
+            ;
+
+array_literal
+            :   '{' expr_list '}'
+            |   '{' '}'
+            ;
+
+array_access:   ID '[' expr ']'
+            |   expr '[' expr ']'
+            ;
+
+nsarray_literal
+            :   ATSIGN '[' expr_list ']'
+            |   ATSIGN '[' ']'
+            ;
+
+nsdictionary_literal
+            :   ATSIGN '{' nsdict_pair_list '}'
+            |   ATSIGN '{' '}'
+            ;
+
+nsdict_pair_list
+            :   nsdict_pair_list ',' nsdict_pair
+            |   nsdict_pair
+            ;
+
+nsdict_pair :   expr ':' expr
             ;
 
 %%
