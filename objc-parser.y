@@ -70,6 +70,11 @@ void yyerror(char const* s) {
 %token  <nsstring_lit>  NSSTRING_LIT
 %token  <objc_object>   OBJECT_LIT
 
+%token PLUS_EQ
+%token MINUS_EQ
+%token MUL_EQ
+%token DIV_EQ
+
 %right	'='
 %left	OR
 %left	AND
@@ -225,6 +230,10 @@ expr        :   INT_LIT
             |   expr OR expr
             |   '!' expr
             |   '-' expr    %prec UMINUS
+            |   expr PLUS_EQ expr
+            |   expr MINUS_EQ expr
+            |   expr MUL_EQ expr
+            |   expr DIV_EQ expr
             ;
 
 interface_decl
