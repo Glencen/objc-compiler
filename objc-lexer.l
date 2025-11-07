@@ -16,7 +16,6 @@ typedef enum {
     TOK_FLOAT,
     TOK_STRING,
     TOK_CHAR,
-    TOK_PREPROCESSOR,
     TOK_COMMENT,
     TOK_ATSIGN,
     TOK_OBJC_INTERFACE,
@@ -295,8 +294,6 @@ OCT      [0-7]
 "."                 { print_token(TOK_DELIMITER, yytext); }
 ":"                 { print_token(TOK_DELIMITER, yytext); }
 
-#.*                 { print_token(TOK_PREPROCESSOR, yytext); }
-
 <*>.                   { 
     print_token(TOK_UNKNOWN, yytext); 
 }
@@ -325,7 +322,6 @@ const char* token_type_name(token_type_t type) {
         case TOK_FLOAT: return "FLOAT";
         case TOK_STRING: return "STRING";
         case TOK_CHAR: return "CHAR";
-        case TOK_PREPROCESSOR: return "PREPROCESSOR";
         case TOK_COMMENT: return "COMMENT";
         case TOK_ATSIGN: return "ATSIGN";
         case TOK_OBJC_INTERFACE: return "OBJC_INTERFACE";
