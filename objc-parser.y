@@ -70,6 +70,7 @@ void yyerror(char const* s) {
 
 %token OBJECTATINDEX
 %token COUNT
+%token SUPER
 
 %right	'='
 %left	OR
@@ -113,17 +114,14 @@ simple_stmt :   return_stmt
             |   expr ';'
             ;
 
-assignment_expr :   lvalue '=' expr
-                |   lvalue '=' initializer
-                ;
+assignment_expr
+            :   lvalue '=' expr
+            |   lvalue '=' initializer
+            ;
 
 lvalue      :   ID
             |   array_access
-            |   member_access
             ;
-
-member_access : expr '.' ID
-              ;
 
 expr_inc_dec:   lvalue INC
             |   lvalue DEC
@@ -165,9 +163,10 @@ for_init    :   for_assignment
             |
             ;
 
-for_assignment : lvalue '=' expr
-               | expr_inc_dec
-               ;
+for_assignment
+            :   lvalue '=' expr
+            |   expr_inc_dec
+            ;
 
 for_decl    :   type_spec for_declarator_list
             |   CONST type_spec for_declarator_list
@@ -265,7 +264,6 @@ expr        :   INT_LIT
             |   '-' expr    %prec UMINUS
             |   array_access
             |   method_call_expr
-            |   member_access
             |   '(' expr ')'
             |   assignment_expr
             |   expr_inc_dec
@@ -310,8 +308,21 @@ nsdict_pair :   expr ':' expr
             ;
 
 method_call_expr
-            :   expr '.' OBJECTATINDEX '(' expr ')'
-            |   expr '.' COUNT '(' ')'
+            :   '[' receiver message_selector ']'
+            ;
+
+receiver    :   expr
+            |   SUPER
+            ;
+
+message_selector
+            :   ID
+            |   keyword_args
+            ;
+
+keyword_args
+            :   ID ':' expr
+            |   keyword_args ':' expr
             ;
 
 interface_decl
