@@ -349,13 +349,19 @@ method_type :   PLUS
             |   MINUS
             ;
 
-method_sel  :   ID
-            |   ID ':' method_param method_sel_part
-            |   ID method_sel_part
+method_sel  :   simple_method
+            |   method_with_params
             ;
 
-method_sel_part
-            :   ':' method_param method_sel_part
+simple_method
+            :   ID
+            ;
+
+method_with_params
+            :   ID ':' method_param param_list
+            ;
+
+param_list  :   ':' method_param param_list
             |
             ;
 
