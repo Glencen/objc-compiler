@@ -315,7 +315,7 @@ implementation_decl
 
 implementation_body
             :   implementation_body property_decl
-            |   implementation_body method_decl
+            |   implementation_body method_impl
             |   implementation_body var_decl
             |
             ;
@@ -335,29 +335,32 @@ property_attr
             |   ID '=' ID
             ;
 
-method_decl :   method_sign ':'
+method_decl :   method_type method_selector ';'
             ;
 
-method_impl :   method_sign compound_stmt
-            ;
-
-method_sign :   method_type '(' type_name ')' method_sel
-            |   method_type method_sel
+method_impl :   method_type method_selector compound_stmt
             ;
 
 method_type :   PLUS
             |   MINUS
             ;
 
-method_sel  :   ID
-            |   ID ':' method_param param_list
+method_selector
+            :   '(' type_name ')' method_name_with_params
+            |   method_name_with_params
             ;
 
-param_list  :   param_list ':' method_param
-            |   ':' method_param
+method_name_with_params
+            :   ID
+            |   ID ':' method_params
             ;
 
-method_param:   '(' type_name ')' ID
+method_params
+            :   method_param
+            |   method_params method_param
+            ;
+
+method_param:   ID ':' '(' type_name ')' ID
             ;
 
 %%
