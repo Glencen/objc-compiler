@@ -115,8 +115,11 @@ simple_stmt :   expr_assign
             ;
 
 expr_assign :   expr '=' expr
+            |   expr '=' initializer
             |   array_access '=' expr
+            |   array_access '=' initializer
             |   method_call_expr '=' expr
+            |   method_call_expr '=' initializer
             ;
 
 expr_inc_dec:   expr INC
@@ -198,12 +201,10 @@ declarator_list
 
 declarator  :   ID
             |   ID '=' expr
-            |   ID '=' array_literal
-            |   ID '=' nsarray_literal
-            |   ID '=' nsdictionary_literal
+            |   ID '=' initializer
             |   ID '[' expr ']'
-            |   ID '[' expr ']' '=' array_literal
-            |   ID '[' ']' '=' array_literal
+            |   ID '[' expr ']' '=' initializer
+            |   ID '[' ']' '=' initializer
             ;
 
 expr_list   :   expr_list ',' expr
@@ -244,12 +245,14 @@ expr        :   INT_LIT
             |   '-' expr    %prec UMINUS
             |   array_access
             |   method_call_expr
-            |   array_literal
-            |   nsarray_literal
-            |   nsdictionary_literal
             |   '(' expr ')'
             |   expr_assign
             |   expr_inc_dec
+            ;
+
+initializer :   array_literal
+            |   nsarray_literal
+            |   nsdictionary_literal
             ;
 
 array_type_spec
