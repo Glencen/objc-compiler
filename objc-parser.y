@@ -50,8 +50,6 @@ void yyerror(char const* s) {
 %token MINUS
 %token ATSIGN
 
-%token FOUNDATION // библиотека
-
 %token INT
 %token FLOAT
 %token BOOL
