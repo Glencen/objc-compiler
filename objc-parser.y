@@ -79,6 +79,7 @@ void yyerror(char const* s) {
 %left	'*' '/'
 %right	INC DEC '!' UMINUS
 %left   '.' '['
+%left   ARRAY_INDEX
 
 %start program
 
@@ -110,13 +111,12 @@ simple_stmt :   expr
             |   expr INC
             |   expr DEC
             |   return_stmt
-            |   BREAK ';'
-            |   CONTINUE ';'
+            |   BREAK
+            |   CONTINUE
             |   expr '=' expr
             |   expr '=' array_literal
             |   array_access '=' expr
-            |   nsarray_access '=' expr
-            |   nsdictionary_access '='
+            |   method_call_expr '=' expr
             ;
 
 return_stmt :   RETURN expr_list
@@ -241,23 +241,19 @@ expr        :   INT_LIT
             |   '!' expr
             |   '-' expr    %prec UMINUS
             |   array_access
-            |   nsarray_access
-            |   nsdictionary_access
+            |   method_call_expr
             |   array_literal
             |   nsarray_literal
             |   nsdictionary_literal
-            |   method_call_expr
             |   '(' expr ')'
             ;
 
 nsarray_type_spec
-            : NSARRAY '<' type_name '>'
-            | NSARRAY
+            : NSARRAY
             ;
 
 nsdictionary_type_spec
-            : NSDICTIONARY '<' type_name ',' type_name '>'
-            | NSDICTIONARY
+            : NSDICTIONARY
             ;
 
 interface_decl
@@ -336,18 +332,7 @@ array_literal
             |   '{' '}'
             ;
 
-array_access:   ID '[' expr ']'
-            |   array_access '[' expr ']'
-            |   expr '[' expr ']'
-            ;
-
-nsarray_access
-            :   expr '[' expr ']'
-            |   method_call_expr
-            ;
-
-nsdictionary_access
-            :   expr '[' expr ']'
+array_access:   expr '[' expr ']'   %prec ARRAY_INDEX
             ;
 
 nsarray_literal
