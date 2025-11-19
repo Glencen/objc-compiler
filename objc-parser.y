@@ -68,6 +68,9 @@ void yyerror(char const* s) {
 %token  <nsstring_lit>  NSSTRING_LIT
 %token  <objc_object>   OBJECT_LIT
 
+%token OBJECTATINDEX
+%token COUNT
+
 %right	'='
 %left	OR
 %left	AND
@@ -75,6 +78,7 @@ void yyerror(char const* s) {
 %left	'+' '-'
 %left	'*' '/'
 %right	INC DEC '!' UMINUS
+%left   '.' '['
 
 %start program
 
@@ -110,6 +114,9 @@ simple_stmt :   expr
             |   CONTINUE ';'
             |   expr '=' expr
             |   expr '=' array_literal
+            |   array_access '=' expr
+            |   nsarray_access '=' expr
+            |   nsdictionary_access '='
             ;
 
 return_stmt :   RETURN expr_list
@@ -178,6 +185,8 @@ const_decl  :   CONST type_spec declarator_list ';'
 type_spec   :   type_name
             |   type_name '*'
             |   array_type_spec
+            |   nsarray_type_spec
+            |   nsdictionary_type_spec
             ;
 
 declarator_list
@@ -188,6 +197,8 @@ declarator_list
 declarator  :   ID
             |   ID '=' expr
             |   ID '=' array_literal
+            |   ID '=' nsarray_literal
+            |   ID '=' nsdictionary_literal
             |   ID '[' expr ']'
             |   ID '[' expr ']' '=' array_literal
             |   ID '[' ']' '=' array_literal
@@ -230,9 +241,23 @@ expr        :   INT_LIT
             |   '!' expr
             |   '-' expr    %prec UMINUS
             |   array_access
+            |   nsarray_access
+            |   nsdictionary_access
             |   array_literal
             |   nsarray_literal
             |   nsdictionary_literal
+            |   method_call_expr
+            |   '(' expr ')'
+            ;
+
+nsarray_type_spec
+            : NSARRAY '<' type_name '>'
+            | NSARRAY
+            ;
+
+nsdictionary_type_spec
+            : NSDICTIONARY '<' type_name ',' type_name '>'
+            | NSDICTIONARY
             ;
 
 interface_decl
@@ -302,6 +327,8 @@ method_param:   '(' type_name ')' ID
 array_type_spec
             :   type_name '[' ']'
             |   type_name '[' expr ']'
+            |   array_type_spec '[' ']'
+            |   array_type_spec '[' expr ']'
             ;
 
 array_literal
@@ -310,7 +337,17 @@ array_literal
             ;
 
 array_access:   ID '[' expr ']'
+            |   array_access '[' expr ']'
             |   expr '[' expr ']'
+            ;
+
+nsarray_access
+            :   expr '[' expr ']'
+            |   method_call_expr
+            ;
+
+nsdictionary_access
+            :   expr '[' expr ']'
             ;
 
 nsarray_literal
@@ -329,6 +366,11 @@ nsdict_pair_list
             ;
 
 nsdict_pair :   expr ':' expr
+            ;
+
+method_call_expr
+            :   expr '.' OBJECTATINDEX '(' expr ')'
+            |   expr '.' COUNT '(' ')'
             ;
 
 %%
