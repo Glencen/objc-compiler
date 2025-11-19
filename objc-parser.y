@@ -107,16 +107,20 @@ stmt        :   decl
             |   method_impl
             ;
 
-simple_stmt :   expr
-            |   expr INC
-            |   expr DEC
+simple_stmt :   expr_assign
+            |   expr_inc_dec
             |   return_stmt
             |   BREAK
             |   CONTINUE
-            |   expr '=' expr
-            |   expr '=' array_literal
+            ;
+
+expr_assign :   expr '=' expr
             |   array_access '=' expr
             |   method_call_expr '=' expr
+            ;
+
+expr_inc_dec:   expr INC
+            |   expr DEC
             ;
 
 return_stmt :   RETURN expr_list
@@ -185,8 +189,6 @@ const_decl  :   CONST type_spec declarator_list ';'
 type_spec   :   type_name
             |   type_name '*'
             |   array_type_spec
-            |   nsarray_type_spec
-            |   nsdictionary_type_spec
             ;
 
 declarator_list
@@ -246,14 +248,46 @@ expr        :   INT_LIT
             |   nsarray_literal
             |   nsdictionary_literal
             |   '(' expr ')'
+            |   expr_assign
+            |   expr_inc_dec
             ;
 
-nsarray_type_spec
-            : NSARRAY
+array_type_spec
+            :   type_name '[' ']'
+            |   type_name '[' expr ']'
+            |   array_type_spec '[' ']'
+            |   array_type_spec '[' expr ']'
             ;
 
-nsdictionary_type_spec
-            : NSDICTIONARY
+array_literal
+            :   '{' expr_list '}'
+            |   '{' '}'
+            ;
+
+array_access:   expr '[' expr ']'   %prec ARRAY_INDEX
+            ;
+
+nsarray_literal
+            :   ATSIGN '[' expr_list ']'
+            |   ATSIGN '[' ']'
+            ;
+
+nsdictionary_literal
+            :   ATSIGN '{' nsdict_pair_list '}'
+            |   ATSIGN '{' '}'
+            ;
+
+nsdict_pair_list
+            :   nsdict_pair_list ',' nsdict_pair
+            |   nsdict_pair
+            ;
+
+nsdict_pair :   expr ':' expr
+            ;
+
+method_call_expr
+            :   expr '.' OBJECTATINDEX '(' expr ')'
+            |   expr '.' COUNT '(' ')'
             ;
 
 interface_decl
@@ -318,44 +352,6 @@ method_sel_part
             ;
 
 method_param:   '(' type_name ')' ID
-            ;
-
-array_type_spec
-            :   type_name '[' ']'
-            |   type_name '[' expr ']'
-            |   array_type_spec '[' ']'
-            |   array_type_spec '[' expr ']'
-            ;
-
-array_literal
-            :   '{' expr_list '}'
-            |   '{' '}'
-            ;
-
-array_access:   expr '[' expr ']'   %prec ARRAY_INDEX
-            ;
-
-nsarray_literal
-            :   ATSIGN '[' expr_list ']'
-            |   ATSIGN '[' ']'
-            ;
-
-nsdictionary_literal
-            :   ATSIGN '{' nsdict_pair_list '}'
-            |   ATSIGN '{' '}'
-            ;
-
-nsdict_pair_list
-            :   nsdict_pair_list ',' nsdict_pair
-            |   nsdict_pair
-            ;
-
-nsdict_pair :   expr ':' expr
-            ;
-
-method_call_expr
-            :   expr '.' OBJECTATINDEX '(' expr ')'
-            |   expr '.' COUNT '(' ')'
             ;
 
 %%
