@@ -107,23 +107,26 @@ stmt        :   decl
             |   method_impl
             ;
 
-simple_stmt :   expr_assign
-            |   expr_inc_dec
-            |   return_stmt
+simple_stmt :   return_stmt
             |   BREAK
             |   CONTINUE
+            |   expr ';'
             ;
 
-expr_assign :   expr '=' expr
-            |   expr '=' initializer
-            |   array_access '=' expr
-            |   array_access '=' initializer
-            |   method_call_expr '=' expr
-            |   method_call_expr '=' initializer
+assignment_expr :   lvalue '=' expr
+                |   lvalue '=' initializer
+                ;
+
+lvalue      :   ID
+            |   array_access
+            |   member_access
             ;
 
-expr_inc_dec:   expr INC
-            |   expr DEC
+member_access : expr '.' ID
+              ;
+
+expr_inc_dec:   lvalue INC
+            |   lvalue DEC
             ;
 
 return_stmt :   RETURN expr_list
@@ -157,8 +160,9 @@ default_case:   DEFAULT ':' stmt_list
 for_stmt    :   FOR '(' for_init ';' for_condition ';' for_iteration ')' stmt
             ;
 
-for_init    :   expr
+for_init    :   assignment_expr
             |   decl
+            |   expr
             |
             ;
 
@@ -245,8 +249,9 @@ expr        :   INT_LIT
             |   '-' expr    %prec UMINUS
             |   array_access
             |   method_call_expr
+            |   member_access
             |   '(' expr ')'
-            |   expr_assign
+            |   assignment_expr
             |   expr_inc_dec
             ;
 
