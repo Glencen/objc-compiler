@@ -160,10 +160,28 @@ default_case:   DEFAULT ':' stmt_list
 for_stmt    :   FOR '(' for_init ';' for_condition ';' for_iteration ')' stmt
             ;
 
-for_init    :   assignment_expr
-            |   decl
-            |   expr
+for_init    :   for_assignment
+            |   for_decl
             |
+            ;
+
+for_assignment : lvalue '=' expr
+               | expr_inc_dec
+               ;
+
+for_decl    :   type_spec for_declarator_list
+            |   CONST type_spec for_declarator_list
+            ;
+
+for_declarator_list
+            :   for_declarator
+            |   for_declarator_list ',' for_declarator
+            ;
+
+for_declarator
+            :   ID
+            |   ID '=' expr
+            |   ID '=' initializer
             ;
 
 for_condition
@@ -203,9 +221,7 @@ declarator_list
             |   declarator
             ;
 
-declarator  :   ID
-            |   ID '=' expr
-            |   ID '=' initializer
+declarator  :   for_declarator
             |   ID '[' expr ']'
             |   ID '[' expr ']' '=' initializer
             |   ID '[' ']' '=' initializer
