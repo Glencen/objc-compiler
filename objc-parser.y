@@ -361,8 +361,8 @@ method_with_params
             :   ID ':' method_param param_list
             ;
 
-param_list  :   ':' method_param param_list
-            |
+param_list  :   param_list ':' method_param
+            |   ':' method_param
             ;
 
 method_param:   '(' type_name ')' ID
