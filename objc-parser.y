@@ -97,7 +97,21 @@ void yyerror(char const* s) {
 
 %%
 
-program     :   stmt_list
+program     :   external_decl_list
+            ;
+
+external_decl_list
+            :   external_decl_list external_decl
+            |   external_decl
+            ;
+
+external_decl
+            :   interface_decl
+            |   implementation_decl
+            |   function_def
+            |   function_decl
+            |   var_decl
+            |   const_decl
             ;
 
 stmt_list   :   stmt_list stmt
@@ -112,13 +126,6 @@ stmt        :   decl
             |   for_stmt
             |   while_stmt
             |   do_while_stmt
-            |   interface_decl
-            |   implementation_decl
-            |   property_decl
-            |   method_decl
-            |   method_impl
-            |   function_decl
-            |   function_def
             |   nslog_stmt
             |   printf_stmt
             ;
@@ -126,7 +133,7 @@ stmt        :   decl
 simple_stmt :   return_stmt
             |   BREAK
             |   CONTINUE
-            |   expr ';'
+            |   expr
             ;
 
 assignment_expr
@@ -391,27 +398,9 @@ interface_decl
             ;
 
 interface_body
-            :   interface_body access_section
-            |   interface_body property_decl
+            :   interface_body property_decl
             |   interface_body method_decl
             |   interface_body function_decl
-            |
-            ;
-
-access_section
-            :   access_specifier '{' interface_members '}'
-            ;
-
-access_specifier
-            :   ATSIGN PUBLIC
-            |   ATSIGN PROTECTED
-            |   ATSIGN PRIVATE
-            ;
-
-interface_members
-            :   interface_members property_decl
-            |   interface_members method_decl
-            |   interface_members function_decl
             |
             ;
 
@@ -420,25 +409,11 @@ implementation_decl
             ;
 
 implementation_body
-            :   implementation_body access_section_impl
-            |   implementation_body property_decl
+            :   implementation_body property_decl
             |   implementation_body method_impl
             |   implementation_body var_decl
             |   implementation_body function_def
             |   implementation_body function_decl
-            |
-            ;
-
-access_section_impl
-            :   access_specifier '{' implementation_members '}'
-            ;
-
-implementation_members
-            :   implementation_members property_decl
-            |   implementation_members method_impl
-            |   implementation_members var_decl
-            |   implementation_members function_def
-            |   implementation_members function_decl
             |
             ;
 
