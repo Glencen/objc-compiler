@@ -80,6 +80,7 @@ void yyerror(char const* s) {
 %token OBJECTATINDEX
 %token COUNT
 %token SUPER
+%token SELF
 
 %right	'='
 %left	OR
@@ -334,6 +335,7 @@ method_call_expr
 
 receiver    :   expr
             |   SUPER
+            |   SELF
             ;
 
 message_selector
