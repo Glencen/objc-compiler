@@ -58,6 +58,7 @@ void yyerror(char const* s) {
 %token NSNUMBER
 %token NSARRAY
 %token NSDICTIONARY
+%token VOID
 
 %token 	<int_lit>		INT_LIT
 %token	<float_lit>		FLOAT_LIT
@@ -81,6 +82,7 @@ void yyerror(char const* s) {
 %right	INC DEC '!' UMINUS
 %left   '.' '['
 %left   ARRAY_INDEX
+%left   FUNCTION_CALL
 
 %start program
 
@@ -106,6 +108,8 @@ stmt        :   decl
             |   property_decl
             |   method_decl
             |   method_impl
+            |   function_decl
+            |   function_def
             ;
 
 simple_stmt :   return_stmt
@@ -139,10 +143,14 @@ if_stmt     :   IF '(' expr ')' stmt    %prec NO_ELSE
             |   IF '(' expr ')' stmt ELSE stmt
             ;
 
-switch_stmt :   SWITCH '(' expr ')' '{' case_list '}'
-            |   SWITCH '(' expr ')' '{' case_list default_case '}'
-            |   SWITCH '(' expr ')' '{' default_case '}'
-            |   SWITCH '(' expr ')' '{' default_case case_list '}'
+switch_stmt :   SWITCH '(' expr ')' '{' switch_body '}'
+            ;
+
+switch_body :   case_list
+            |   case_list default_case
+            |   default_case
+            |   default_case case_list
+            |
             ;
 
 case_list   :   case_list case_stmt
@@ -238,6 +246,7 @@ type_name   :   INT
             |   NSNUMBER
             |   NSARRAY
             |   NSDICTIONARY
+            |   VOID
             ;
 
 expr        :   INT_LIT
@@ -248,6 +257,7 @@ expr        :   INT_LIT
             |   BOOL_LIT
             |   OBJECT_LIT
             |   ID
+            |   function_call_expr
             |   expr '+' expr
             |   expr '-' expr
             |   expr '*' expr
@@ -322,7 +332,52 @@ message_selector
 
 keyword_args
             :   ID ':' expr
-            |   keyword_args ':' expr
+            |   keyword_args ID ':' expr
+            ;
+
+// Объявление C-функции (прототип)
+function_decl
+            :   type_spec ID '(' parameter_list_opt ')' ';'
+            ;
+
+// Определение C-функции
+function_def
+            :   type_spec ID '(' parameter_list_opt ')' compound_stmt
+            ;
+
+// Список параметров функции (опциональный)
+parameter_list_opt
+            :   parameter_list
+            |
+            ;
+
+// Список параметров функции
+parameter_list
+            :   parameter
+            |   parameter_list ',' parameter
+            ;
+
+// Параметр функции
+parameter   :   type_spec ID
+            |   type_spec ID '[' ']'  // массив как параметр
+            |   type_spec ID '[' expr ']'
+            ;
+
+// Вызов C-функции
+function_call_expr
+            :   ID '(' argument_list_opt ')'   %prec FUNCTION_CALL
+            ;
+
+// Список аргументов при вызове функции (опциональный)
+argument_list_opt
+            :   argument_list
+            |
+            ;
+
+// Список аргументов при вызове функции
+argument_list
+            :   expr
+            |   argument_list ',' expr
             ;
 
 interface_decl
@@ -333,6 +388,7 @@ interface_decl
 interface_body
             :   interface_body property_decl
             |   interface_body method_decl
+            |   interface_body function_decl
             |
             ;
 
@@ -344,6 +400,8 @@ implementation_body
             :   implementation_body property_decl
             |   implementation_body method_impl
             |   implementation_body var_decl
+            |   implementation_body function_def
+            |   implementation_body function_decl
             |
             ;
 
