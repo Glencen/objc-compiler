@@ -56,9 +56,13 @@ void yyerror(char const* s) {
 %token CHAR
 %token NSSTRING
 %token NSNUMBER
+%token NSINTEGER
 %token NSARRAY
 %token NSDICTIONARY
 %token VOID
+
+%token PRINTF
+%token NSLOG
 
 %token 	<int_lit>		INT_LIT
 %token	<float_lit>		FLOAT_LIT
@@ -110,6 +114,8 @@ stmt        :   decl
             |   method_impl
             |   function_decl
             |   function_def
+            |   nslog_stmt
+            |   printf_stmt
             ;
 
 simple_stmt :   return_stmt
@@ -244,6 +250,7 @@ type_name   :   INT
             |   BOOL
             |   NSSTRING
             |   NSNUMBER
+            |   NSINTEGER
             |   NSARRAY
             |   NSDICTIONARY
             |   VOID
@@ -335,46 +342,38 @@ keyword_args
             |   keyword_args ID ':' expr
             ;
 
-// Объявление C-функции (прототип)
 function_decl
             :   type_spec ID '(' parameter_list_opt ')' ';'
             ;
 
-// Определение C-функции
 function_def
             :   type_spec ID '(' parameter_list_opt ')' compound_stmt
             ;
 
-// Список параметров функции (опциональный)
 parameter_list_opt
             :   parameter_list
             |
             ;
 
-// Список параметров функции
 parameter_list
             :   parameter
             |   parameter_list ',' parameter
             ;
 
-// Параметр функции
 parameter   :   type_spec ID
-            |   type_spec ID '[' ']'  // массив как параметр
+            |   type_spec ID '[' ']'
             |   type_spec ID '[' expr ']'
             ;
 
-// Вызов C-функции
 function_call_expr
             :   ID '(' argument_list_opt ')'   %prec FUNCTION_CALL
             ;
 
-// Список аргументов при вызове функции (опциональный)
 argument_list_opt
             :   argument_list
             |
             ;
 
-// Список аргументов при вызове функции
 argument_list
             :   expr
             |   argument_list ',' expr
@@ -446,6 +445,44 @@ method_params
             ;
 
 method_param:   ID ':' '(' type_name ')' ID
+            ;
+
+nslog_stmt  :   NSLOG '(' nslog_arguments ')' ';'
+            ;
+
+nslog_arguments
+            :   nslog_arguments ',' nslog_argument
+            |   nslog_argument
+            |
+            ;
+
+nslog_argument
+            :   expr
+            ;
+
+printf_stmt :   PRINTF '(' printf_arguments ')' ';'
+            ;
+
+printf_arguments
+            :   printf_format printf_args_opt
+            ;
+
+printf_format
+            :   C_STRING_LIT
+            |   NSSTRING_LIT
+            ;
+
+printf_args_opt
+            :   ',' printf_arg_list
+            |
+            ;
+
+printf_arg_list
+            :   printf_arg_list ',' printf_arg
+            |   printf_arg
+            ;
+
+printf_arg  :   expr
             ;
 
 %%
