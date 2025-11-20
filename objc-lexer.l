@@ -228,23 +228,16 @@ OCT      [0-7]
 
 "YES"               { print_token(TOK_KEYWORD, yytext); }
 "NO"                { print_token(TOK_KEYWORD, yytext); }
-"nil"               { print_token(TOK_KEYWORD, yytext); }
-"Nil"               { print_token(TOK_KEYWORD, yytext); }
-"NULL"              { print_token(TOK_KEYWORD, yytext); }
 "self"              { print_token(TOK_KEYWORD, yytext); }
 "super"             { print_token(TOK_KEYWORD, yytext); }
 
-"id"                { print_token(TOK_KEYWORD, yytext); }
-"Class"             { print_token(TOK_KEYWORD, yytext); }
-"SEL"               { print_token(TOK_KEYWORD, yytext); }
-"IMP"               { print_token(TOK_KEYWORD, yytext); }
 "BOOL"              { print_token(TOK_KEYWORD, yytext); }
-
 "int"               { print_token(TOK_KEYWORD, yytext); }
 "float"             { print_token(TOK_KEYWORD, yytext); }
 "char"              { print_token(TOK_KEYWORD, yytext); }
 "NSString"          { print_token(TOK_KEYWORD, yytext); }
 "NSNumber"          { print_token(TOK_KEYWORD, yytext); }
+"NSInteger"         { print_token(TOK_KEYWORD, yytext); }
 "NSArray"           { print_token(TOK_KEYWORD, yytext); }
 "NSDictionary"      { print_token(TOK_KEYWORD, yytext); }
 "if"                { print_token(TOK_KEYWORD, yytext); }
