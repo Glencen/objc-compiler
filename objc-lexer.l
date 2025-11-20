@@ -26,10 +26,17 @@ typedef enum {
     TOK_ERROR
 } token_type_t;
 
+extern int yylval;
+extern "C" int yylex(void);
+
 void print_token(token_type_t type, const std::string& value);
 void print_token_int(token_type_t type, long value);
 void print_token_float(token_type_t type, double value);
 const char* token_type_name(token_type_t type);
+
+void set_token_int(long value);
+void set_token_float(double value);
+void set_token_string(const std::string& value);
 %}
 
 %option noyywrap
@@ -56,7 +63,7 @@ OCT      [0-7]
 
 {WS}     {}
 
-\n       {}
+\n       { return '\n'; }
 
 \/\/.*   { 
     print_token(TOK_COMMENT, yytext);
@@ -82,7 +89,10 @@ OCT      [0-7]
     string_buf.clear();
 }
 
-@        { print_token(TOK_ATSIGN, yytext); }
+@        { 
+    print_token(TOK_ATSIGN, yytext);
+    return ATSIGN;
+}
 
 <STRING>[^"\\\n]+ {
     string_buf += yytext;
@@ -100,13 +110,11 @@ OCT      [0-7]
 }
 
 <STRING>\\x{HEX}{1,2} {
-    // Hex escape sequence
     char hex_val = (char)std::strtol(yytext + 2, NULL, 16);
     string_buf += hex_val;
 }
 
 <STRING>\\[0-7]{1,3} {
-    // Octal escape sequence
     char oct_val = (char)std::strtol(yytext + 1, NULL, 8);
     string_buf += oct_val;
 }
@@ -114,46 +122,62 @@ OCT      [0-7]
 <STRING>\n {
     BEGIN(INITIAL);
     print_token(TOK_ERROR, "Unclosed string");
+    return TOK_ERROR;
 }
 
 <STRING><<EOF>> {
     BEGIN(INITIAL);
     print_token(TOK_ERROR, "Unclosed string");
+    return TOK_ERROR;
 }
 
 <STRING>\" {
     BEGIN(INITIAL);
     print_token(TOK_STRING, string_buf);
+    set_token_string(string_buf);
+    return C_STRING_LIT;
 }
 
 [1-9]{DIGIT}*            { 
     long value = std::strtol(yytext, NULL, 10);
-    print_token_int(TOK_INTEGER, value); 
+    print_token_int(TOK_INTEGER, value);
+    set_token_int(value);
+    return INT_LIT;
 }
 
 0{OCT}*             { 
     long value = std::strtol(yytext, NULL, 8);
-    print_token_int(TOK_INTEGER, value); 
+    print_token_int(TOK_INTEGER, value);
+    set_token_int(value);
+    return INT_LIT;
 }
 
 0[xX]{HEX}+         { 
     long value = std::strtol(yytext, NULL, 16);
-    print_token_int(TOK_INTEGER, value); 
+    print_token_int(TOK_INTEGER, value);
+    set_token_int(value);
+    return INT_LIT;
 }
 
 {DIGIT}+\.{DIGIT}*([eE][-+]?{DIGIT}+)?   { 
     double value = std::strtod(yytext, NULL);
-    print_token_float(TOK_FLOAT, value); 
+    print_token_float(TOK_FLOAT, value);
+    set_token_float(value);
+    return FLOAT_LIT;
 }
 
 \.{DIGIT}+([eE][-+]?{DIGIT}+)?           { 
     double value = std::strtod(yytext, NULL);
-    print_token_float(TOK_FLOAT, value); 
+    print_token_float(TOK_FLOAT, value);
+    set_token_float(value);
+    return FLOAT_LIT;
 }
 
 {DIGIT}+[eE][-+]?{DIGIT}+                { 
     double value = std::strtod(yytext, NULL);
-    print_token_float(TOK_FLOAT, value); 
+    print_token_float(TOK_FLOAT, value);
+    set_token_float(value);
+    return FLOAT_LIT;
 }
 
 \'       {
@@ -179,13 +203,11 @@ OCT      [0-7]
 }
 
 <CHAR>\\x{HEX}{1,2} {
-    // Hex escape sequence
     char hex_val = (char)std::strtol(yytext + 2, NULL, 16);
     string_buf += hex_val;
 }
 
 <CHAR>\\[0-7]{1,3} {
-    // Octal escape sequence
     char oct_val = (char)std::strtol(yytext + 1, NULL, 8);
     string_buf += oct_val;
 }
@@ -193,102 +215,125 @@ OCT      [0-7]
 <CHAR>\n {
     BEGIN(INITIAL);
     print_token(TOK_ERROR, "Unclosed char constant");
+    return TOK_ERROR;
 }
 
 <CHAR><<EOF>> {
     BEGIN(INITIAL);
     print_token(TOK_ERROR, "Unclosed char constant");
+    return TOK_ERROR;
 }
 
 <CHAR>\' {
     BEGIN(INITIAL);
     if (string_buf.length() == 1) {
         print_token(TOK_CHAR, string_buf);
+        yylval = string_buf[0];
+        return CHAR_LIT;
     } else {
         print_token(TOK_ERROR, "Invalid char constant");
+        return TOK_ERROR;
     }
 }
 
-"@interface"        { print_token(TOK_OBJC_INTERFACE, yytext); }
-"@implementation"   { print_token(TOK_OBJC_IMPLEMENTATION, yytext); }
-"@end"              { print_token(TOK_OBJC_END, yytext); }
-"@property"         { print_token(TOK_OBJC_PROPERTY, yytext); }
+"@interface"        { 
+    print_token(TOK_OBJC_INTERFACE, yytext);
+    return INTERFACE;
+}
+
+"@implementation"   { 
+    print_token(TOK_OBJC_IMPLEMENTATION, yytext);
+    return IMPLEMENTATION;
+}
+
+"@end"              { 
+    print_token(TOK_OBJC_END, yytext);
+    return END;
+}
+
+"@property"         { 
+    print_token(TOK_OBJC_PROPERTY, yytext);
+    return PROPERTY;
+}
 
 "@["    { 
     print_token(TOK_OPERATOR, yytext);
+    return '[';
 }
 
 "@{"    { 
     print_token(TOK_OPERATOR, yytext);
+    return '{';
 }
 
-"@public"           { print_token(TOK_KEYWORD, yytext); }
-"@private"          { print_token(TOK_KEYWORD, yytext); }
-"@protected"        { print_token(TOK_KEYWORD, yytext); }
+"@public"           { print_token(TOK_KEYWORD, yytext); return PUBLIC; }
+"@private"          { print_token(TOK_KEYWORD, yytext); return PRIVATE; }
+"@protected"        { print_token(TOK_KEYWORD, yytext); return PROTECTED; }
 
-"YES"               { print_token(TOK_KEYWORD, yytext); }
-"NO"                { print_token(TOK_KEYWORD, yytext); }
-"self"              { print_token(TOK_KEYWORD, yytext); }
-"super"             { print_token(TOK_KEYWORD, yytext); }
+"YES"               { print_token(TOK_KEYWORD, yytext); yylval = 1; return BOOL_LIT; }
+"NO"                { print_token(TOK_KEYWORD, yytext); yylval = 0; return BOOL_LIT; }
+"self"              { print_token(TOK_KEYWORD, yytext); return SELF; }
+"super"             { print_token(TOK_KEYWORD, yytext); return SUPER; }
 
-"BOOL"              { print_token(TOK_KEYWORD, yytext); }
-"int"               { print_token(TOK_KEYWORD, yytext); }
-"float"             { print_token(TOK_KEYWORD, yytext); }
-"char"              { print_token(TOK_KEYWORD, yytext); }
-"NSString"          { print_token(TOK_KEYWORD, yytext); }
-"NSNumber"          { print_token(TOK_KEYWORD, yytext); }
-"NSInteger"         { print_token(TOK_KEYWORD, yytext); }
-"NSArray"           { print_token(TOK_KEYWORD, yytext); }
-"NSDictionary"      { print_token(TOK_KEYWORD, yytext); }
-"if"                { print_token(TOK_KEYWORD, yytext); }
-"else"              { print_token(TOK_KEYWORD, yytext); }
-"while"             { print_token(TOK_KEYWORD, yytext); }
-"do"                { print_token(TOK_KEYWORD, yytext); }
-"for"               { print_token(TOK_KEYWORD, yytext); }
-"switch"            { print_token(TOK_KEYWORD, yytext); }
-"case"              { print_token(TOK_KEYWORD, yytext); }
-"default"           { print_token(TOK_KEYWORD, yytext); }
-"break"             { print_token(TOK_KEYWORD, yytext); }
-"continue"          { print_token(TOK_KEYWORD, yytext); }
-"return"            { print_token(TOK_KEYWORD, yytext); }
-"const"             { print_token(TOK_KEYWORD, yytext); }
+"BOOL"              { print_token(TOK_KEYWORD, yytext); return BOOL; }
+"int"               { print_token(TOK_KEYWORD, yytext); return INT; }
+"float"             { print_token(TOK_KEYWORD, yytext); return FLOAT; }
+"char"              { print_token(TOK_KEYWORD, yytext); return CHAR; }
+"NSString"          { print_token(TOK_KEYWORD, yytext); return NSSTRING; }
+"NSNumber"          { print_token(TOK_KEYWORD, yytext); return NSNUMBER; }
+"NSInteger"         { print_token(TOK_KEYWORD, yytext); return NSINTEGER; }
+"NSArray"           { print_token(TOK_KEYWORD, yytext); return NSARRAY; }
+"NSDictionary"      { print_token(TOK_KEYWORD, yytext); return NSDICTIONARY; }
+"if"                { print_token(TOK_KEYWORD, yytext); return IF; }
+"else"              { print_token(TOK_KEYWORD, yytext); return ELSE; }
+"while"             { print_token(TOK_KEYWORD, yytext); return WHILE; }
+"do"                { print_token(TOK_KEYWORD, yytext); return DO; }
+"for"               { print_token(TOK_KEYWORD, yytext); return FOR; }
+"switch"            { print_token(TOK_KEYWORD, yytext); return SWITCH; }
+"case"              { print_token(TOK_KEYWORD, yytext); return CASE; }
+"default"           { print_token(TOK_KEYWORD, yytext); return DEFAULT; }
+"break"             { print_token(TOK_KEYWORD, yytext); return BREAK; }
+"continue"          { print_token(TOK_KEYWORD, yytext); return CONTINUE; }
+"return"            { print_token(TOK_KEYWORD, yytext); return RETURN; }
+"const"             { print_token(TOK_KEYWORD, yytext); return CONST; }
 
-{ID}                { print_token(TOK_IDENTIFIER, yytext); }
+{ID}                { 
+    print_token(TOK_IDENTIFIER, yytext);
+    set_token_string(yytext);
+    return ID;
+}
 
-"+"                 { print_token(TOK_OPERATOR, yytext); }
-"-"                 { print_token(TOK_OPERATOR, yytext); }
-"*"                 { print_token(TOK_OPERATOR, yytext); }
-"/"                 { print_token(TOK_OPERATOR, yytext); }
-"++"                { print_token(TOK_OPERATOR, yytext); }
-"--"                { print_token(TOK_OPERATOR, yytext); }
-"="                 { print_token(TOK_OPERATOR, yytext); }
-"=="                { print_token(TOK_OPERATOR, yytext); }
-"!="                { print_token(TOK_OPERATOR, yytext); }
-"<"                 { print_token(TOK_OPERATOR, yytext); }
-">"                 { print_token(TOK_OPERATOR, yytext); }
-"<="                { print_token(TOK_OPERATOR, yytext); }
-">="                { print_token(TOK_OPERATOR, yytext); }
-"!"                 { print_token(TOK_OPERATOR, yytext); }
-"&&"                { print_token(TOK_OPERATOR, yytext); }
-"||"                { print_token(TOK_OPERATOR, yytext); }
-"+="                { print_token(TOK_OPERATOR, yytext); }
-"-="                { print_token(TOK_OPERATOR, yytext); }
-"*="                { print_token(TOK_OPERATOR, yytext); }
-"/="                { print_token(TOK_OPERATOR, yytext); }
+"+"                 { print_token(TOK_OPERATOR, yytext); return '+'; }
+"-"                 { print_token(TOK_OPERATOR, yytext); return '-'; }
+"*"                 { print_token(TOK_OPERATOR, yytext); return '*'; }
+"/"                 { print_token(TOK_OPERATOR, yytext); return '/'; }
+"++"                { print_token(TOK_OPERATOR, yytext); return INC; }
+"--"                { print_token(TOK_OPERATOR, yytext); return DEC; }
+"="                 { print_token(TOK_OPERATOR, yytext); return '='; }
+"=="                { print_token(TOK_OPERATOR, yytext); return EQUAL; }
+"!="                { print_token(TOK_OPERATOR, yytext); return NEQUAL; }
+"<"                 { print_token(TOK_OPERATOR, yytext); return '<'; }
+">"                 { print_token(TOK_OPERATOR, yytext); return '>'; }
+"<="                { print_token(TOK_OPERATOR, yytext); return LESS_EQUAL; }
+">="                { print_token(TOK_OPERATOR, yytext); return GREATER_EQUAL; }
+"!"                 { print_token(TOK_OPERATOR, yytext); return '!'; }
+"&&"                { print_token(TOK_OPERATOR, yytext); return AND; }
+"||"                { print_token(TOK_OPERATOR, yytext); return OR; }
 
-"("                 { print_token(TOK_DELIMITER, yytext); }
-")"                 { print_token(TOK_DELIMITER, yytext); }
-"{"                 { print_token(TOK_DELIMITER, yytext); }
-"}"                 { print_token(TOK_DELIMITER, yytext); }
-"["                 { print_token(TOK_DELIMITER, yytext); }
-"]"                 { print_token(TOK_DELIMITER, yytext); }
-","                 { print_token(TOK_DELIMITER, yytext); }
-";"                 { print_token(TOK_DELIMITER, yytext); }
-"."                 { print_token(TOK_DELIMITER, yytext); }
-":"                 { print_token(TOK_DELIMITER, yytext); }
+"("                 { print_token(TOK_DELIMITER, yytext); return '('; }
+")"                 { print_token(TOK_DELIMITER, yytext); return ')'; }
+"{"                 { print_token(TOK_DELIMITER, yytext); return '{'; }
+"}"                 { print_token(TOK_DELIMITER, yytext); return '}'; }
+"["                 { print_token(TOK_DELIMITER, yytext); return '['; }
+"]"                 { print_token(TOK_DELIMITER, yytext); return ']'; }
+","                 { print_token(TOK_DELIMITER, yytext); return ','; }
+";"                 { print_token(TOK_DELIMITER, yytext); return ';'; }
+"."                 { print_token(TOK_DELIMITER, yytext); return '.'; }
+":"                 { print_token(TOK_DELIMITER, yytext); return ':'; }
 
 <*>.                   { 
-    print_token(TOK_UNKNOWN, yytext); 
+    print_token(TOK_UNKNOWN, yytext);
+    return TOK_UNKNOWN;
 }
 
 %%
@@ -325,6 +370,18 @@ const char* token_type_name(token_type_t type) {
         case TOK_ERROR: return "ERROR";
         default: return "UNKNOWN";
     }
+}
+
+void set_token_int(long value) {
+    yylval = value;
+}
+
+void set_token_float(double value) {
+    yylval = (int)value;
+}
+
+void set_token_string(const std::string& value) {
+    yylval = 1;
 }
 
 int main(int argc, char **argv) {
