@@ -50,6 +50,10 @@ void yyerror(char const* s) {
 %token MINUS
 %token ATSIGN
 
+%token PUBLIC
+%token PROTECTED
+%token PRIVATE
+
 %token INT
 %token FLOAT
 %token BOOL
@@ -385,9 +389,27 @@ interface_decl
             ;
 
 interface_body
-            :   interface_body property_decl
+            :   interface_body access_section
+            |   interface_body property_decl
             |   interface_body method_decl
             |   interface_body function_decl
+            |
+            ;
+
+access_section
+            :   access_specifier '{' interface_members '}'
+            ;
+
+access_specifier
+            :   ATSIGN PUBLIC
+            |   ATSIGN PROTECTED
+            |   ATSIGN PRIVATE
+            ;
+
+interface_members
+            :   interface_members property_decl
+            |   interface_members method_decl
+            |   interface_members function_decl
             |
             ;
 
@@ -396,11 +418,25 @@ implementation_decl
             ;
 
 implementation_body
-            :   implementation_body property_decl
+            :   implementation_body access_section_impl
+            |   implementation_body property_decl
             |   implementation_body method_impl
             |   implementation_body var_decl
             |   implementation_body function_def
             |   implementation_body function_decl
+            |
+            ;
+
+access_section_impl
+            :   access_specifier '{' implementation_members '}'
+            ;
+
+implementation_members
+            :   implementation_members property_decl
+            |   implementation_members method_impl
+            |   implementation_members var_decl
+            |   implementation_members function_def
+            |   implementation_members function_decl
             |
             ;
 
