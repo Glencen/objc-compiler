@@ -27,7 +27,6 @@ void yyerror(char const* s) {
 %nonassoc NO_ELSE
 %nonassoc ELSE
 
-%token IMPORT
 %token CONST
 %token VAR
 %token FUNC
