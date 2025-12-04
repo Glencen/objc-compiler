@@ -299,6 +299,7 @@ msg_expr    :   '[' receiver msg_sel ']'
 receiver    :   SELF
             |   SUPER
             |   CLASS_NAME
+            |   msg_expr
             ;
 
 msg_sel     :   ID
