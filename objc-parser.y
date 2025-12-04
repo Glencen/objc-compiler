@@ -305,6 +305,7 @@ expr        :   ID
             |   SELF
             |   msg_expr
             |   '-' expr    %prec UMINUS
+            |   '!' expr
             |   expr '+' expr
             |   expr '-' expr
             |   expr '*' expr
@@ -315,6 +316,8 @@ expr        :   ID
             |   expr '<' expr
             |   expr LESS_EQUAL expr
             |   expr GREATER_EQUAL expr
+            |   expr AND expr
+            |   expr OR expr
             |   expr '=' expr
             ;
 
