@@ -311,7 +311,6 @@ keyword_arg_list
             ;
 
 keyword_arg :   ID ':' expr
-            |   ':' expr
             ;
 
 literal     :   C_STRING_LIT
