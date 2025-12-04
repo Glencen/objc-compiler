@@ -282,7 +282,7 @@ expr_e      :
             |   expr
             ;
 
-if_stmt     :   IF '(' expr ')' stmt
+if_stmt     :   IF '(' expr ')' stmt    %prec NO_ELSE
             |   IF '(' expr ')' stmt ELSE stmt
             ;
 
