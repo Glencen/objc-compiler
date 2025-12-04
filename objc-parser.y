@@ -27,17 +27,9 @@ void yyerror(char const* s) {
 %nonassoc NO_ELSE
 %nonassoc ELSE
 
-%token CONST
-%token VAR
-%token FUNC
 %token RETURN
-%token BREAK
-%token CONTINUE
 %token IF
 %token ELSE
-%token SWITCH
-%token CASE
-%token DEFAULT
 %token FOR
 %token WHILE
 %token DO
@@ -45,27 +37,12 @@ void yyerror(char const* s) {
 %token IMPLEMENTATION
 %token END
 %token PROPERTY
-%token PLUS
-%token MINUS
-%token ATSIGN
-
-%token PUBLIC
-%token PROTECTED
-%token PRIVATE
 
 %token INT
 %token FLOAT
 %token BOOL
 %token CHAR
-%token NSSTRING
-%token NSNUMBER
-%token NSINTEGER
-%token NSARRAY
-%token NSDICTIONARY
 %token VOID
-
-%token PRINTF
-%token NSLOG
 
 %token 	<int_lit>		INT_LIT
 %token	<float_lit>		FLOAT_LIT
@@ -75,8 +52,6 @@ void yyerror(char const* s) {
 %token  <c_str_lit>     C_STRING_LIT
 %token  <nsstring_lit>  NSSTRING_LIT
 
-%token OBJECTATINDEX
-%token COUNT
 %token SUPER
 %token SELF
 %token CLASS_NAME
@@ -84,7 +59,6 @@ void yyerror(char const* s) {
 %token READWRITE
 %token READONLY
 %token IN
-%token ELLIPSIS
 
 %right	'='
 %left	OR
@@ -93,9 +67,7 @@ void yyerror(char const* s) {
 %left	'+' '-'
 %left	'*' '/'
 %right	INC DEC '!' UMINUS
-%left   '.' '['
-%left   ARRAY_INDEX
-%left   FUNCTION_CALL
+%left   '['
 
 %start program
 
