@@ -63,6 +63,7 @@ void yyerror(char const* s);
 %token READWRITE
 %token READONLY
 %token IN
+%token ATSIGN
 
 %right	'='
 %left	OR
@@ -290,7 +291,7 @@ expr_list   :   expr
             |   expr_list ',' expr
             ;
 
-nsarray_lit:   '@' '[' nsobject_list_e ']'
+nsarray_lit:   ATSIGN '[' nsobject_list_e ']'
             ;
 
 nsobject_list_e
@@ -304,7 +305,7 @@ nsobject_list
             ;
 
 nsobject    :   expr
-            |   '@' expr
+            |   ATSIGN expr
             ;
 
 compound_stmt
