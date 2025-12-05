@@ -70,7 +70,7 @@ void yyerror(char const* s);
 %left    '*' '/'
 %left    INC DEC
 %right   '!' UMINUS
-%left    '['
+%left    '(' '['
 %nonassoc ATSIGN
 
 %start program
