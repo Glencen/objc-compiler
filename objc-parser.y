@@ -18,7 +18,6 @@ void yyerror(char const* s);
     bool bool_lit;
     char *c_str_lit;
     char *nsstring_lit;
-    char *objc_object;
 }
 
 %nonassoc NO_ELSE
