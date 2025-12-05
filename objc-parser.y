@@ -281,7 +281,6 @@ nsobject_list
 
 nsobject    :   expr
             |   '@' expr
-            |   '@' '(' expr ')'
             ;
 
 compound_stmt
