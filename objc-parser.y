@@ -351,6 +351,7 @@ expr        :   primary_expr
 
 primary_expr:   ID
             |   literal
+            |   nsarray_lit
             |   '(' expr ')'
             |   msg_expr
             ;
