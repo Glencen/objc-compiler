@@ -71,6 +71,7 @@ void yyerror(char const* s);
 %left    INC DEC
 %right   '!' UMINUS
 %left    '['
+%nonassoc ATSIGN
 
 %start program
 
