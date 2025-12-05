@@ -261,8 +261,8 @@ init_decl   :   ID
             ;
 
 c_array_decl:   ID '[' expr ']'
-            |   ID '[' expr ']' '=' '{' expr_list_e '}'
-            |   ID '[' ']' '=' '{' expr_list_e '}'
+            |   ID '[' expr ']' '=' expr
+            |   ID '[' ']' '=' expr
             ;
 
 array_access:   expr '[' expr ']'
