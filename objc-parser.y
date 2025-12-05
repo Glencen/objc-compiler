@@ -261,26 +261,11 @@ init_decl_list
 init_decl   :   ID
             |   ID '=' expr
             |   c_array_decl
-            |   nsarray_decl
             ;
 
-c_array_decl:   ID array_decl
-            |   ID array_decl '=' c_array_lit
-            ;
-
-c_array_lit:   '{' expr_list_e '}'
-            ;
-
-nsarray_decl:   nsarray_type '*' ID
-            |   nsarray_type '*' ID '=' nsarray_lit
-            ;
-
-nsarray_type:   NSARRAY
-            |   NSMUTABLEARRAY
-            ;
-
-array_decl  :   '[' ']'
-            |   '[' expr ']'
+c_array_decl:   ID '[' expr ']'
+            |   ID '[' expr ']' '=' '{' expr_list_e '}'
+            |   ID '[' ']' '=' '{' expr_list_e '}'
             ;
 
 array_access:   expr '[' expr ']'
