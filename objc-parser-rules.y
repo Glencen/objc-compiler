@@ -13,9 +13,9 @@ void yyerror(char const* s);
 %union {
     int int_lit;
     char *identifier;
-	char char_lit;
+    char char_lit;
     float float_lit;
-	bool bool_lit;
+    bool bool_lit;
     char *c_str_lit;
     char *nsstring_lit;
     char *objc_object;
@@ -53,6 +53,9 @@ void yyerror(char const* s);
 %token  <c_str_lit>     C_STRING_LIT
 %token  <nsstring_lit>  NSSTRING_LIT
 
+%token PUBLIC
+%token PROTECTED
+%token PRIVATE
 %token SUPER
 %token SELF
 %token CLASS_NAME
@@ -110,7 +113,31 @@ interface_body
             ;
 
 instance_vars
-            :   '{' decl_list '}'
+            :   '{' instance_var_decl_list_e '}'
+            ;
+
+instance_var_decl_list_e
+            :
+            |   instance_var_decl_list
+            ;
+
+instance_var_decl_list
+            :   access_modifier instance_var_decl
+            |   access_modifier instance_var_decl instance_var_decl_list
+            ;
+
+instance_var_decl
+            :   type ID ';'
+            |   type ID '=' expr ';'
+            |   c_array_decl ';'
+            |   nsarray_decl ';'
+            ;
+
+access_modifier
+            :   
+            |   PUBLIC
+            |   PROTECTED
+            |   PRIVATE
             ;
 
 interface_decl_list
