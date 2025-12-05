@@ -318,7 +318,7 @@ expr        :   ID
             |   literal
             |   objc_literal
             |   '(' expr ')'
-            |   msg_expr
+            |   '[' receiver msg_sel ']'
             |   SELF
             |   '-' expr    %prec UMINUS
             |   '!' expr
@@ -338,12 +338,9 @@ expr        :   ID
             |   expr OR expr
             |   expr '=' expr
             |   expr '[' expr ']'
-            |   func_call
+            |   ID '(' expr_list_e ')'
             |   ATSIGN '(' expr ')'
             |   '{' expr_list_e '}'
-            ;
-
-msg_expr    :   '[' receiver msg_sel ']'
             ;
 
 receiver    :   SUPER
@@ -391,9 +388,6 @@ param_list  :   param_decl
             ;
 
 param_decl  :   type ID
-            ;
-
-func_call   :   ID '(' expr_list_e ')'
             ;
 
 %%
