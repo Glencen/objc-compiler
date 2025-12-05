@@ -80,6 +80,8 @@ void yyerror(char const* s) {
 program     :   stmt_list
             |   class_decl_list
             |   class_fw_decl_list
+            |   func_decl_list
+            |   func_def_list
             ;
 
 class_fw_decl_list
@@ -282,8 +284,6 @@ nsobject    :   expr
             |   '@' '(' expr ')'
             ;
 
-
-
 compound_stmt
             :   '{' stmt_list_e '}'
             ;
@@ -346,6 +346,7 @@ expr        :   primary_expr
             |   expr OR expr
             |   expr '=' expr
             |   array_access
+            |   func_call
             ;
 
 primary_expr:   ID
@@ -382,6 +383,36 @@ literal     :   C_STRING_LIT
 
 num_const   :   INT_LIT
             |   FLOAT_LIT
+            ;
+
+func_decl_list
+            :   func_decl
+            |   func_decl_list func_decl
+            ;
+
+func_def_list
+            :   func_def
+            |   func_def_list func_def
+            ;
+
+func_decl   :   type ID '(' param_list_e ')' ';'
+            ;
+
+func_def    :   type ID '(' param_list_e ')' compound_stmt
+            ;
+
+param_list_e:
+            |   param_list
+            ;
+
+param_list  :   param_decl
+            |   param_list ',' param_decl
+            ;
+
+param_decl  :   type ID
+            ;
+
+func_call   :   ID '(' expr_list_e ')'
             ;
 
 %%
