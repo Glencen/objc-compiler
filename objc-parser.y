@@ -351,10 +351,8 @@ expr        :   ID
 msg_expr    :   '[' receiver msg_sel ']'
             ;
 
-receiver    :   SELF
-            |   SUPER
-            |   ID
-            |   msg_expr
+receiver    :   SUPER
+            |   expr
             ;
 
 msg_sel     :   ID
