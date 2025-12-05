@@ -136,7 +136,6 @@ instance_var_decl
             :   type ID ';'
             |   type ID '=' expr ';'
             |   c_array_decl ';'
-            |   nsarray_decl ';'
             ;
 
 access_modifier
@@ -197,10 +196,11 @@ type        :   INT
             |   CHAR
             |   FLOAT
             |   BOOL
-            |   ID
             |   ID '*'
             |   NSNUMBER '*'
             |   NSSTRING '*'
+            |   NSARRAY '*'
+            |   NSMUTABLEARRAY '*'
             ;
 
 class_implementation
@@ -278,9 +278,6 @@ expr_list   :   expr
             |   expr_list ',' expr
             ;
 
-nsarray_lit:   ATSIGN '[' nsobject_list_e ']'
-            ;
-
 nsobject_list_e
             :
             |   nsobject_list
@@ -340,7 +337,7 @@ do_while_stmt
 
 expr        :   ID
             |   literal
-            |   nsarray_lit
+            |   objc_literal
             |   '(' expr ')'
             |   msg_expr
             |   num_const
@@ -365,6 +362,7 @@ expr        :   ID
             |   expr '=' expr
             |   array_access
             |   func_call
+            |   ATSIGN '(' expr ')'
             ;
 
 msg_expr    :   '[' receiver msg_sel ']'
@@ -390,7 +388,12 @@ keyword_arg :   ID ':' expr
 
 literal     :   C_STRING_LIT
             |   CHAR_LIT
-            |   NSSTRING_LIT
+            ;
+
+objc_literal:   NSSTRING_LIT
+            |   ATSIGN num_const
+            |   ATSIGN BOOL_LIT
+            |   ATSIGN '[' nsobject_list_e ']'
             ;
 
 num_const   :   INT_LIT
@@ -398,11 +401,9 @@ num_const   :   INT_LIT
             ;
 
 func_decl   :   type ID '(' param_list_e ')' ';'
-            |   nsarray_type ID '(' param_list_e ')' ';'
             ;
 
 func_def    :   type ID '(' param_list_e ')' compound_stmt
-            |   nsarray_type ID '(' param_list_e ')' compound_stmt
             ;
 
 param_list_e:
