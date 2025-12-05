@@ -43,6 +43,7 @@ void yyerror(char const* s) {
 %token BOOL
 %token CHAR
 %token NSARRAY
+%token NSMUTABLEARRAY
 %token NSSTRING
 %token NSNUMBER
 %token VOID
@@ -240,8 +241,12 @@ c_array_decl:   ID array_decl
 c_array_lit:   '{' expr_list_e '}'
             ;
 
-nsarray_decl:   NSARRAY '*' ID
-            |   NSARRAY '*' ID '=' nsarray_lit
+nsarray_decl:   nsarray_type '*' ID
+            |   nsarray_type '*' ID '=' nsarray_lit
+            ;
+
+nsarray_type:   NSARRAY
+            |   NSMUTABLEARRAY
             ;
 
 array_decl  :   '[' ']'
