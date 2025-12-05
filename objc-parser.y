@@ -42,6 +42,9 @@ void yyerror(char const* s) {
 %token FLOAT
 %token BOOL
 %token CHAR
+%token NSARRAY
+%token NSSTRING
+%token NSNUMBER
 %token VOID
 
 %token 	<int_lit>		INT_LIT
@@ -67,7 +70,7 @@ void yyerror(char const* s) {
 %left	'+' '-'
 %left	'*' '/'
 %right	INC DEC '!' UMINUS
-%left   '['
+%left   '{' '}' '[' ']'
 
 %start program
 
@@ -163,6 +166,7 @@ type        :   INT
             |   BOOL
             |   ID
             |   CLASS_NAME '*'
+            |   NSNUMBER '*'
             ;
 
 class_implementation
@@ -220,12 +224,60 @@ init_decl_list_e
 
 init_decl_list
             :   init_decl
-            |   init_decl_list init_decl
+            |   init_decl_list ',' init_decl
             ;
 
 init_decl   :   ID
             |   ID '=' expr
+            |   c_array_decl
+            |   nsarray_decl
             ;
+
+c_array_decl:   ID array_decl
+            |   ID array_decl '=' c_array_lit
+            ;
+
+c_array_lit:   '{' expr_list_e '}'
+            ;
+
+nsarray_decl:   NSARRAY '*' ID
+            |   NSARRAY '*' ID '=' nsarray_lit
+            ;
+
+array_decl  :   '[' ']'
+            |   '[' expr ']'
+            ;
+
+array_access:   primary_expr '[' expr ']'
+            ;
+
+expr_list_e :
+            |   expr_list
+            ;
+
+expr_list   :   expr
+            |   expr_list ',' expr
+            ;
+
+nsarray_lit:   '@' '[' nsobject_list_e ']'
+            ;
+
+nsobject_list_e
+            :
+            |   nsobject_list
+            ;
+
+nsobject_list
+            :   nsobject
+            |   nsobject_list ',' nsobject
+            ;
+
+nsobject    :   expr
+            |   '@' expr
+            |   '@' '(' expr ')'
+            ;
+
+
 
 compound_stmt
             :   '{' stmt_list_e '}'
@@ -270,12 +322,9 @@ do_while_stmt
             :   DO stmt WHILE '(' expr ')' ';'
             ;
 
-expr        :   ID
-            |   literal
+expr        :   primary_expr
             |   num_const
-            |   '(' expr ')'
             |   SELF
-            |   msg_expr
             |   '-' expr    %prec UMINUS
             |   '!' expr
             |   expr '+' expr
@@ -291,6 +340,13 @@ expr        :   ID
             |   expr AND expr
             |   expr OR expr
             |   expr '=' expr
+            |   array_access
+            ;
+
+primary_expr:   ID
+            |   literal
+            |   '(' expr ')'
+            |   msg_expr
             ;
 
 msg_expr    :   '[' receiver msg_sel ']'
