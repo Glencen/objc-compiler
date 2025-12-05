@@ -169,6 +169,7 @@ type        :   INT
             |   BOOL
             |   CLASS_NAME '*'
             |   NSNUMBER '*'
+            |   NSSTRING '*'
             ;
 
 class_implementation
@@ -327,6 +328,7 @@ do_while_stmt
 
 expr        :   primary_expr
             |   num_const
+            |   BOOL_LIT
             |   SELF
             |   '-' expr    %prec UMINUS
             |   '!' expr
