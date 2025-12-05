@@ -281,21 +281,13 @@ OCT      [0-7]
 "char"              { print_token(TOK_KEYWORD, yytext); return CHAR; }
 "NSString"          { print_token(TOK_KEYWORD, yytext); return NSSTRING; }
 "NSNumber"          { print_token(TOK_KEYWORD, yytext); return NSNUMBER; }
-"NSInteger"         { print_token(TOK_KEYWORD, yytext); return NSINTEGER; }
 "NSArray"           { print_token(TOK_KEYWORD, yytext); return NSARRAY; }
-"NSDictionary"      { print_token(TOK_KEYWORD, yytext); return NSDICTIONARY; }
 "if"                { print_token(TOK_KEYWORD, yytext); return IF; }
 "else"              { print_token(TOK_KEYWORD, yytext); return ELSE; }
 "while"             { print_token(TOK_KEYWORD, yytext); return WHILE; }
 "do"                { print_token(TOK_KEYWORD, yytext); return DO; }
 "for"               { print_token(TOK_KEYWORD, yytext); return FOR; }
-"switch"            { print_token(TOK_KEYWORD, yytext); return SWITCH; }
-"case"              { print_token(TOK_KEYWORD, yytext); return CASE; }
-"default"           { print_token(TOK_KEYWORD, yytext); return DEFAULT; }
-"break"             { print_token(TOK_KEYWORD, yytext); return BREAK; }
-"continue"          { print_token(TOK_KEYWORD, yytext); return CONTINUE; }
 "return"            { print_token(TOK_KEYWORD, yytext); return RETURN; }
-"const"             { print_token(TOK_KEYWORD, yytext); return CONST; }
 
 {ID}                { 
     print_token(TOK_IDENTIFIER, yytext);
