@@ -16,8 +16,7 @@ void yyerror(char const* s);
     char char_lit;
     float float_lit;
     bool bool_lit;
-    char *c_str_lit;
-    char *nsstring_lit;
+    char *str_lit;
 }
 
 %nonassoc NO_ELSE
@@ -49,8 +48,7 @@ void yyerror(char const* s);
 %token	<bool_lit>		BOOL_LIT
 %token	<identifier>	ID
 %token	<char_lit>		CHAR_LIT
-%token  <c_str_lit>     C_STRING_LIT
-%token  <nsstring_lit>  NSSTRING_LIT
+%token  <str_lit>       STRING_LIT
 
 %token PUBLIC
 %token PROTECTED
@@ -278,20 +276,6 @@ expr_list   :   expr
             |   expr_list ',' expr
             ;
 
-nsobject_list_e
-            :
-            |   nsobject_list
-            ;
-
-nsobject_list
-            :   nsobject
-            |   nsobject_list ',' nsobject
-            ;
-
-nsobject    :   expr
-            |   ATSIGN expr
-            ;
-
 compound_stmt
             :   '{' stmt_list_e '}'
             ;
@@ -340,8 +324,6 @@ expr        :   ID
             |   objc_literal
             |   '(' expr ')'
             |   msg_expr
-            |   num_const
-            |   BOOL_LIT
             |   SELF
             |   '-' expr    %prec UMINUS
             |   '!' expr
@@ -363,6 +345,7 @@ expr        :   ID
             |   array_access
             |   func_call
             |   ATSIGN '(' expr ')'
+            |   '{' expr_list_e '}'
             ;
 
 msg_expr    :   '[' receiver msg_sel ']'
@@ -386,17 +369,17 @@ keyword_arg_list
 keyword_arg :   ID ':' expr
             ;
 
-literal     :   C_STRING_LIT
+literal     :   STRING_LIT
             |   CHAR_LIT
+            |   BOOL_LIT
+            |   num_literal
             ;
 
-objc_literal:   NSSTRING_LIT
-            |   ATSIGN num_const
-            |   ATSIGN BOOL_LIT
-            |   ATSIGN '[' nsobject_list_e ']'
+objc_literal:   ATSIGN literal
+            |   ATSIGN '[' expr_list_e ']'
             ;
 
-num_const   :   INT_LIT
+num_literal :   INT_LIT
             |   FLOAT_LIT
             ;
 
