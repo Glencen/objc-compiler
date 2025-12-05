@@ -167,7 +167,6 @@ type        :   INT
             |   CHAR
             |   FLOAT
             |   BOOL
-            |   ID
             |   CLASS_NAME '*'
             |   NSNUMBER '*'
             ;
