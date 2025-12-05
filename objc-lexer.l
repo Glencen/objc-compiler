@@ -240,6 +240,7 @@ OCT      [0-7]
 "@implementation"   { print_token(TOK_OBJC_IMPLEMENTATION, yytext); return IMPLEMENTATION; }
 "@end"              { print_token(TOK_OBJC_END, yytext); return END; }
 "@property"         { print_token(TOK_OBJC_PROPERTY, yytext); return PROPERTY; }
+"@class"            { print_token(TOK_KEYWORD, yytext); return CLASS; }
 "@["                { print_token(TOK_OPERATOR, yytext); return '['; }
 "@{"                { print_token(TOK_OPERATOR, yytext); return '{'; }
 
@@ -251,6 +252,8 @@ OCT      [0-7]
 "NO"                { print_token(TOK_KEYWORD, yytext); yylval = 0; return BOOL_LIT; }
 "self"              { print_token(TOK_KEYWORD, yytext); return SELF; }
 "super"             { print_token(TOK_KEYWORD, yytext); return SUPER; }
+"readonly"          { print_token(TOK_KEYWORD, yytext); return READONLY; }
+"readwrite"         { print_token(TOK_KEYWORD, yytext); return READWRITE; }
 
 "BOOL"              { print_token(TOK_KEYWORD, yytext); return BOOL; }
 "int"               { print_token(TOK_KEYWORD, yytext); return INT; }
@@ -259,6 +262,8 @@ OCT      [0-7]
 "NSString"          { print_token(TOK_KEYWORD, yytext); return NSSTRING; }
 "NSNumber"          { print_token(TOK_KEYWORD, yytext); return NSNUMBER; }
 "NSArray"           { print_token(TOK_KEYWORD, yytext); return NSARRAY; }
+"NSMutableArray"    { print_token(TOK_KEYWORD, yytext); return NSMUTABLEARRAY; }
+"void"              { print_token(TOK_KEYWORD, yytext); return VOID; }
 "if"                { print_token(TOK_KEYWORD, yytext); return IF; }
 "else"              { print_token(TOK_KEYWORD, yytext); return ELSE; }
 "while"             { print_token(TOK_KEYWORD, yytext); return WHILE; }
