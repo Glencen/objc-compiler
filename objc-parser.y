@@ -397,9 +397,11 @@ func_def_list
             ;
 
 func_decl   :   type ID '(' param_list_e ')' ';'
+            |   nsarray_type ID '(' param_list_e ')' ';'
             ;
 
 func_def    :   type ID '(' param_list_e ')' compound_stmt
+            |   nsarray_type ID '(' param_list_e ')' compound_stmt
             ;
 
 param_list_e:
