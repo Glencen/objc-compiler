@@ -237,15 +237,10 @@ OCT      [0-7]
 }
 
 "@interface"        { print_token(TOK_OBJC_INTERFACE, yytext); return INTERFACE; }
-
 "@implementation"   { print_token(TOK_OBJC_IMPLEMENTATION, yytext); return IMPLEMENTATION; }
-
 "@end"              { print_token(TOK_OBJC_END, yytext); return END; }
-
 "@property"         { print_token(TOK_OBJC_PROPERTY, yytext); return PROPERTY; }
-
 "@["                { print_token(TOK_OPERATOR, yytext); return '['; }
-
 "@{"                { print_token(TOK_OPERATOR, yytext); return '{'; }
 
 "@public"           { print_token(TOK_KEYWORD, yytext); return PUBLIC; }
