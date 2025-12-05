@@ -61,14 +61,16 @@ void yyerror(char const* s);
 %token IN
 %token ATSIGN
 
-%right	'='
-%left	OR
-%left	AND
-%left 	EQUAL NEQUAL '<' LESS_EQUAL '>' GREATER_EQUAL
-%left	'+' '-'
-%left	'*' '/'
-%right	INC DEC '!' UMINUS
-%left   '{' '}' '[' ']'
+%right   '='
+%left    OR
+%left    AND
+%left    EQUAL NEQUAL
+%left    '<' '>' LESS_EQUAL GREATER_EQUAL
+%left    '+' '-'
+%left    '*' '/'
+%left    INC DEC
+%right   '!' UMINUS
+%left    '['
 
 %start program
 
@@ -242,12 +244,7 @@ decl_list   :   decl
             |   decl_list decl
             ;
 
-decl        :   type init_decl_list_e ';'
-            ;
-
-init_decl_list_e
-            :
-            |   init_decl_list
+decl        :   type init_decl_list ';'
             ;
 
 init_decl_list
@@ -263,9 +260,6 @@ init_decl   :   ID
 c_array_decl:   ID '[' expr ']'
             |   ID '[' expr ']' '=' expr
             |   ID '[' ']' '=' expr
-            ;
-
-array_access:   expr '[' expr ']'
             ;
 
 expr_list_e :
@@ -342,7 +336,7 @@ expr        :   ID
             |   expr AND expr
             |   expr OR expr
             |   expr '=' expr
-            |   array_access
+            |   expr '[' expr ']'
             |   func_call
             |   ATSIGN '(' expr ')'
             |   '{' expr_list_e '}'
