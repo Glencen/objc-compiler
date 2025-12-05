@@ -332,6 +332,8 @@ expr        :   primary_expr
             |   SELF
             |   '-' expr    %prec UMINUS
             |   '!' expr
+            |   expr INC
+            |   expr DEC
             |   expr '+' expr
             |   expr '-' expr
             |   expr '*' expr
