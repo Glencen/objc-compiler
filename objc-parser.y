@@ -6,10 +6,7 @@
 using namespace std;
 
 extern int yylex(void);
-
-void yyerror(char const* s) {
-    cout << s << endl;
-}
+void yyerror(char const* s);
 
 %}
 
