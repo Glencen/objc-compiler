@@ -275,7 +275,7 @@ array_decl  :   '[' ']'
             |   '[' expr ']'
             ;
 
-array_access:   primary_expr '[' expr ']'
+array_access:   expr '[' expr ']'
             ;
 
 expr_list_e :
@@ -346,7 +346,11 @@ do_while_stmt
             :   DO stmt WHILE '(' expr ')' ';'
             ;
 
-expr        :   primary_expr
+expr        :   ID
+            |   literal
+            |   nsarray_lit
+            |   '(' expr ')'
+            |   msg_expr
             |   num_const
             |   BOOL_LIT
             |   SELF
@@ -369,13 +373,6 @@ expr        :   primary_expr
             |   expr '=' expr
             |   array_access
             |   func_call
-            ;
-
-primary_expr:   ID
-            |   literal
-            |   nsarray_lit
-            |   '(' expr ')'
-            |   msg_expr
             ;
 
 msg_expr    :   '[' receiver msg_sel ']'
