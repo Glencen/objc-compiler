@@ -58,7 +58,6 @@ void yyerror(char const* s);
 %token PRIVATE
 %token SUPER
 %token SELF
-%token CLASS_NAME
 %token CLASS
 %token READWRITE
 %token READONLY
@@ -105,7 +104,6 @@ class_decl  :   class_interface
 class_interface
             :   INTERFACE ID ':' ID interface_body END
             |   INTERFACE ID interface_body END
-            |   INTERFACE ID ':' CLASS_NAME interface_body END
             ;
 
 interface_body
@@ -192,7 +190,8 @@ type        :   INT
             |   CHAR
             |   FLOAT
             |   BOOL
-            |   CLASS_NAME '*'
+            |   ID
+            |   ID '*'
             |   NSNUMBER '*'
             |   NSSTRING '*'
             ;
@@ -200,10 +199,6 @@ type        :   INT
 class_implementation
             :   IMPLEMENTATION ID implementation_body END
             |   IMPLEMENTATION ID ':' ID implementation_body END
-            |   IMPLEMENTATION CLASS_NAME implementation_body END
-            |   IMPLEMENTATION CLASS_NAME ':' ID implementation_body END
-            |   IMPLEMENTATION ID ':' CLASS_NAME implementation_body END
-            |   IMPLEMENTATION CLASS_NAME ':' CLASS_NAME implementation_body END
             ;
 
 implementation_body
@@ -388,7 +383,7 @@ msg_expr    :   '[' receiver msg_sel ']'
 
 receiver    :   SELF
             |   SUPER
-            |   CLASS_NAME
+            |   ID
             |   msg_expr
             ;
 
