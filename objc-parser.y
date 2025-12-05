@@ -77,11 +77,24 @@ void yyerror(char const* s);
 
 %%
 
-program     :   stmt_list
-            |   class_decl_list
+program     :   external_decl_list_e
+            ;
+
+external_decl_list_e
+            :
+            |   external_decl_list
+            ;
+
+external_decl_list
+            :   external_decl
+            |   external_decl_list external_decl
+            ;
+
+external_decl
+            :   class_decl
             |   class_fw_decl_list
-            |   func_decl_list
-            |   func_def_list
+            |   func_decl
+            |   func_def
             ;
 
 class_fw_decl_list
@@ -90,11 +103,6 @@ class_fw_decl_list
 
 class_list  :   ID
             |   class_list ',' ID
-            ;
-
-class_decl_list
-            :   class_decl
-            |   class_decl_list class_decl
             ;
 
 class_decl  :   class_interface
@@ -403,16 +411,6 @@ literal     :   C_STRING_LIT
 
 num_const   :   INT_LIT
             |   FLOAT_LIT
-            ;
-
-func_decl_list
-            :   func_decl
-            |   func_decl_list func_decl
-            ;
-
-func_def_list
-            :   func_def
-            |   func_def_list func_def
             ;
 
 func_decl   :   type ID '(' param_list_e ')' ';'
