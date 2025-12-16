@@ -72,8 +72,7 @@ void yyerror(char const* s);
 %left    '*' '/'
 %left    INC DEC
 %right   '!' UMINUS
-%left    '.' ARROW
-%left    '(' '['
+%left    '(' '[' '.' ARROW
 %nonassoc ATSIGN
 
 %start program
