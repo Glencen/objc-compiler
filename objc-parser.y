@@ -70,6 +70,7 @@ void yyerror(char const* s);
 %left    '*' '/'
 %left    INC DEC
 %right   '!' UMINUS
+%left    '.' ARROW
 %left    '(' '['
 %nonassoc ATSIGN
 
@@ -336,6 +337,8 @@ expr        :   ID
             |   expr '[' expr ']'
             |   ID '(' expr_list_e ')'
             |   ATSIGN '(' expr ')'
+            |   expr '.' expr
+            |   expr ARROW expr
             ;
 
 receiver    :   SUPER
