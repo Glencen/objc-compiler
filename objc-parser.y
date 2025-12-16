@@ -310,9 +310,13 @@ if_stmt     :   IF '(' expr ')' stmt    %prec NO_ELSE
             |   IF '(' expr ')' stmt ELSE stmt
             ;
 
-for_stmt    :   FOR '(' expr_e ';' expr_e ';' expr_e ')' stmt
+for_stmt    :   FOR '(' for_init ';' expr_e ';' expr_e ')' stmt
             |   FOR '(' ID IN expr ')' stmt
             |   FOR '(' type ID IN expr ')' stmt
+            ;
+
+for_init    :   expr_e
+            |   decl
             ;
 
 while_stmt  :   WHILE '(' expr ')' stmt
