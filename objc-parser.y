@@ -147,8 +147,7 @@ access_modifier
             ;
 
 interface_decl_list
-            :   property
-            |   method_decl
+            :   
             |   interface_decl_list property
             |   interface_decl_list method_decl
             ;
