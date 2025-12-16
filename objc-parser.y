@@ -255,8 +255,8 @@ init_decl   :   ID
             ;
 
 c_array_decl:   ID '[' expr ']'
-            |   ID '[' expr ']' '=' expr
-            |   ID '[' ']' '=' expr
+            |   ID '[' expr ']' '=' '{' expr_list_e '}'
+            |   ID '[' ']' '=' '{' expr_list_e '}'
             ;
 
 expr_list_e :
@@ -336,7 +336,6 @@ expr        :   ID
             |   expr '[' expr ']'
             |   ID '(' expr_list_e ')'
             |   ATSIGN '(' expr ')'
-            |   '{' expr_list_e '}'
             ;
 
 receiver    :   SUPER
