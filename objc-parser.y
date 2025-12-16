@@ -188,8 +188,7 @@ method_has_args
 method_type :   '(' type ')'
             ;
 
-method_sel
-            :   method_param
+method_sel  :   method_param
             |   method_sel method_param
             ;
 
@@ -361,15 +360,15 @@ receiver    :   SUPER
             ;
 
 msg_sel     :   ID
-            |   keyword_arg_list
+            |   msg_arg_list
             ;
 
-keyword_arg_list
-            :   keyword_arg
-            |   keyword_arg_list keyword_arg
+msg_arg_list
+            :   msg_arg
+            |   msg_arg_list msg_arg
             ;
 
-keyword_arg :   ID ':' expr
+msg_arg :   ID ':' expr
             ;
 
 literal     :   STRING_LIT
