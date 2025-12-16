@@ -42,6 +42,7 @@ void yyerror(char const* s);
 %token NSSTRING
 %token NSNUMBER
 %token VOID
+%token TYPE_ID
 
 %token 	<int_lit>		INT_LIT
 %token	<float_lit>		FLOAT_LIT
@@ -60,6 +61,7 @@ void yyerror(char const* s);
 %token READONLY
 %token IN
 %token ATSIGN
+%token NIL
 
 %right   '='
 %left    OR
@@ -200,6 +202,7 @@ type        :   INT
             |   FLOAT
             |   BOOL
             |   ID
+            |   TYPE_ID
             |   NSNUMBER '*'
             |   NSSTRING '*'
             |   NSARRAY '*'
@@ -328,6 +331,7 @@ do_while_stmt
 expr        :   ID
             |   literal
             |   objc_literal
+            |   NIL
             |   '(' expr ')'
             |   '[' receiver msg_sel ']'
             |   SELF
