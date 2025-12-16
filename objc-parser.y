@@ -201,7 +201,7 @@ type        :   INT
             |   CHAR
             |   FLOAT
             |   BOOL
-            |   ID '*'
+            |   ID
             |   NSNUMBER '*'
             |   NSSTRING '*'
             |   NSARRAY '*'
