@@ -135,9 +135,8 @@ instance_var_decl_list
             ;
 
 instance_var_decl
-            :   type ID ';'
-            |   type ID '=' expr ';'
-            |   c_array_decl ';'
+            :   type init_decl ';'
+            |   type declarator ';'
             ;
 
 access_modifier
@@ -242,22 +241,34 @@ instance_method_def
             |   '-' method_sel compound_stmt
             ;
 
-decl        :   type init_decl_list ';'
+decl        :   type declarator_list
             ;
 
-init_decl_list
-            :   init_decl
-            |   init_decl_list ',' init_decl
+declarator_list
+            :   declarator
+            |   declarator_list ',' declarator
             ;
 
-init_decl   :   ID
-            |   ID '=' expr
-            |   c_array_decl
+declarator  :   ID
+            |   declarator '[' expr ']'
+            |   declarator '[' ']'
             ;
 
-c_array_decl:   ID '[' expr ']'
-            |   ID '[' expr ']' '=' '{' expr_list_e '}'
-            |   ID '[' ']' '=' '{' expr_list_e '}'
+init_decl   :   declarator '=' initializer
+            ;
+
+initializer :   expr
+            |   '{' initializer_list_e '}'
+            ;
+
+initializer_list_e
+            :
+            |   initializer_list
+            ;
+
+initializer_list
+            :   initializer
+            |   initializer_list ',' initializer
             ;
 
 expr_list_e :
@@ -288,7 +299,7 @@ stmt        :   ';'
             |   while_stmt
             |   do_while_stmt
             |   compound_stmt
-            |   decl
+            |   decl ';'
             ;
 
 expr_e      :
