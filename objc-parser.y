@@ -136,7 +136,6 @@ instance_var_decl_list
 
 instance_var_decl
             :   type init_decl ';'
-            |   type declarator ';'
             ;
 
 access_modifier
@@ -245,8 +244,8 @@ decl        :   type declarator_list
             ;
 
 declarator_list
-            :   declarator
-            |   declarator_list ',' declarator
+            :   init_decl
+            |   declarator_list ',' init_decl
             ;
 
 declarator  :   ID
@@ -254,7 +253,8 @@ declarator  :   ID
             |   declarator '[' ']'
             ;
 
-init_decl   :   declarator '=' initializer
+init_decl   :   declarator
+            |   declarator '=' initializer
             ;
 
 initializer :   expr
