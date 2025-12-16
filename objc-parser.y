@@ -153,6 +153,7 @@ interface_decl_list
             ;
 
 property    :   PROPERTY '(' attribute ')' type ID ';'
+            |   PROPERTY type ID ';'
             ;
 
 attribute   :   READONLY
