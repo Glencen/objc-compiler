@@ -165,32 +165,36 @@ method_decl :   class_method_decl
             ;
 
 class_method_decl
-            :   '+' method_type method_sel ';'
-            |   '+' '(' VOID ')' method_sel ';'
+            :   '+' method_no_args ';'
+            |   '+' method_has_args ';'
             |   '+' method_sel ';'
             ;
 
 instance_method_decl
-            :   '-' method_type method_sel ';'
-            |   '-' '(' VOID ')' method_sel ';'
+            :   '-' method_no_args ';'
+            |   '-' method_has_args ';'
             |   '-' method_sel ';'
+            ;
+
+method_no_args
+            :   method_type ID
+            |   '(' VOID ')' ID
+            ;
+
+method_has_args
+            :   method_type method_sel
+            |   '(' VOID ')' method_sel
             ;
 
 method_type :   '(' type ')'
             ;
 
-method_sel  :   ID
-            |   keyword_sel
+method_sel
+            :   method_param
+            |   method_sel method_param
             ;
 
-keyword_sel :   keyword_decl
-            |   keyword_sel keyword_decl
-            ;
-
-keyword_decl:   ':' method_type ID
-            |   ':' ID
-            |   ID ':' method_type ID
-            |   ID ':' ID
+method_param:   ID ':' method_type ID
             ;
 
 type        :   INT
@@ -226,23 +230,15 @@ method_def  :   class_method_def
             ;
 
 class_method_def
-            :   '+' method_type method_sel decl_list_e compound_stmt
-            |   '+' '(' VOID ')' method_sel decl_list_e compound_stmt
-            |   '+' method_sel decl_list_e compound_stmt
+            :   '+' method_no_args compound_stmt
+            |   '+' method_has_args compound_stmt
+            |   '+' method_sel compound_stmt
             ;
 
 instance_method_def
-            :   '-' method_type method_sel decl_list_e compound_stmt
-            |   '-' '(' VOID ')' method_sel decl_list_e compound_stmt
-            |   '-' method_sel decl_list_e compound_stmt
-            ;
-
-decl_list_e :
-            |   decl_list
-            ;
-
-decl_list   :   decl
-            |   decl_list decl
+            :   '-' method_no_args compound_stmt
+            |   '-' method_has_args compound_stmt
+            |   '-' method_sel compound_stmt
             ;
 
 decl        :   type init_decl_list ';'
