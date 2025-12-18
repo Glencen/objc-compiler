@@ -17,7 +17,6 @@ typedef enum {
     TOK_STRING,
     TOK_CHAR,
     TOK_COMMENT,
-    TOK_ATSIGN,
     TOK_OBJC_INTERFACE,
     TOK_OBJC_IMPLEMENTATION,
     TOK_OBJC_END,
@@ -90,7 +89,7 @@ OCT      [0-7]
 }
 
 @        { 
-    print_token(TOK_ATSIGN, yytext);
+    print_token(TOK_OPERATOR, yytext);
     return ATSIGN;
 }
 
@@ -135,7 +134,7 @@ OCT      [0-7]
     BEGIN(INITIAL);
     print_token(TOK_STRING, string_buf);
     set_token_string(string_buf);
-    return C_STRING_LIT;
+    return STRING_LIT;
 }
 
 [1-9]{DIGIT}*            { 
@@ -236,13 +235,11 @@ OCT      [0-7]
     }
 }
 
-"@interface"        { print_token(TOK_OBJC_INTERFACE, yytext); return INTERFACE; }
-"@implementation"   { print_token(TOK_OBJC_IMPLEMENTATION, yytext); return IMPLEMENTATION; }
-"@end"              { print_token(TOK_OBJC_END, yytext); return END; }
-"@property"         { print_token(TOK_OBJC_PROPERTY, yytext); return PROPERTY; }
+"@interface"        { print_token(TOK_KEYWORD, yytext); return INTERFACE; }
+"@implementation"   { print_token(TOK_KEYWORD, yytext); return IMPLEMENTATION; }
+"@end"              { print_token(TOK_KEYWORD, yytext); return END; }
+"@property"         { print_token(TOK_KEYWORD, yytext); return PROPERTY; }
 "@class"            { print_token(TOK_KEYWORD, yytext); return CLASS; }
-"@["                { print_token(TOK_OPERATOR, yytext); return '['; }
-"@{"                { print_token(TOK_OPERATOR, yytext); return '{'; }
 
 "@public"           { print_token(TOK_KEYWORD, yytext); return PUBLIC; }
 "@private"          { print_token(TOK_KEYWORD, yytext); return PRIVATE; }
@@ -252,6 +249,7 @@ OCT      [0-7]
 "NO"                { print_token(TOK_KEYWORD, yytext); yylval = 0; return BOOL_LIT; }
 "self"              { print_token(TOK_KEYWORD, yytext); return SELF; }
 "super"             { print_token(TOK_KEYWORD, yytext); return SUPER; }
+"nil"               { print_token(TOK_KEYWORD, yytext); return NIL; }
 "readonly"          { print_token(TOK_KEYWORD, yytext); return READONLY; }
 "readwrite"         { print_token(TOK_KEYWORD, yytext); return READWRITE; }
 
@@ -259,6 +257,7 @@ OCT      [0-7]
 "int"               { print_token(TOK_KEYWORD, yytext); return INT; }
 "float"             { print_token(TOK_KEYWORD, yytext); return FLOAT; }
 "char"              { print_token(TOK_KEYWORD, yytext); return CHAR; }
+"id"                { print_token(TOK_KEYWORD, yytext); return TYPE_ID; }
 "NSString"          { print_token(TOK_KEYWORD, yytext); return NSSTRING; }
 "NSNumber"          { print_token(TOK_KEYWORD, yytext); return NSNUMBER; }
 "NSArray"           { print_token(TOK_KEYWORD, yytext); return NSARRAY; }
@@ -269,6 +268,7 @@ OCT      [0-7]
 "while"             { print_token(TOK_KEYWORD, yytext); return WHILE; }
 "do"                { print_token(TOK_KEYWORD, yytext); return DO; }
 "for"               { print_token(TOK_KEYWORD, yytext); return FOR; }
+"in"                { print_token(TOK_KEYWORD, yytext); return IN; }
 "return"            { print_token(TOK_KEYWORD, yytext); return RETURN; }
 
 {ID}                { 
@@ -293,6 +293,8 @@ OCT      [0-7]
 "!"                 { print_token(TOK_OPERATOR, yytext); return '!'; }
 "&&"                { print_token(TOK_OPERATOR, yytext); return AND; }
 "||"                { print_token(TOK_OPERATOR, yytext); return OR; }
+"->"                { print_token(TOK_OPERATOR, yytext); return ARROW; }
+"."                 { print_token(TOK_OPERATOR, yytext); return '.'; }
 
 "("                 { print_token(TOK_DELIMITER, yytext); return '('; }
 ")"                 { print_token(TOK_DELIMITER, yytext); return ')'; }
@@ -302,7 +304,6 @@ OCT      [0-7]
 "]"                 { print_token(TOK_DELIMITER, yytext); return ']'; }
 ","                 { print_token(TOK_DELIMITER, yytext); return ','; }
 ";"                 { print_token(TOK_DELIMITER, yytext); return ';'; }
-"."                 { print_token(TOK_DELIMITER, yytext); return '.'; }
 ":"                 { print_token(TOK_DELIMITER, yytext); return ':'; }
 
 <*>.                   { 
@@ -335,7 +336,6 @@ const char* token_type_name(token_type_t type) {
         case TOK_STRING: return "STRING";
         case TOK_CHAR: return "CHAR";
         case TOK_COMMENT: return "COMMENT";
-        case TOK_ATSIGN: return "ATSIGN";
         case TOK_OBJC_INTERFACE: return "OBJC_INTERFACE";
         case TOK_OBJC_IMPLEMENTATION: return "OBJC_IMPLEMENTATION";
         case TOK_OBJC_END: return "OBJC_END";
