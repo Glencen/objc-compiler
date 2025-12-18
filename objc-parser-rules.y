@@ -16,9 +16,7 @@ void yyerror(char const* s);
     char char_lit;
     float float_lit;
     bool bool_lit;
-    char *c_str_lit;
-    char *nsstring_lit;
-    char *objc_object;
+    char *str_lit;
 }
 
 %nonassoc NO_ELSE
@@ -44,44 +42,61 @@ void yyerror(char const* s);
 %token NSSTRING
 %token NSNUMBER
 %token VOID
+%token TYPE_ID
 
 %token 	<int_lit>		INT_LIT
 %token	<float_lit>		FLOAT_LIT
 %token	<bool_lit>		BOOL_LIT
 %token	<identifier>	ID
 %token	<char_lit>		CHAR_LIT
-%token  <c_str_lit>     C_STRING_LIT
-%token  <nsstring_lit>  NSSTRING_LIT
+%token  <str_lit>       STRING_LIT
 
 %token PUBLIC
 %token PROTECTED
 %token PRIVATE
 %token SUPER
 %token SELF
-%token CLASS_NAME
 %token CLASS
 %token READWRITE
 %token READONLY
 %token IN
+%token ATSIGN
+%token NIL
 
-%right	'='
-%left	OR
-%left	AND
-%left 	EQUAL NEQUAL '<' LESS_EQUAL '>' GREATER_EQUAL
-%left	'+' '-'
-%left	'*' '/'
-%right	INC DEC '!' UMINUS
-%left   '{' '}' '[' ']'
+%right   '='
+%left    OR
+%left    AND
+%left    EQUAL NEQUAL
+%left    '<' '>' LESS_EQUAL GREATER_EQUAL
+%left    '+' '-'
+%left    '*' '/'
+%left    INC DEC
+%right   '!' UMINUS
+%left    '(' '[' '.' ARROW
+%nonassoc ATSIGN
 
 %start program
 
 %%
 
-program     :   stmt_list
-            |   class_decl_list
+program     :   external_decl_list_e
+            ;
+
+external_decl_list_e
+            :
+            |   external_decl_list
+            ;
+
+external_decl_list
+            :   external_decl
+            |   external_decl_list external_decl
+            ;
+
+external_decl
+            :   class_decl
             |   class_fw_decl_list
-            |   func_decl_list
-            |   func_def_list
+            |   func_decl
+            |   func_def
             ;
 
 class_fw_decl_list
@@ -92,11 +107,6 @@ class_list  :   ID
             |   class_list ',' ID
             ;
 
-class_decl_list
-            :   class_decl
-            |   class_decl_list class_decl
-            ;
-
 class_decl  :   class_interface
             |   class_implementation
             ;
@@ -104,7 +114,6 @@ class_decl  :   class_interface
 class_interface
             :   INTERFACE ID ':' ID interface_body END
             |   INTERFACE ID interface_body END
-            |   INTERFACE ID ':' CLASS_NAME interface_body END
             ;
 
 interface_body
@@ -127,10 +136,7 @@ instance_var_decl_list
             ;
 
 instance_var_decl
-            :   type ID ';'
-            |   type ID '=' expr ';'
-            |   c_array_decl ';'
-            |   nsarray_decl ';'
+            :   type init_decl ';'
             ;
 
 access_modifier
@@ -141,13 +147,13 @@ access_modifier
             ;
 
 interface_decl_list
-            :   property
-            |   method_decl
+            :   
             |   interface_decl_list property
             |   interface_decl_list method_decl
             ;
 
 property    :   PROPERTY '(' attribute ')' type ID ';'
+            |   PROPERTY type ID ';'
             ;
 
 attribute   :   READONLY
@@ -159,50 +165,52 @@ method_decl :   class_method_decl
             ;
 
 class_method_decl
-            :   '+' method_type method_sel ';'
-            |   '+' '(' VOID ')' method_sel ';'
+            :   '+' method_no_args ';'
+            |   '+' method_has_args ';'
             |   '+' method_sel ';'
             ;
 
 instance_method_decl
-            :   '-' method_type method_sel ';'
-            |   '-' '(' VOID ')' method_sel ';'
+            :   '-' method_no_args ';'
+            |   '-' method_has_args ';'
             |   '-' method_sel ';'
+            ;
+
+method_no_args
+            :   method_type ID
+            |   '(' VOID ')' ID
+            ;
+
+method_has_args
+            :   method_type method_sel
+            |   '(' VOID ')' method_sel
             ;
 
 method_type :   '(' type ')'
             ;
 
-method_sel  :   ID
-            |   keyword_sel
+method_sel  :   method_param
+            |   method_sel method_param
             ;
 
-keyword_sel :   keyword_decl
-            |   keyword_sel keyword_decl
-            ;
-
-keyword_decl:   ':' method_type ID
-            |   ':' ID
-            |   ID ':' method_type ID
-            |   ID ':' ID
+method_param:   ID ':' method_type ID
             ;
 
 type        :   INT
             |   CHAR
             |   FLOAT
             |   BOOL
-            |   CLASS_NAME '*'
+            |   ID
+            |   TYPE_ID
             |   NSNUMBER '*'
             |   NSSTRING '*'
+            |   NSARRAY '*'
+            |   NSMUTABLEARRAY '*'
             ;
 
 class_implementation
             :   IMPLEMENTATION ID implementation_body END
             |   IMPLEMENTATION ID ':' ID implementation_body END
-            |   IMPLEMENTATION CLASS_NAME implementation_body END
-            |   IMPLEMENTATION CLASS_NAME ':' ID implementation_body END
-            |   IMPLEMENTATION ID ':' CLASS_NAME implementation_body END
-            |   IMPLEMENTATION CLASS_NAME ':' CLASS_NAME implementation_body END
             ;
 
 implementation_body
@@ -222,64 +230,46 @@ method_def  :   class_method_def
             ;
 
 class_method_def
-            :   '+' method_type method_sel decl_list_e compound_stmt
-            |   '+' '(' VOID ')' method_sel decl_list_e compound_stmt
-            |   '+' method_sel decl_list_e compound_stmt
+            :   '+' method_no_args compound_stmt
+            |   '+' method_has_args compound_stmt
+            |   '+' method_sel compound_stmt
             ;
 
 instance_method_def
-            :   '-' method_type method_sel decl_list_e compound_stmt
-            |   '-' '(' VOID ')' method_sel decl_list_e compound_stmt
-            |   '-' method_sel decl_list_e compound_stmt
+            :   '-' method_no_args compound_stmt
+            |   '-' method_has_args compound_stmt
+            |   '-' method_sel compound_stmt
             ;
 
-decl_list_e :
-            |   decl_list
+decl        :   type declarator_list
             ;
 
-decl_list   :   decl
-            |   decl_list decl
-            ;
-
-decl        :   type init_decl_list_e ';'
-            ;
-
-init_decl_list_e
-            :
-            |   init_decl_list
-            ;
-
-init_decl_list
+declarator_list
             :   init_decl
-            |   init_decl_list ',' init_decl
+            |   declarator_list ',' init_decl
             ;
 
-init_decl   :   ID
-            |   ID '=' expr
-            |   c_array_decl
-            |   nsarray_decl
+declarator  :   ID
+            |   declarator '[' expr ']'
+            |   declarator '[' ']'
             ;
 
-c_array_decl:   ID array_decl
-            |   ID array_decl '=' c_array_lit
+init_decl   :   declarator
+            |   declarator '=' initializer
             ;
 
-c_array_lit:   '{' expr_list_e '}'
+initializer :   expr
+            |   '{' initializer_list_e '}'
             ;
 
-nsarray_decl:   nsarray_type '*' ID
-            |   nsarray_type '*' ID '=' nsarray_lit
+initializer_list_e
+            :
+            |   initializer_list
             ;
 
-nsarray_type:   NSARRAY
-            |   NSMUTABLEARRAY
-            ;
-
-array_decl  :   '[' ']'
-            |   '[' expr ']'
-            ;
-
-array_access:   primary_expr '[' expr ']'
+initializer_list
+            :   initializer
+            |   initializer_list ',' initializer
             ;
 
 expr_list_e :
@@ -288,23 +278,6 @@ expr_list_e :
 
 expr_list   :   expr
             |   expr_list ',' expr
-            ;
-
-nsarray_lit:   '@' '[' nsobject_list_e ']'
-            ;
-
-nsobject_list_e
-            :
-            |   nsobject_list
-            ;
-
-nsobject_list
-            :   nsobject
-            |   nsobject_list ',' nsobject
-            ;
-
-nsobject    :   expr
-            |   '@' expr
             ;
 
 compound_stmt
@@ -327,7 +300,7 @@ stmt        :   ';'
             |   while_stmt
             |   do_while_stmt
             |   compound_stmt
-            |   decl
+            |   decl ';'
             ;
 
 expr_e      :
@@ -338,9 +311,13 @@ if_stmt     :   IF '(' expr ')' stmt    %prec NO_ELSE
             |   IF '(' expr ')' stmt ELSE stmt
             ;
 
-for_stmt    :   FOR '(' expr_e ';' expr_e ';' expr_e ')' stmt
+for_stmt    :   FOR '(' for_init ';' expr_e ';' expr_e ')' stmt
             |   FOR '(' ID IN expr ')' stmt
             |   FOR '(' type ID IN expr ')' stmt
+            ;
+
+for_init    :   expr_e
+            |   decl
             ;
 
 while_stmt  :   WHILE '(' expr ')' stmt
@@ -350,9 +327,12 @@ do_while_stmt
             :   DO stmt WHILE '(' expr ')' ';'
             ;
 
-expr        :   primary_expr
-            |   num_const
-            |   BOOL_LIT
+expr        :   ID
+            |   literal
+            |   objc_literal
+            |   NIL
+            |   '(' expr ')'
+            |   '[' receiver msg_sel ']'
             |   SELF
             |   '-' expr    %prec UMINUS
             |   '!' expr
@@ -371,63 +351,47 @@ expr        :   primary_expr
             |   expr AND expr
             |   expr OR expr
             |   expr '=' expr
-            |   array_access
-            |   func_call
+            |   expr '[' expr ']'
+            |   ID '(' expr_list_e ')'
+            |   ATSIGN '(' expr ')'
+            |   expr '.' expr
+            |   expr ARROW expr
             ;
 
-primary_expr:   ID
-            |   literal
-            |   nsarray_lit
-            |   '(' expr ')'
-            |   msg_expr
-            ;
-
-msg_expr    :   '[' receiver msg_sel ']'
-            ;
-
-receiver    :   SELF
-            |   SUPER
-            |   CLASS_NAME
-            |   msg_expr
+receiver    :   SUPER
+            |   expr
             ;
 
 msg_sel     :   ID
-            |   keyword_arg_list
+            |   msg_arg_list
             ;
 
-keyword_arg_list
-            :   keyword_arg
-            |   keyword_arg_list keyword_arg
+msg_arg_list
+            :   msg_arg
+            |   msg_arg_list msg_arg
             ;
 
-keyword_arg :   ID ':' expr
+msg_arg :   ID ':' expr
             ;
 
-literal     :   C_STRING_LIT
+literal     :   STRING_LIT
             |   CHAR_LIT
-            |   NSSTRING_LIT
+            |   BOOL_LIT
+            |   num_literal
             ;
 
-num_const   :   INT_LIT
+objc_literal:   ATSIGN literal
+            |   ATSIGN '[' expr_list_e ']'
+            ;
+
+num_literal :   INT_LIT
             |   FLOAT_LIT
             ;
 
-func_decl_list
-            :   func_decl
-            |   func_decl_list func_decl
-            ;
-
-func_def_list
-            :   func_def
-            |   func_def_list func_def
-            ;
-
 func_decl   :   type ID '(' param_list_e ')' ';'
-            |   nsarray_type ID '(' param_list_e ')' ';'
             ;
 
 func_def    :   type ID '(' param_list_e ')' compound_stmt
-            |   nsarray_type ID '(' param_list_e ')' compound_stmt
             ;
 
 param_list_e:
@@ -439,9 +403,6 @@ param_list  :   param_decl
             ;
 
 param_decl  :   type ID
-            ;
-
-func_call   :   ID '(' expr_list_e ')'
             ;
 
 %%
