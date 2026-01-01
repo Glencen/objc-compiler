@@ -352,7 +352,6 @@ expr        :   ID
             |   expr '=' expr
             |   expr '[' expr ']'
             |   ID '(' expr_list_e ')'
-            |   ATSIGN '(' expr ')'
             |   expr '.' expr
             |   expr ARROW expr
             ;
@@ -381,6 +380,7 @@ literal     :   STRING_LIT
 
 objc_literal:   ATSIGN literal
             |   ATSIGN '[' expr_list_e ']'
+            |   ATSIGN '(' expr ')'
             ;
 
 num_literal :   INT_LIT
