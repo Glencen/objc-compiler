@@ -192,7 +192,10 @@ method_sel  :   method_param
             |   method_sel method_param
             ;
 
-method_param:   ID ':' method_type ID
+method_param:   ID ':' '(' type ')' ID
+            |   ID ':' '(' type '[' ']' ')' ID
+            |   ID ':' '(' type array_size_spec ')' ID
+            |   ID ':' '(' type array_size_spec '[' ']' ')' ID
             ;
 
 type        :   INT
@@ -250,11 +253,11 @@ declarator_list
 
 declarator  :   ID
             |   declarator '[' expr ']'
-            |   declarator '[' ']'
             ;
 
 init_decl   :   declarator
             |   declarator '=' initializer
+            |   declarator '[' ']' '=' initializer
             ;
 
 initializer :   expr
@@ -402,6 +405,14 @@ param_list  :   param_decl
             ;
 
 param_decl  :   type ID
+            |   type ID '[' ']'
+            |   type ID array_size_spec
+            |   type ID array_size_spec '[' ']'
+            ;
+
+array_size_spec
+            :   '[' expr ']'
+            |   array_size_spec '[' expr ']'
             ;
 
 %%
