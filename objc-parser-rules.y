@@ -73,7 +73,6 @@ void yyerror(char const* s);
 %left    INC DEC
 %right   '!' UMINUS
 %left    '(' '[' '.' ARROW
-%nonassoc ATSIGN
 
 %start program
 
@@ -83,7 +82,7 @@ program     :   external_decl_list_e
             ;
 
 external_decl_list_e
-            :
+            :   /* empty */
             |   external_decl_list
             ;
 
@@ -126,7 +125,7 @@ instance_vars
             ;
 
 instance_var_decl_list_e
-            :
+            :   /* empty */
             |   instance_var_decl_list
             ;
 
@@ -140,7 +139,7 @@ instance_var_decl
             ;
 
 access_modifier
-            :   
+            :   /* empty */
             |   PUBLIC
             |   PROTECTED
             |   PRIVATE
@@ -177,23 +176,23 @@ instance_method_decl
             ;
 
 method_no_args
-            :   method_type ID
+            :   '(' type ')' ID
             |   '(' VOID ')' ID
             ;
 
 method_has_args
-            :   method_type method_sel
+            :   '(' type ')' method_sel
             |   '(' VOID ')' method_sel
-            ;
-
-method_type :   '(' type ')'
             ;
 
 method_sel  :   method_param
             |   method_sel method_param
             ;
 
-method_param:   ID ':' method_type ID
+method_param:   ID ':' '(' type ')' ID
+            |   ID ':' '(' type '[' ']' ')' ID
+            |   ID ':' '(' type array_size_spec ')' ID
+            |   ID ':' '(' type array_size_spec '[' ']' ')' ID
             ;
 
 type        :   INT
@@ -251,11 +250,11 @@ declarator_list
 
 declarator  :   ID
             |   declarator '[' expr ']'
-            |   declarator '[' ']'
             ;
 
 init_decl   :   declarator
             |   declarator '=' initializer
+            |   declarator '[' ']' '=' initializer
             ;
 
 initializer :   expr
@@ -263,7 +262,7 @@ initializer :   expr
             ;
 
 initializer_list_e
-            :
+            :   /* empty */
             |   initializer_list
             ;
 
@@ -284,7 +283,7 @@ compound_stmt
             :   '{' stmt_list_e '}'
             ;
 
-stmt_list_e :
+stmt_list_e :   /* empty */
             |   stmt_list
             ;
 
@@ -303,7 +302,7 @@ stmt        :   ';'
             |   decl ';'
             ;
 
-expr_e      :
+expr_e      :   /* empty */
             |   expr
             ;
 
@@ -353,7 +352,6 @@ expr        :   ID
             |   expr '=' expr
             |   expr '[' expr ']'
             |   ID '(' expr_list_e ')'
-            |   ATSIGN '(' expr ')'
             |   expr '.' expr
             |   expr ARROW expr
             ;
@@ -382,6 +380,7 @@ literal     :   STRING_LIT
 
 objc_literal:   ATSIGN literal
             |   ATSIGN '[' expr_list_e ']'
+            |   ATSIGN '(' expr ')'
             ;
 
 num_literal :   INT_LIT
@@ -394,7 +393,7 @@ func_decl   :   type ID '(' param_list_e ')' ';'
 func_def    :   type ID '(' param_list_e ')' compound_stmt
             ;
 
-param_list_e:
+param_list_e:   /* empty */
             |   param_list
             ;
 
@@ -403,6 +402,14 @@ param_list  :   param_decl
             ;
 
 param_decl  :   type ID
+            |   type ID '[' ']'
+            |   type ID array_size_spec
+            |   type ID array_size_spec '[' ']'
+            ;
+
+array_size_spec
+            :   '[' expr ']'
+            |   array_size_spec '[' expr ']'
             ;
 
 %%
