@@ -176,16 +176,13 @@ instance_method_decl
             ;
 
 method_no_args
-            :   method_type ID
+            :   '(' type ')' ID
             |   '(' VOID ')' ID
             ;
 
 method_has_args
-            :   method_type method_sel
+            :   '(' type ')' method_sel
             |   '(' VOID ')' method_sel
-            ;
-
-method_type :   '(' type ')'
             ;
 
 method_sel  :   method_param
