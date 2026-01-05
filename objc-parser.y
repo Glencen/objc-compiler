@@ -366,7 +366,7 @@ msg_arg_list
             |   msg_arg_list msg_arg
             ;
 
-msg_arg :   ID ':' expr
+msg_arg     :   ID ':' expr
             ;
 
 literal     :   STRING_LIT
