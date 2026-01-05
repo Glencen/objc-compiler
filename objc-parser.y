@@ -372,16 +372,13 @@ msg_arg :   ID ':' expr
 literal     :   STRING_LIT
             |   CHAR_LIT
             |   BOOL_LIT
-            |   num_literal
+            |   INT_LIT
+            |   FLOAT_LIT
             ;
 
 objc_literal:   ATSIGN literal
             |   ATSIGN '[' expr_list_e ']'
             |   ATSIGN '(' expr ')'
-            ;
-
-num_literal :   INT_LIT
-            |   FLOAT_LIT
             ;
 
 func_decl   :   type ID '(' param_list_e ')' ';'
