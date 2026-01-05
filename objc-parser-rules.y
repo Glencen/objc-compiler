@@ -325,7 +325,8 @@ do_while_stmt
 
 expr        :   ID
             |   literal
-            |   objc_literal
+            |   ATSIGN '[' expr_list_e ']'
+            |   ATSIGN '(' expr ')'
             |   NIL
             |   '(' expr ')'
             |   '[' receiver msg_sel ']'
@@ -374,11 +375,10 @@ literal     :   STRING_LIT
             |   BOOL_LIT
             |   INT_LIT
             |   FLOAT_LIT
-            ;
-
-objc_literal:   ATSIGN literal
-            |   ATSIGN '[' expr_list_e ']'
-            |   ATSIGN '(' expr ')'
+            |   ATSIGN STRING_LIT
+            |   ATSIGN BOOL_LIT
+            |   ATSIGN INT_LIT
+            |   ATSIGN FLOAT_LIT
             ;
 
 func_decl   :   type ID '(' param_list_e ')' ';'
