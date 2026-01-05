@@ -43,6 +43,7 @@ void yyerror(char const* s);
 %token NSNUMBER
 %token VOID
 %token TYPE_ID
+%token CLASS_NAME
 
 %token 	<int_lit>		INT_LIT
 %token	<float_lit>		FLOAT_LIT
@@ -102,8 +103,8 @@ class_fw_decl_list
             :   CLASS class_list ';'
             ;
 
-class_list  :   ID
-            |   class_list ',' ID
+class_list  :   CLASS_NAME
+            |   class_list ',' CLASS_NAME
             ;
 
 class_decl  :   class_interface
@@ -111,8 +112,8 @@ class_decl  :   class_interface
             ;
 
 class_interface
-            :   INTERFACE ID ':' ID interface_body END
-            |   INTERFACE ID interface_body END
+            :   INTERFACE CLASS_NAME ':' ID interface_body END
+            |   INTERFACE CLASS_NAME interface_body END
             ;
 
 interface_body
@@ -199,17 +200,13 @@ type        :   INT
             |   CHAR
             |   FLOAT
             |   BOOL
-            |   ID
             |   TYPE_ID
-            |   NSNUMBER '*'
-            |   NSSTRING '*'
-            |   NSARRAY '*'
-            |   NSMUTABLEARRAY '*'
+            |   CLASS_NAME '*'
             ;
 
 class_implementation
-            :   IMPLEMENTATION ID implementation_body END
-            |   IMPLEMENTATION ID ':' ID implementation_body END
+            :   IMPLEMENTATION CLASS_NAME implementation_body END
+            |   IMPLEMENTATION CLASS_NAME ':' ID implementation_body END
             ;
 
 implementation_body
