@@ -53,6 +53,7 @@ OCT      [0-7]
 %x COMMENT
 %x STRING
 %x CHAR
+%x EXPECT_CLASS_NAME
 
 %%
 
@@ -235,11 +236,49 @@ OCT      [0-7]
     }
 }
 
-"@interface"        { print_token(TOK_KEYWORD, yytext); return INTERFACE; }
-"@implementation"   { print_token(TOK_KEYWORD, yytext); return IMPLEMENTATION; }
-"@end"              { print_token(TOK_KEYWORD, yytext); return END; }
-"@property"         { print_token(TOK_KEYWORD, yytext); return PROPERTY; }
-"@class"            { print_token(TOK_KEYWORD, yytext); return CLASS; }
+"@interface"        { 
+    print_token(TOK_KEYWORD, yytext); 
+    BEGIN(EXPECT_CLASS_NAME);
+    return INTERFACE; 
+}
+
+"@implementation"   { 
+    print_token(TOK_KEYWORD, yytext); 
+    BEGIN(EXPECT_CLASS_NAME);
+    return IMPLEMENTATION; 
+}
+
+"@end"              { 
+    print_token(TOK_KEYWORD, yytext); 
+    BEGIN(INITIAL);
+    return END; 
+}
+
+"@property"         { 
+    print_token(TOK_KEYWORD, yytext); 
+    BEGIN(INITIAL);
+    return PROPERTY; 
+}
+
+"@class"            { 
+    print_token(TOK_KEYWORD, yytext); 
+    BEGIN(EXPECT_CLASS_NAME);
+    return CLASS; 
+}
+
+<EXPECT_CLASS_NAME>{ID} {
+    print_token(TOK_IDENTIFIER, yytext);
+    set_token_string(yytext);
+    BEGIN(INITIAL);
+    return CLASS_NAME;
+}
+
+<EXPECT_CLASS_NAME>{WS} {}
+
+<EXPECT_CLASS_NAME>. {
+    yyless(0);
+    BEGIN(INITIAL);
+}
 
 "@public"           { print_token(TOK_KEYWORD, yytext); return PUBLIC; }
 "@private"          { print_token(TOK_KEYWORD, yytext); return PRIVATE; }
