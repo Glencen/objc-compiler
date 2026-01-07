@@ -9,7 +9,8 @@
 
 typedef enum {
     TOK_KEYWORD,
-    TOK_IDENTIFIER, 
+    TOK_IDENTIFIER,
+    TOK_CLASS_NAME,
     TOK_OPERATOR,
     TOK_DELIMITER,
     TOK_INTEGER,
@@ -53,7 +54,11 @@ OCT      [0-7]
 %x COMMENT
 %x STRING
 %x CHAR
-%x EXPECT_CLASS_NAME
+%x INTERFACE_IMPL
+%x CLASS_LIST
+%x INTERFACE_IMPL_AFTER_NAME
+%x INTERFACE_IMPL_PARENT
+%x CLASS_LIST_AFTER_NAME
 
 %%
 
@@ -238,13 +243,13 @@ OCT      [0-7]
 
 "@interface"        { 
     print_token(TOK_KEYWORD, yytext); 
-    BEGIN(EXPECT_CLASS_NAME);
+    BEGIN(INTERFACE_IMPL);
     return INTERFACE; 
 }
 
 "@implementation"   { 
     print_token(TOK_KEYWORD, yytext); 
-    BEGIN(EXPECT_CLASS_NAME);
+    BEGIN(INTERFACE_IMPL);
     return IMPLEMENTATION; 
 }
 
@@ -262,20 +267,71 @@ OCT      [0-7]
 
 "@class"            { 
     print_token(TOK_KEYWORD, yytext); 
-    BEGIN(EXPECT_CLASS_NAME);
+    BEGIN(CLASS_LIST);
     return CLASS; 
 }
 
-<EXPECT_CLASS_NAME>{ID} {
-    print_token(TOK_IDENTIFIER, yytext);
-    set_token_string(yytext);
-    BEGIN(INITIAL);
-    return CLASS_NAME;
+<INTERFACE_IMPL>{WS} {}
+
+<INTERFACE_IMPL>{ID} {
+    print_token(TOK_CLASS_NAME, yytext);
+    BEGIN(INTERFACE_IMPL_AFTER_NAME);
 }
 
-<EXPECT_CLASS_NAME>{WS} {}
+<INTERFACE_IMPL>. {
+    yyless(0);
+    BEGIN(INITIAL);
+}
 
-<EXPECT_CLASS_NAME>. {
+<INTERFACE_IMPL_AFTER_NAME>{WS} {}
+
+<INTERFACE_IMPL_AFTER_NAME>":" {
+    print_token(TOK_DELIMITER, yytext);
+    BEGIN(INTERFACE_IMPL_PARENT);
+}
+
+<INTERFACE_IMPL_AFTER_NAME>. {
+    yyless(0);
+    BEGIN(INITIAL);
+}
+
+<INTERFACE_IMPL_PARENT>{WS} {}
+
+<INTERFACE_IMPL_PARENT>{ID} {
+    print_token(TOK_CLASS_NAME, yytext);
+    BEGIN(INITIAL);
+}
+
+<INTERFACE_IMPL_PARENT>. {
+    yyless(0);
+    BEGIN(INITIAL);
+}
+
+<CLASS_LIST>{WS} {}
+
+<CLASS_LIST>{ID} {
+    print_token(TOK_CLASS_NAME, yytext);
+    BEGIN(CLASS_LIST_AFTER_NAME);
+}
+
+<CLASS_LIST>. {
+    yyless(0);
+    BEGIN(INITIAL);
+}
+
+<CLASS_LIST_AFTER_NAME>{WS} {}
+
+<CLASS_LIST_AFTER_NAME>"," {
+    print_token(TOK_DELIMITER, yytext);
+    BEGIN(CLASS_LIST);
+}
+
+<CLASS_LIST_AFTER_NAME>";" {
+    print_token(TOK_DELIMITER, yytext);
+    BEGIN(INITIAL);
+}
+
+<CLASS_LIST_AFTER_NAME>. {
     yyless(0);
     BEGIN(INITIAL);
 }
@@ -368,6 +424,7 @@ const char* token_type_name(token_type_t type) {
     switch (type) {
         case TOK_KEYWORD: return "KEYWORD";
         case TOK_IDENTIFIER: return "IDENTIFIER";
+        case TOK_CLASS_NAME: return "CLASS_NAME";
         case TOK_OPERATOR: return "OPERATOR";
         case TOK_DELIMITER: return "DELIMITER";
         case TOK_INTEGER: return "INTEGER";

@@ -106,7 +106,7 @@ class_name_list
             ;
 
 class_interface
-            :   INTERFACE CLASS_NAME ':' ID interface_body END
+            :   INTERFACE CLASS_NAME ':' CLASS_NAME interface_body END
             |   INTERFACE CLASS_NAME interface_body END
             ;
 
@@ -185,7 +185,7 @@ type        :   INT
 
 class_implementation
             :   IMPLEMENTATION CLASS_NAME implementation_body END
-            |   IMPLEMENTATION CLASS_NAME ':' ID implementation_body END
+            |   IMPLEMENTATION CLASS_NAME ':' CLASS_NAME implementation_body END
             ;
 
 implementation_body
