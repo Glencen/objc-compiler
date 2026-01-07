@@ -93,22 +93,16 @@ external_decl_list
             ;
 
 external_decl
-            :   class_decl
-            |   class_fw_decl_list
+            :   class_interface
+            |   class_implementation
+            |   CLASS class_name_list ';'
             |   func_decl
             |   func_def
             ;
 
-class_fw_decl_list
-            :   CLASS class_list ';'
-            ;
-
-class_list  :   CLASS_NAME
-            |   class_list ',' CLASS_NAME
-            ;
-
-class_decl  :   class_interface
-            |   class_implementation
+class_name_list
+            :   CLASS_NAME
+            |   class_name_list ',' CLASS_NAME
             ;
 
 class_interface
@@ -122,21 +116,17 @@ interface_body
             ;
 
 instance_vars
-            :   '{' instance_var_decl_list_e '}'
-            ;
-
-instance_var_decl_list_e
-            :   /* empty */
-            |   instance_var_decl_list
+            :   '{' '}'
+            |   '{' instance_var_decl_list '}'
             ;
 
 instance_var_decl_list
-            :   access_modifier instance_var_decl
-            |   access_modifier instance_var_decl instance_var_decl_list
+            :   instance_var_decl
+            |   instance_var_decl instance_var_decl_list
             ;
 
 instance_var_decl
-            :   type init_decl ';'
+            :   access_modifier type init_decl ';'
             ;
 
 access_modifier
@@ -147,9 +137,10 @@ access_modifier
             ;
 
 interface_decl_list
-            :   
+            :   /* empty */
             |   interface_decl_list property
-            |   interface_decl_list method_decl
+            |   interface_decl_list class_method_decl
+            |   interface_decl_list instance_method_decl
             ;
 
 property    :   PROPERTY '(' attribute ')' type ID ';'
@@ -160,30 +151,18 @@ attribute   :   READONLY
             |   READWRITE
             ;
 
-method_decl :   class_method_decl
-            |   instance_method_decl
-            ;
-
 class_method_decl
-            :   '+' method_no_args ';'
-            |   '+' method_has_args ';'
-            |   '+' method_sel ';'
+            :   '+' '(' type ')' ID ';'
+            |   '+' '(' VOID ')' ID ';'
+            |   '+' '(' type ')' method_sel ';'
+            |   '+' '(' VOID ')' method_sel ';'
             ;
 
 instance_method_decl
-            :   '-' method_no_args ';'
-            |   '-' method_has_args ';'
-            |   '-' method_sel ';'
-            ;
-
-method_no_args
-            :   '(' type ')' ID
-            |   '(' VOID ')' ID
-            ;
-
-method_has_args
-            :   '(' type ')' method_sel
-            |   '(' VOID ')' method_sel
+            :   '-' '(' type ')' ID ';'
+            |   '-' '(' VOID ')' ID ';'
+            |   '-' '(' type ')' method_sel ';'
+            |   '-' '(' VOID ')' method_sel ';'
             ;
 
 method_sel  :   method_param
@@ -216,25 +195,25 @@ implementation_body
 
 implementation_def_list
             :   property
-            |   method_def
-            |   implementation_def_list property
-            |   implementation_def_list method_def
-            ;
-
-method_def  :   class_method_def
+            |   class_method_def
             |   instance_method_def
+            |   implementation_def_list property
+            |   implementation_def_list class_method_def
+            |   implementation_def_list instance_method_def
             ;
 
 class_method_def
-            :   '+' method_no_args compound_stmt
-            |   '+' method_has_args compound_stmt
-            |   '+' method_sel compound_stmt
+            :   '+' '(' type ')' ID compound_stmt
+            |   '+' '(' VOID ')' ID compound_stmt
+            |   '+' '(' type ')' method_sel compound_stmt
+            |   '+' '(' VOID ')' method_sel compound_stmt
             ;
 
 instance_method_def
-            :   '-' method_no_args compound_stmt
-            |   '-' method_has_args compound_stmt
-            |   '-' method_sel compound_stmt
+            :   '-' '(' type ')' ID compound_stmt
+            |   '-' '(' VOID ')' ID compound_stmt
+            |   '-' '(' type ')' method_sel compound_stmt
+            |   '-' '(' VOID ')' method_sel compound_stmt
             ;
 
 decl        :   type declarator_list
@@ -307,13 +286,10 @@ if_stmt     :   IF '(' expr ')' stmt    %prec NO_ELSE
             |   IF '(' expr ')' stmt ELSE stmt
             ;
 
-for_stmt    :   FOR '(' for_init ';' expr_e ';' expr_e ')' stmt
+for_stmt    :   FOR '(' expr_e ';' expr_e ';' expr_e ')' stmt
+            |   FOR '(' decl ';' expr_e ';' expr_e ')' stmt
             |   FOR '(' ID IN expr ')' stmt
             |   FOR '(' type ID IN expr ')' stmt
-            ;
-
-for_init    :   expr_e
-            |   decl
             ;
 
 while_stmt  :   WHILE '(' expr ')' stmt
