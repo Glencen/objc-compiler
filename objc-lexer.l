@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iomanip>
+#include "objc-parser.hpp"
 
 #define STRING_BUF_SIZE 1024
 
@@ -26,8 +27,7 @@ typedef enum {
     TOK_ERROR
 } token_type_t;
 
-extern int yylval;
-extern "C" int yylex(void);
+extern YYSTYPE yylval;
 
 void print_token(token_type_t type, const std::string& value);
 void print_token_int(token_type_t type, long value);
@@ -37,12 +37,14 @@ const char* token_type_name(token_type_t type);
 void set_token_int(long value);
 void set_token_float(double value);
 void set_token_string(const std::string& value);
+void set_token_identifier(const std::string& value);
 %}
 
 %option noyywrap
 %option nounput
 %option noinput
 %option never-interactive
+%option yylineno
 
 DIGIT    [0-9]
 LETTER   [a-zA-Z_]
@@ -68,7 +70,7 @@ OCT      [0-7]
 
 {WS}     {}
 
-\n       { return '\n'; }
+\n       {}
 
 \/\/.*   { 
     print_token(TOK_COMMENT, yytext);
@@ -233,7 +235,7 @@ OCT      [0-7]
     BEGIN(INITIAL);
     if (string_buf.length() == 1) {
         print_token(TOK_CHAR, string_buf);
-        yylval = string_buf[0];
+        yylval.char_lit = string_buf[0];
         return CHAR_LIT;
     } else {
         print_token(TOK_ERROR, "Invalid char constant");
@@ -275,7 +277,9 @@ OCT      [0-7]
 
 <INTERFACE_IMPL>{ID} {
     print_token(TOK_CLASS_NAME, yytext);
+    set_token_identifier(yytext);
     BEGIN(INTERFACE_IMPL_AFTER_NAME);
+    return CLASS_NAME;
 }
 
 <INTERFACE_IMPL>. {
@@ -288,6 +292,7 @@ OCT      [0-7]
 <INTERFACE_IMPL_AFTER_NAME>":" {
     print_token(TOK_DELIMITER, yytext);
     BEGIN(INTERFACE_IMPL_PARENT);
+    return ':';
 }
 
 <INTERFACE_IMPL_AFTER_NAME>. {
@@ -299,7 +304,9 @@ OCT      [0-7]
 
 <INTERFACE_IMPL_PARENT>{ID} {
     print_token(TOK_CLASS_NAME, yytext);
+    set_token_identifier(yytext);
     BEGIN(INITIAL);
+    return CLASS_NAME;
 }
 
 <INTERFACE_IMPL_PARENT>. {
@@ -311,7 +318,9 @@ OCT      [0-7]
 
 <CLASS_LIST>{ID} {
     print_token(TOK_CLASS_NAME, yytext);
+    set_token_identifier(yytext);
     BEGIN(CLASS_LIST_AFTER_NAME);
+    return CLASS_NAME;
 }
 
 <CLASS_LIST>. {
@@ -324,11 +333,13 @@ OCT      [0-7]
 <CLASS_LIST_AFTER_NAME>"," {
     print_token(TOK_DELIMITER, yytext);
     BEGIN(CLASS_LIST);
+    return ',';
 }
 
 <CLASS_LIST_AFTER_NAME>";" {
     print_token(TOK_DELIMITER, yytext);
     BEGIN(INITIAL);
+    return ';';
 }
 
 <CLASS_LIST_AFTER_NAME>. {
@@ -340,8 +351,8 @@ OCT      [0-7]
 "@private"          { print_token(TOK_KEYWORD, yytext); return PRIVATE; }
 "@protected"        { print_token(TOK_KEYWORD, yytext); return PROTECTED; }
 
-"YES"               { print_token(TOK_KEYWORD, yytext); yylval = 1; return BOOL_LIT; }
-"NO"                { print_token(TOK_KEYWORD, yytext); yylval = 0; return BOOL_LIT; }
+"YES"               { print_token(TOK_KEYWORD, yytext); yylval.bool_lit = true;; return BOOL_LIT; }
+"NO"                { print_token(TOK_KEYWORD, yytext); yylval.bool_lit = false; return BOOL_LIT; }
 "self"              { print_token(TOK_KEYWORD, yytext); return SELF; }
 "super"             { print_token(TOK_KEYWORD, yytext); return SUPER; }
 "nil"               { print_token(TOK_KEYWORD, yytext); return NIL; }
@@ -353,10 +364,6 @@ OCT      [0-7]
 "float"             { print_token(TOK_KEYWORD, yytext); return FLOAT; }
 "char"              { print_token(TOK_KEYWORD, yytext); return CHAR; }
 "id"                { print_token(TOK_KEYWORD, yytext); return TYPE_ID; }
-"NSString"          { print_token(TOK_KEYWORD, yytext); return NSSTRING; }
-"NSNumber"          { print_token(TOK_KEYWORD, yytext); return NSNUMBER; }
-"NSArray"           { print_token(TOK_KEYWORD, yytext); return NSARRAY; }
-"NSMutableArray"    { print_token(TOK_KEYWORD, yytext); return NSMUTABLEARRAY; }
 "void"              { print_token(TOK_KEYWORD, yytext); return VOID; }
 "if"                { print_token(TOK_KEYWORD, yytext); return IF; }
 "else"              { print_token(TOK_KEYWORD, yytext); return ELSE; }
@@ -368,7 +375,7 @@ OCT      [0-7]
 
 {ID}                { 
     print_token(TOK_IDENTIFIER, yytext);
-    set_token_string(yytext);
+    set_token_identifier(yytext);
     return ID;
 }
 
@@ -443,37 +450,17 @@ const char* token_type_name(token_type_t type) {
 }
 
 void set_token_int(long value) {
-    yylval = value;
+    yylval.int_lit = value;
 }
 
 void set_token_float(double value) {
-    yylval = (int)value;
+    yylval.float_lit = (float)value;
 }
 
 void set_token_string(const std::string& value) {
-    yylval = 1;
+    yylval.str_lit = new std::string(value);
 }
 
-int main(int argc, char **argv) {
-    if (argc > 1) {
-        FILE *file = fopen(argv[1], "r");
-        if (!file) {
-            fprintf(stderr, "Error: Cannot open file %s\n", argv[1]);
-            return 1;
-        }
-        yyin = file;
-    } else {
-        printf("Enter Objective-C code (Ctrl+D to end):\n");
-    }
-    
-    printf("%-20s %s\n", "Token Type", "Value");
-    printf("%-20s %s\n", "--------------------", "-----");
-    
-    yylex();
-    
-    if (argc > 1) {
-        fclose(yyin);
-    }
-    
-    return 0;
+void set_token_identifier(const std::string& value) {
+    yylval.identifier = new std::string(value);
 }
