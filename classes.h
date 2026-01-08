@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CLASSES_H
+#define CLASSES_H
 
 #include <iostream>
 #include <string>
@@ -1113,3 +1114,5 @@ protected:
 
     ProgramNode();
 };
+
+#endif
