@@ -35,30 +35,6 @@ public:
     virtual string toDot() const = 0;
 };
 
-class IdentifierNode : public AstNode {
-public:
-    enum IdentifierKind {
-        NONE,
-        IDENTIFIER,
-        CLASS_NAME
-    };
-
-    static IdentifierNode* createIdentifier(string *name);
-    static IdentifierNode* createClassName(string *name);
-
-    IdentifierKind getKind() const;
-    string* getName() const;
-
-    string getDotLabel() const override;
-    string toDot() const override;
-
-protected:
-    IdentifierKind kind;
-    string *name;
-
-    IdentifierNode();
-};
-
 class ValueNode : public AstNode {
 public:
     enum ValueType {
@@ -72,7 +48,9 @@ public:
         OBJC_INT_LIT,
         OBJC_FLOAT_LIT,
         OBJC_BOOL_LIT,
-        OBJC_STRING_LIT
+        OBJC_STRING_LIT,
+        IDENTIFIER,
+        CLASS_NAME
     };
 
     static ValueNode* createInt(int value);
@@ -85,6 +63,8 @@ public:
     static ValueNode* createObjcFloat(string *value);
     static ValueNode* createObjcBool(string *value);
     static ValueNode* createObjcString(string *value);
+    static ValueNode* createIdentifier(string *value);
+    static ValueNode* createClassName(string *value);
 
     ValueType getValueType() const;
     int getInt() const;
@@ -96,6 +76,8 @@ public:
     string* getObjcFloat() const;
     string* getObjcBool() const;
     string* getObjcString() const;
+    string* getIdentifier() const;
+    string* getClassName() const;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -114,6 +96,7 @@ protected:
 class ReceiverNode : public AstNode {
 public:
     enum ReceiverType {
+        NONE,
         EXPR,
         SUPER
     };
@@ -136,16 +119,16 @@ protected:
 
 class MsgArgNode : public AstNode {
 public:
-    static MsgArgNode* createMsgArg(IdentifierNode *identifier, ExprNode *arg);
+    static MsgArgNode* createMsgArg(ValueNode *identifier, ExprNode *arg);
 
-    IdentifierNode* getIdentifier() const;
+    ValueNode* getIdentifier() const;
     ExprNode* getArg() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
-    IdentifierNode *identifier;
+    ValueNode *identifier;
     ExprNode *arg;
 
     MsgArgNode();
@@ -170,15 +153,16 @@ protected:
 class MsgSelectorNode : public AstNode {
 public:
     enum MsgSelectorType {
+        NONE,
         SIMPLE_SEL,
         ARGUMENT_LIST
     };
 
-    static MsgSelectorNode* createSimpleSel(IdentifierNode *identifier);
+    static MsgSelectorNode* createSimpleSel(ValueNode *identifier);
     static MsgSelectorNode* createArgumentList(MsgArgListNode *list);
 
     MsgSelectorType getType() const;
-    IdentifierNode* getIdentifier() const;
+    ValueNode* getIdentifier() const;
     MsgArgListNode* getMsgArgList() const;
 
     string getDotLabel() const override;
@@ -186,7 +170,7 @@ public:
 
 protected:
     MsgSelectorType type;
-    IdentifierNode *identifier;
+    ValueNode *identifier;
     MsgArgListNode *argList;
 
     MsgSelectorNode();
@@ -211,7 +195,7 @@ class ExprNode : public AstNode {
 public:
     enum ExprType {
         NONE,
-        ID,
+        IDENTIFIER,
         LITERAL,
         OBJC_ARRAY_LITERAL,
         OBJC_BOXED_EXPR,
@@ -242,7 +226,7 @@ public:
         ARROW
     };
 
-    static ExprNode* createIdentifier(IdentifierNode *value);
+    static ExprNode* createIdentifier(ValueNode *value);
     static ExprNode* createLiteral(ValueNode *value);
     static ExprNode* createObjcArrayLiteral(ExprListNode *exprList);
     static ExprNode* createObjcBoxedExpr(ExprNode *expr);
@@ -268,39 +252,41 @@ public:
     static ExprNode* createOr(ExprNode *left, ExprNode *right);
     static ExprNode* createAssign(ExprNode *left, ExprNode *right);
     static ExprNode* createArrayAccess(ExprNode *operand, ExprNode *index);
-    static ExprNode* createFunctionCall(IdentifierNode *funcId, ExprListNode *args);
+    static ExprNode* createFunctionCall(ValueNode *funcId, ExprListNode *args);
     static ExprNode* createDot(ExprNode *left, ExprNode *right);
     static ExprNode* createArrow(ExprNode *left, ExprNode *right);
 
     ExprType getType() const;
-    IdentifierNode* getIdentifier() const;
+    ValueNode* getIdentifier() const;
     ValueNode* getLiteral() const;
     ExprNode* getLeft() const;
     ExprNode* getRight() const;
     ExprNode* getOperand() const;
     ExprNode* getIndex() const;
-    ValueNode* getFunc() const;
+    ValueNode* getFuncId() const;
     ExprListNode* getArgs() const;
     ReceiverNode* getReceiver() const;
     MsgSelectorNode* getSelector() const;
+    ExprListNode* getObjcArrayExprList() const;
+    ExprNode* getBoxedExpr() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
     ExprType type;
-    IdentifierNode *identifier;
+    ValueNode *identifier;
     ValueNode *literalValue;
     ExprNode *left;
     ExprNode *right;
     ExprNode *operand;
     ExprNode *index;
-    IdentifierNode *funcId;
+    ValueNode *funcId;
     ExprListNode *args;
     ReceiverNode *receiver;
     MsgSelectorNode *selector;
     ExprListNode *objcArrayExprList;
-    ExprNode *objcBoxedExpr;
+    ExprNode *boxedExpr;
 
     ExprNode();
 };
@@ -314,8 +300,7 @@ public:
         BOOL,
         CHAR,
         TYPE_ID,
-        CLASS_NAME,
-        VOID
+        CLASS_NAME
     };
 
     static TypeNode* createIntType();
@@ -323,18 +308,17 @@ public:
     static TypeNode* createFloatType();
     static TypeNode* createBoolType();
     static TypeNode* createIdType();
-    static TypeNode* createClassNameType();
-    static TypeNode* createVoidType();
+    static TypeNode* createClassNameType(ValueNode *classNameValue);
 
     TypeKind getKind() const;
-    IdentifierNode* getClassName() const;
+    ValueNode* getClassName() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
     TypeKind kind;
-    IdentifierNode *classNameValue;
+    ValueNode *classNameValue;
 
     TypeNode();
 };
@@ -367,7 +351,7 @@ public:
 
 protected:
     TypeNode *type;
-    DeclaratorListNode *list;
+    DeclaratorListNode *declaratorList;
 
     DeclNode();
 };
@@ -398,7 +382,8 @@ public:
         RETURN,
         IF,
         IF_ELSE,
-        FOR,
+        FOR_WITH_EXPR,
+        FOR_WITH_DECL,
         FOR_IN,
         TYPED_FOR_IN,
         WHILE,
@@ -414,8 +399,8 @@ public:
     static StmtNode* createIfElse(ExprNode *condition, StmtNode *thenBranch, StmtNode *elseBranch);
     static StmtNode* createFor(ExprNode *expr, ExprNode *condition, ExprNode *post, StmtNode *body);
     static StmtNode* createFor(DeclNode *decl, ExprNode *condition, ExprNode *post, StmtNode *body);
-    static StmtNode* createForIn(IdentifierNode *id, ExprNode *collection, StmtNode *body);
-    static StmtNode* createTypedForIn(TypeNode *type, IdentifierNode *id, ExprNode *collection, StmtNode *body);
+    static StmtNode* createForIn(ValueNode *id, ExprNode *collection, StmtNode *body);
+    static StmtNode* createTypedForIn(TypeNode *type, ValueNode *id, ExprNode *collection, StmtNode *body);
     static StmtNode* createWhile(ExprNode *condition, StmtNode *body);
     static StmtNode* createDoWhile(StmtNode *body, ExprNode *condition);
     static StmtNode* createCompound(StmtListNode *compound);
@@ -430,9 +415,8 @@ protected:
     ExprNode *condition;
     StmtNode *thenBranch;
     StmtNode *elseBranch;
-    ExprNode *init;
     ExprNode *post;
-    IdentifierNode *forInId;
+    ValueNode *forInId;
     TypeNode *forInType;
     ExprNode *collection;
     StmtNode *body;
@@ -468,22 +452,23 @@ public:
         ARRAY_OF_ARRAYS
     };
 
-    static ParamDeclNode* createParamDecl(TypeNode *type, IdentifierNode *identifier);
-    static ParamDeclNode* createArrayParamDecl(TypeNode *type, IdentifierNode *identifier);
-    static ParamDeclNode* createSizedArrayParamDecl(TypeNode *type, IdentifierNode *identifier, ArraySizeSpecNode *arraySizeSpec);
-    static ParamDeclNode* createSizedArrayOfArraysParamDecl(TypeNode *type, IdentifierNode *identifier, ArraySizeSpecNode *arraySizeSpec);
+    static ParamDeclNode* createParamDecl(TypeNode *type, ValueNode *identifier);
+    static ParamDeclNode* createArrayParamDecl(TypeNode *type, ValueNode *identifier);
+    static ParamDeclNode* createSizedArrayParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec);
+    static ParamDeclNode* createSizedArrayOfArraysParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec);
 
     ParamDeclKind getKind() const;
     TypeNode* getType() const;
-    IdentifierNode* getIdentifier() const;
+    ValueNode* getIdentifier() const;
     ArraySizeSpecNode* getSizeSpec() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
+    ParamDeclKind kind;
     TypeNode *type;
-    IdentifierNode *identifier;
+    ValueNode *identifier;
     ArraySizeSpecNode *arraySizeSpec;
 
     ParamDeclNode();
@@ -508,10 +493,10 @@ protected:
 
 class FuncDefNode : public AstNode {
 public:
-    static FuncDefNode* createFuncDef(TypeNode *type, IdentifierNode *identifier, ParamListNode *paramList, StmtNode *compoundStmt);
+    static FuncDefNode* createFuncDef(TypeNode *type, ValueNode *identifier, ParamListNode *paramList, StmtNode *compoundStmt);
 
     TypeNode* getType() const;
-    IdentifierNode* getIdentifier() const;
+    ValueNode* getIdentifier() const;
     ParamListNode* getParamList() const;
     StmtNode* getCompoundStmt() const;
 
@@ -520,7 +505,7 @@ public:
 
 protected:
     TypeNode *type;
-    IdentifierNode *identifier;
+    ValueNode *identifier;
     ParamListNode *paramList;
     StmtNode *compoundStmt;
 
@@ -529,10 +514,10 @@ protected:
 
 class FuncDeclNode : public AstNode {
 public:
-    static FuncDeclNode* createFuncDecl(TypeNode *type, IdentifierNode *identifier, ParamListNode *paramList);
+    static FuncDeclNode* createFuncDecl(TypeNode *type, ValueNode *identifier, ParamListNode *paramList);
 
     TypeNode* getType() const;
-    IdentifierNode* getIdentifier() const;
+    ValueNode* getIdentifier() const;
     ParamListNode* getParamList() const;
 
     string getDotLabel() const override;
@@ -540,7 +525,7 @@ public:
 
 protected:
     TypeNode *type;
-    IdentifierNode *identifier;
+    ValueNode *identifier;
     ParamListNode *paramList;
 
     FuncDeclNode();
@@ -556,15 +541,15 @@ public:
         ARRAY_OF_ARRAYS
     };
 
-    static MethodParamNode* createMethodParam(IdentifierNode *selectorIdentifier, TypeNode *type, IdentifierNode *paramIdentifier);
-    static MethodParamNode* createArrayMethodParam(IdentifierNode *selectorIdentifier, TypeNode *type, IdentifierNode *paramIdentifier);
-    static MethodParamNode* createSizedArrayMethodParam(IdentifierNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, IdentifierNode *paramIdentifier);
-    static MethodParamNode* createSizedArrayOfArraysMethodParam(IdentifierNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, IdentifierNode *paramIdentifier);
+    static MethodParamNode* createMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ValueNode *paramIdentifier);
+    static MethodParamNode* createArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ValueNode *paramIdentifier);
+    static MethodParamNode* createSizedArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier);
+    static MethodParamNode* createSizedArrayOfArraysMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier);
 
     MethodParamKind getKind() const;
-    IdentifierNode* getSelectorIdentifier() const;
+    ValueNode* getSelectorIdentifier() const;
     TypeNode* getType() const;
-    IdentifierNode* getParamIdentifier() const;
+    ValueNode* getParamIdentifier() const;
     ArraySizeSpecNode* getArraySizeSpec() const;
 
     string getDotLabel() const override;
@@ -572,9 +557,9 @@ public:
 
 protected:
     MethodParamKind kind;
-    IdentifierNode *selectorIdentifier;
+    ValueNode *selectorIdentifier;
     TypeNode *type;
-    IdentifierNode *paramIdentifier;
+    ValueNode *paramIdentifier;
     ArraySizeSpecNode *arraySizeSpec;
 
     MethodParamNode();
@@ -606,14 +591,14 @@ public:
         VOID_SEL
     };
 
-    static InstanceMethodDefNode* createInstanceMethodDef(TypeNode *type, IdentifierNode *identifier, StmtNode *compoundStmt);
+    static InstanceMethodDefNode* createInstanceMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt);
     static InstanceMethodDefNode* createInstanceMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt);
-    static InstanceMethodDefNode* createInstanceMethodDef(IdentifierNode *identifier, StmtNode *compoundStmt);
+    static InstanceMethodDefNode* createInstanceMethodDef(ValueNode *identifier, StmtNode *compoundStmt);
     static InstanceMethodDefNode* createInstanceMethodDef(MethodSelNode *methodSel, StmtNode *compoundStmt);
 
     InstanceMethodDefKind getKind() const;
     TypeNode* getType() const;
-    IdentifierNode* getIdentifier() const;
+    ValueNode* getIdentifier() const;
     MethodSelNode* getMethodSel() const;
     StmtNode* getCompoundStmt() const;
 
@@ -623,7 +608,7 @@ public:
 protected:
     InstanceMethodDefKind kind;
     TypeNode *type;
-    IdentifierNode *identifier;
+    ValueNode *identifier;
     MethodSelNode *methodSel;
     StmtNode *compoundStmt;
 
@@ -640,14 +625,14 @@ public:
         VOID_SEL
     };
 
-    static ClassMethodDefNode* createClassMethodDef(TypeNode *type, IdentifierNode *identifier, StmtNode *compoundStmt);
+    static ClassMethodDefNode* createClassMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt);
     static ClassMethodDefNode* createClassMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt);
-    static ClassMethodDefNode* createClassMethodDef(IdentifierNode *identifier, StmtNode *compoundStmt);
+    static ClassMethodDefNode* createClassMethodDef(ValueNode *identifier, StmtNode *compoundStmt);
     static ClassMethodDefNode* createClassMethodDef(MethodSelNode *methodSel, StmtNode *compoundStmt);
 
     ClassMethodDefKind getKind() const;
     TypeNode* getType() const;
-    IdentifierNode* getIdentifier() const;
+    ValueNode* getIdentifier() const;
     MethodSelNode* getMethodSel() const;
     StmtNode* getCompoundStmt() const;
 
@@ -657,7 +642,7 @@ public:
 protected:
     ClassMethodDefKind kind;
     TypeNode *type;
-    IdentifierNode *identifier;
+    ValueNode *identifier;
     MethodSelNode *methodSel;
     StmtNode *compoundStmt;
 
@@ -699,7 +684,7 @@ public:
 
 protected:
     InstanceVarsNode *instanceVars;
-    ImplementationDefListNode *interfaceDeclList;
+    ImplementationDefListNode *implementationDefList;
 
     ImplementationBodyNode();
 };
@@ -714,14 +699,14 @@ public:
         VOID_SEL
     };
 
-    static InstanceMethodDeclNode* createInstanceMethodDecl(TypeNode *type, IdentifierNode *identifier);
+    static InstanceMethodDeclNode* createInstanceMethodDecl(TypeNode *type, ValueNode *identifier);
     static InstanceMethodDeclNode* createInstanceMethodDecl(TypeNode *type, MethodSelNode *methodSel);
-    static InstanceMethodDeclNode* createInstanceMethodDecl(IdentifierNode *identifier);
+    static InstanceMethodDeclNode* createInstanceMethodDecl(ValueNode *identifier);
     static InstanceMethodDeclNode* createInstanceMethodDecl(MethodSelNode *methodSel);
 
     InstanceMethodDeclKind getKind() const;
     TypeNode* getType() const;
-    IdentifierNode* getIdentifier() const;
+    ValueNode* getIdentifier() const;
     MethodSelNode* getMethodSel() const;
 
     string getDotLabel() const override;
@@ -730,7 +715,7 @@ public:
 protected:
     InstanceMethodDeclKind kind;
     TypeNode *type;
-    IdentifierNode *identifier;
+    ValueNode *identifier;
     MethodSelNode *methodSel;
 
     InstanceMethodDeclNode();
@@ -746,14 +731,14 @@ public:
         VOID_SEL
     };
 
-    static ClassMethodDeclNode* createClassMethodDecl(TypeNode *type, IdentifierNode *identifier);
+    static ClassMethodDeclNode* createClassMethodDecl(TypeNode *type, ValueNode *identifier);
     static ClassMethodDeclNode* createClassMethodDecl(TypeNode *type, MethodSelNode *methodSel);
-    static ClassMethodDeclNode* createClassMethodDecl(IdentifierNode *identifier);
+    static ClassMethodDeclNode* createClassMethodDecl(ValueNode *identifier);
     static ClassMethodDeclNode* createClassMethodDecl(MethodSelNode *methodSel);
 
     ClassMethodDeclKind getKind() const;
     TypeNode* getType() const;
-    IdentifierNode* getIdentifier() const;
+    ValueNode* getIdentifier() const;
     MethodSelNode* getMethodSel() const;
 
     string getDotLabel() const override;
@@ -762,7 +747,7 @@ public:
 protected:
     ClassMethodDeclKind kind;
     TypeNode *type;
-    IdentifierNode *identifier;
+    ValueNode *identifier;
     MethodSelNode *methodSel;
 
     ClassMethodDeclNode();
@@ -776,12 +761,12 @@ public:
         READWRITE
     };
 
-    static PropertyNode* createProperty(Attribute attr, TypeNode *type, IdentifierNode *name);
-    static PropertyNode* createProperty(TypeNode *type, IdentifierNode *name);
+    static PropertyNode* createProperty(Attribute attr, TypeNode *type, ValueNode *name);
+    static PropertyNode* createProperty(TypeNode *type, ValueNode *name);
 
     Attribute getAttribute() const;
     TypeNode* getType() const;
-    IdentifierNode* getName() const;
+    ValueNode* getName() const;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -789,7 +774,7 @@ public:
 protected:
     Attribute attribute;
     TypeNode *type;
-    IdentifierNode *name;
+    ValueNode *name;
 
     PropertyNode();
 };
@@ -798,8 +783,8 @@ class InterfaceDeclListNode : public AstNode {
 public:
     static InterfaceDeclListNode* createInterfaceDeclList();
     static InterfaceDeclListNode* addProperty(InterfaceDeclListNode *interfaceDeclList, PropertyNode *property);
-    static InterfaceDeclListNode* addClassMethodDecl(InterfaceDeclListNode *interfaceDeclList, ClassMethodDeclNode *property);
-    static InterfaceDeclListNode* addInstanceMethodDecl(InterfaceDeclListNode *interfaceDeclList, InstanceMethodDeclNode *property);
+    static InterfaceDeclListNode* addClassMethodDecl(InterfaceDeclListNode *interfaceDeclList, ClassMethodDeclNode *classMethodDecl);
+    static InterfaceDeclListNode* addInstanceMethodDecl(InterfaceDeclListNode *interfaceDeclList, InstanceMethodDeclNode *instanceMethodDecl);
 
     list<PropertyNode*>* getProperties() const;
     list<ClassMethodDeclNode*>* getClassMethodDecls() const;
@@ -818,6 +803,7 @@ protected:
 
 class InitializerListNode : public AstNode {
 public:
+    static InitializerListNode* createInitializerList();
     static InitializerListNode* createInitializerList(InitializerNode *initializer);
     static InitializerListNode* addInitializer(InitializerListNode *initList, InitializerNode *initializer);
 
@@ -860,17 +846,17 @@ protected:
 
 class DeclaratorNode : public AstNode {
 public:
-    static DeclaratorNode* createDeclarator(ValueNode *id);
+    static DeclaratorNode* createDeclarator(ValueNode *identifier);
     static DeclaratorNode* addArrayAccess(DeclaratorNode *decl, ExprNode *size);
 
-    ValueNode* getId() const;
+    ValueNode* getIdentifier() const;
     list<ExprNode*>* getArraySizes() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
-    ValueNode *id;
+    ValueNode *identifier;
     list<ExprNode*> *arraySizes;
 
     DeclaratorNode();
@@ -950,7 +936,7 @@ protected:
 class InstanceVarsDeclListNode : public AstNode {
 public:
     static InstanceVarsDeclListNode* createInstanceVarsDeclList(InstanceVarDeclNode *instanceVarDecl);
-    static InstanceVarsDeclListNode* addInstanceVarDecl(InstanceVarDeclNode *instanceVarDecl, InstanceVarsDeclListNode *InstanceVarsDeclList);
+    static InstanceVarsDeclListNode* addInstanceVarDecl(InstanceVarDeclNode *instanceVarDecl, InstanceVarsDeclListNode *instanceVarsDeclList);
 
     list<InstanceVarDeclNode*>* getInstanceVarsDeclList() const;
 
@@ -999,19 +985,19 @@ protected:
 
 class ImplementationNode : public AstNode {
 public:
-    static ImplementationNode* createImplementation(IdentifierNode *className, InterfaceBodyNode *interfaceBody);
-    static ImplementationNode* createImplementation(IdentifierNode *className, ValueNode *inheritedClassName, InterfaceBodyNode *implementationBody);
+    static ImplementationNode* createImplementation(ValueNode *className, ImplementationBodyNode *implementationBody);
+    static ImplementationNode* createImplementation(ValueNode *className, ValueNode *superClassName, ImplementationBodyNode *implementationBody);
 
-    IdentifierNode* getClassName() const;
-    ValueNode* getInheritedClassName() const;
+    ValueNode* getClassName() const;
+    ValueNode* getSuperClassName() const;
     ImplementationBodyNode* getImplementationBody() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
-    IdentifierNode *className;
-    ValueNode *inheritedClassName;
+    ValueNode *className;
+    ValueNode *superClassName;
     ImplementationBodyNode *implementationBody;
 
     ImplementationNode();
@@ -1019,19 +1005,19 @@ protected:
 
 class InterfaceNode : public AstNode {
 public:
-    static InterfaceNode* createInterface(IdentifierNode *className, InterfaceBodyNode *interfaceBody);
-    static InterfaceNode* createInterface(IdentifierNode *className, ValueNode *inheritedClassName, InterfaceBodyNode *interfaceBody);
+    static InterfaceNode* createInterface(ValueNode *className, InterfaceBodyNode *interfaceBody);
+    static InterfaceNode* createInterface(ValueNode *className, ValueNode *superClassName, InterfaceBodyNode *interfaceBody);
 
-    IdentifierNode* getClassName() const;
-    ValueNode* getInheritedClassName() const;
+    ValueNode* getClassName() const;
+    ValueNode* getSuperClassName() const;
     InterfaceBodyNode* getInterfaceBody() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
-    IdentifierNode *className;
-    ValueNode *inheritedClassName;
+    ValueNode *className;
+    ValueNode *superClassName;
     InterfaceBodyNode *interfaceBody;
 
     InterfaceNode();
@@ -1039,16 +1025,16 @@ protected:
 
 class ClassNameListNode : public AstNode {
 public:
-    static ClassNameListNode* createClassFwDeclList(IdentifierNode *className);
-    static ClassNameListNode* addClassFwDecl(ClassNameListNode *classFwDeclList, IdentifierNode *className);
+    static ClassNameListNode* createClassFwDeclList(ValueNode *className);
+    static ClassNameListNode* addClassFwDecl(ClassNameListNode *classFwDeclList, ValueNode *className);
 
-    list<IdentifierNode*>* getClassFwDeclList() const;
+    list<ValueNode*>* getClassFwDeclList() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
-    list<IdentifierNode*> *classFwDeclList;
+    list<ValueNode*> *classFwDeclList;
 
     ClassNameListNode();
 };
@@ -1066,7 +1052,7 @@ public:
 
     static ExternalDeclNode* createInterface(InterfaceNode *interface);
     static ExternalDeclNode* createImplementation(ImplementationNode *implementation);
-    static ExternalDeclNode* createFwClassDeclList(ClassNameListNode *classFwDeclList);
+    static ExternalDeclNode* createFwClassDeclList(ClassNameListNode *classNames);
     static ExternalDeclNode* createFuncDecl(FuncDeclNode *funcDecl);
     static ExternalDeclNode* createFuncDef(FuncDefNode *funcDef);
 
