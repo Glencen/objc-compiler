@@ -247,7 +247,7 @@ initializer_list
             |   initializer_list ',' initializer
             ;
 
-expr_list_e :
+expr_list_e :   /* empty */
             |   expr_list
             ;
 

@@ -2,21 +2,67 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
+#include "classes.h"
 
 using namespace std;
 
 extern int yylex(void);
 void yyerror(char const* s);
 
+#include "objc_parser.hpp"
+ProgramNode* root = nullptr;
+
 %}
 
 %union {
     int int_lit;
-    char *identifier;
+    string *identifier;
     char char_lit;
     float float_lit;
     bool bool_lit;
-    char *str_lit;
+    string *str_lit;
+    ValueNode *value_node;
+    ReceiverNode *receiver_node;
+    MsgArgNode *msg_arg_node;
+    MsgArgListNode *msg_arg_list_node;
+    MsgSelectorNode *msg_selector_node;
+    ExprListNode *expr_list_node;
+    ExprNode *expr_node;
+    TypeNode *type_node;
+    DeclaratorListNode *declarator_list_node;
+    DeclNode *decl_node;
+    StmtListNode *stmt_list_node;
+    StmtNode *stmt_node;
+    ArraySizeSpecNode *array_size_spec_node;
+    ParamDeclNode *param_decl_node;
+    ParamListNode *param_list_node;
+    FuncDefNode *func_def_node;
+    FuncDeclNode *func_decl_node;
+    MethodParamNode *method_param_node;
+    MethodSelNode *method_sel_node;
+    InstanceMethodDefNode *instance_method_def_node;
+    ClassMethodDefNode *class_method_def_node;
+    ImplementationDefListNode *implementation_def_list_node;
+    ImplementationBodyNode *implementation_body_node;
+    InstanceMethodDeclNode *instance_method_decl_node;
+    ClassMethodDeclNode *class_method_decl_node;
+    PropertyNode *property_node;
+    InterfaceDeclListNode *interface_decl_list_node;
+    InitializerListNode *initializer_list_node;
+    InitializerNode *initializer_node;
+    DeclaratorNode *declarator_node;
+    InitDeclNode *init_decl_node;
+    AccessModifierNode *access_modifier_node;
+    InstanceVarDeclNode *instance_var_decl_node;
+    InstanceVarsDeclListNode *instance_vars_decl_list_node;
+    InstanceVarsNode *instance_vars_node;
+    InterfaceBodyNode *interface_body_node;
+    ImplementationNode *implementation_node;
+    InterfaceNode *interface_node;
+    ClassNameListNode *class_name_list_node;
+    ExternalDeclNode *external_decl_node;
+    ExternalDeclListNode *external_decl_list_node;
+    ProgramNode *program_node;
 }
 
 %nonassoc NO_ELSE
@@ -43,12 +89,12 @@ void yyerror(char const* s);
 %token NSNUMBER
 %token VOID
 %token TYPE_ID
-%token CLASS_NAME
 
 %token 	<int_lit>		INT_LIT
 %token	<float_lit>		FLOAT_LIT
 %token	<bool_lit>		BOOL_LIT
 %token	<identifier>	ID
+%token  <identifier>    CLASS_NAME
 %token	<char_lit>		CHAR_LIT
 %token  <str_lit>       STRING_LIT
 
@@ -63,6 +109,49 @@ void yyerror(char const* s);
 %token IN
 %token ATSIGN
 %token NIL
+
+%type <value_node>                      literal
+%type <receiver_node>                   receiver
+%type <msg_arg_node>                    msg_arg
+%type <msg_arg_list_node>               msg_arg_list
+%type <msg_selector_node>               msg_sel
+%type <expr_list_node>                  expr_list_e expr_list
+%type <expr_node>                       expr_e expr
+%type <type_node>                       type
+%type <declarator_list_node>            declarator_list
+%type <decl_node>                       decl
+%type <stmt_list_node>                  stmt_list_e stmt_list
+%type <stmt_node>                       stmt compound_stmt if_stmt for_stmt while_stmt do_while_stmt
+%type <array_size_spec_node>            array_size_spec
+%type <param_decl_node>                 param_decl
+%type <param_list_node>                 param_list_e param_list
+%type <func_def_node>                   func_def
+%type <func_decl_node>                  func_decl
+%type <method_param_node>               method_param
+%type <method_sel_node>                 method_sel
+%type <instance_method_def_node>        instance_method_def
+%type <class_method_def_node>           class_method_def
+%type <implementation_def_list_node>    implementation_def_list
+%type <implementation_body_node>        implementation_body
+%type <instance_method_decl_node>       instance_method_decl
+%type <class_method_decl_node>          class_method_decl
+%type <property_node>                   property attribute
+%type <interface_decl_list_node>        interface_decl_list
+%type <initializer_list_node>           initializer_list_e initializer_list
+%type <initializer_node>                initializer
+%type <declarator_node>                 declarator
+%type <init_decl_node>                  init_decl
+%type <access_modifier_node>            access_modifier
+%type <instance_var_decl_node>          instance_var_decl
+%type <instance_vars_decl_list_node>    instance_var_decl_list
+%type <instance_vars_node>              instance_vars
+%type <interface_body_node>             interface_body
+%type <implementation_node>             class_implementation
+%type <interface_node>                  class_interface
+%type <class_name_list_node>            class_name_list
+%type <external_decl_node>              external_decl
+%type <external_decl_list_node>         external_decl_list_e external_decl_list
+%type <program_node>                    program
 
 %right   '='
 %left    OR
@@ -79,307 +168,307 @@ void yyerror(char const* s);
 
 %%
 
-program     :   external_decl_list_e
+program     :   external_decl_list_e    {root=ProgramNode::createProgram($1);}
             ;
 
 external_decl_list_e
-            :   /* empty */
-            |   external_decl_list
+            :   /* empty */             {$$=ExternalDeclListNode::createExternalDeclList();}
+            |   external_decl_list      {$$=$1}
             ;
 
 external_decl_list
-            :   external_decl
-            |   external_decl_list external_decl
+            :   external_decl                       {$$=ExternalDeclListNode::createExternalDeclList($1);}
+            |   external_decl_list external_decl    {$$=ExternalDeclListNode::addExternalDecl($1, $2);}
             ;
 
 external_decl
-            :   class_interface
-            |   class_implementation
-            |   CLASS class_name_list ';'
-            |   func_decl
-            |   func_def
+            :   class_interface             {$$=ExternalDeclNode::createInterface($1);}
+            |   class_implementation        {$$=ExternalDeclNode::createImplementation($1);}
+            |   CLASS class_name_list ';'   {$$=ExternalDeclNode::createFwClassDeclList($2);}
+            |   func_decl                   {$$=ExternalDeclNode::createFuncDecl($1);}
+            |   func_def                    {$$=ExternalDeclNode::createFuncDef($1);}
             ;
 
 class_name_list
-            :   CLASS_NAME
-            |   class_name_list ',' CLASS_NAME
+            :   CLASS_NAME                          {$$=ClassNameListNode::createClassFwDeclList($1);}
+            |   class_name_list ',' CLASS_NAME      {$$=ClassNameListNode::addClassFwDecl($1, $3);}
             ;
 
 class_interface
-            :   INTERFACE CLASS_NAME ':' CLASS_NAME interface_body END
-            |   INTERFACE CLASS_NAME interface_body END
+            :   INTERFACE CLASS_NAME ':' CLASS_NAME interface_body END  {$$=InterfaceNode::createInterface($2, $5);}
+            |   INTERFACE CLASS_NAME interface_body END                 {$$=InterfaceNode::createInterface($2);}
             ;
 
 interface_body
-            :   instance_vars interface_decl_list
-            |   interface_decl_list
+            :   instance_vars interface_decl_list   {$$=InterfaceBodyNode::createInterfaceBody($1, $2);}
+            |   interface_decl_list                 {$$=InterfaceBodyNode::createInterfaceBody($1);}
             ;
 
 instance_vars
-            :   '{' '}'
-            |   '{' instance_var_decl_list '}'
+            :   '{' '}'                             {$$=InstanceVarsNode::createInstanceVars();}
+            |   '{' instance_var_decl_list '}'      {$$=InstanceVarsNode::createInstanceVars($2);}
             ;
 
 instance_var_decl_list
-            :   instance_var_decl
-            |   instance_var_decl instance_var_decl_list
+            :   instance_var_decl                           {$$=InstanceVarsDeclListNode::createInstanceVarsDeclList($1);}
+            |   instance_var_decl instance_var_decl_list    {$$=InstanceVarsDeclListNode::addInstanceVarDecl($1, $2);}
             ;
 
 instance_var_decl
-            :   access_modifier type init_decl ';'
+            :   access_modifier type init_decl ';'      {$$=InstanceVarDeclNode::createInstanceVarDecl($1, $2, $3);}
             ;
 
 access_modifier
-            :   /* empty */
-            |   PUBLIC
-            |   PROTECTED
-            |   PRIVATE
+            :   /* empty */     {$$=nullptr}
+            |   PUBLIC          {$$=AccessModifierNode::createPublic();}
+            |   PROTECTED       {$$=AccessModifierNode::createProtected();}
+            |   PRIVATE         {$$=AccessModifierNode::createPrivate();}
             ;
 
 interface_decl_list
-            :   /* empty */
-            |   interface_decl_list property
-            |   interface_decl_list class_method_decl
-            |   interface_decl_list instance_method_decl
+            :   /* empty */                                     {$$=InterfaceDeclListNode::createInterfaceDeclList();}
+            |   interface_decl_list property                    {$$=InterfaceDeclListNode::addProperty($1, $2);}
+            |   interface_decl_list class_method_decl           {$$=InterfaceDeclListNode::addClassMethodDecl($1, $2);}
+            |   interface_decl_list instance_method_decl        {$$=InterfaceDeclListNode::addInstanceMethodDecl($1, $2);}
             ;
 
-property    :   PROPERTY '(' attribute ')' type ID ';'
-            |   PROPERTY type ID ';'
+property    :   PROPERTY '(' attribute ')' type ID ';'      {$$=PropertyNode::createProperty($3, $5, $6);}
+            |   PROPERTY type ID ';'                        {$$=PropertyNode::createProperty($2, $3);}
             ;
 
-attribute   :   READONLY
-            |   READWRITE
+attribute   :   READONLY        {$$=PropertyNode::Attribute::READONLY}
+            |   READWRITE       {$$=PropertyNode::Attribute::READWRITE}
             ;
 
 class_method_decl
-            :   '+' '(' type ')' ID ';'
-            |   '+' '(' VOID ')' ID ';'
-            |   '+' '(' type ')' method_sel ';'
-            |   '+' '(' VOID ')' method_sel ';'
+            :   '+' '(' type ')' ID ';'             {$$=ClassMethodDeclNode::createClassMethodDecl($3, $5);}
+            |   '+' '(' VOID ')' ID ';'             {$$=ClassMethodDeclNode::createClassMethodDecl($5);}
+            |   '+' '(' type ')' method_sel ';'     {$$=ClassMethodDeclNode::createClassMethodDecl($3, $5);}
+            |   '+' '(' VOID ')' method_sel ';'     {$$=ClassMethodDeclNode::createClassMethodDecl($5);}
             ;
 
 instance_method_decl
-            :   '-' '(' type ')' ID ';'
-            |   '-' '(' VOID ')' ID ';'
-            |   '-' '(' type ')' method_sel ';'
-            |   '-' '(' VOID ')' method_sel ';'
+            :   '-' '(' type ')' ID ';'             {$$=InstanceMethodDeclNode::createInstanceMethodDecl($3, $5);}
+            |   '-' '(' VOID ')' ID ';'             {$$=InstanceMethodDeclNode::createInstanceMethodDecl($5);}
+            |   '-' '(' type ')' method_sel ';'     {$$=InstanceMethodDeclNode::createInstanceMethodDecl($3, $5);}
+            |   '-' '(' VOID ')' method_sel ';'     {$$=InstanceMethodDeclNode::createInstanceMethodDecl($5);}
             ;
 
-method_sel  :   method_param
-            |   method_sel method_param
+method_sel  :   method_param                {$$=MethodSelNode::createMethodSel($1);}
+            |   method_sel method_param     {$$=MethodSelNode::addMethodParam($1, $2);}
             ;
 
-method_param:   ID ':' '(' type ')' ID
-            |   ID ':' '(' type '[' ']' ')' ID
-            |   ID ':' '(' type array_size_spec ')' ID
-            |   ID ':' '(' type array_size_spec '[' ']' ')' ID
+method_param:   ID ':' '(' type ')' ID                              {$$=MethodParamNode::createMethodParam($1, $4, $6);}
+            |   ID ':' '(' type '[' ']' ')' ID                      {$$=MethodParamNode::createArrayMethodParam($1, $4, $8);}
+            |   ID ':' '(' type array_size_spec ')' ID              {$$=MethodParamNode::createSizedArrayMethodParam($1, $4, $5, $7);}
+            |   ID ':' '(' type array_size_spec '[' ']' ')' ID      {$$=MethodParamNode::createSizedArrayOfArraysMethodParam($1, $4, $5, $9);}
             ;
 
-type        :   INT
-            |   CHAR
-            |   FLOAT
-            |   BOOL
-            |   TYPE_ID
-            |   CLASS_NAME '*'
+type        :   INT                 {$$=TypeNode::createIntType();}
+            |   CHAR                {$$=TypeNode::createCharType();}
+            |   FLOAT               {$$=TypeNode::createFloatType();}
+            |   BOOL                {$$=TypeNode::createBoolType();}
+            |   TYPE_ID             {$$=TypeNode::createIdType();}
+            |   CLASS_NAME '*'      {$$=TypeNode::createClassNameType();}
             ;
 
 class_implementation
-            :   IMPLEMENTATION CLASS_NAME implementation_body END
-            |   IMPLEMENTATION CLASS_NAME ':' CLASS_NAME implementation_body END
+            :   IMPLEMENTATION CLASS_NAME implementation_body END                   {$$=ImplementationNode::createImplementation($2, $3);}
+            |   IMPLEMENTATION CLASS_NAME ':' CLASS_NAME implementation_body END    {$$=ImplementationNode::createImplementation($2, $4, $5);}
             ;
 
 implementation_body
-            :   instance_vars implementation_def_list
-            |   implementation_def_list
+            :   instance_vars implementation_def_list       {$$=ImplementationBodyNode::createImplementationBody($1, $2);}
+            |   implementation_def_list                     {$$=ImplementationBodyNode::createImplementationBody($1);}
             ;
 
 implementation_def_list
-            :   property
-            |   class_method_def
-            |   instance_method_def
-            |   implementation_def_list property
-            |   implementation_def_list class_method_def
-            |   implementation_def_list instance_method_def
+            :   property                                        {$$=ImplementationDefListNode::createImplementationDefList($1);}
+            |   class_method_def                                {$$=ImplementationDefListNode::createImplementationDefList($1);}
+            |   instance_method_def                             {$$=ImplementationDefListNode::createImplementationDefList($1);}
+            |   implementation_def_list property                {$$=ImplementationDefListNode::addProperty($1, $2);}
+            |   implementation_def_list class_method_def        {$$=ImplementationDefListNode::addClassMethodDef($1, $2);}
+            |   implementation_def_list instance_method_def     {$$=ImplementationDefListNode::addInstanceMethodDef($1, $2);}
             ;
 
 class_method_def
-            :   '+' '(' type ')' ID compound_stmt
-            |   '+' '(' VOID ')' ID compound_stmt
-            |   '+' '(' type ')' method_sel compound_stmt
-            |   '+' '(' VOID ')' method_sel compound_stmt
+            :   '+' '(' type ')' ID compound_stmt               {$$=ClassMethodDefNode::createClassMethodDef($3, $5, $6);}
+            |   '+' '(' VOID ')' ID compound_stmt               {$$=ClassMethodDefNode::createClassMethodDef($5, $6);}
+            |   '+' '(' type ')' method_sel compound_stmt       {$$=ClassMethodDefNode::createClassMethodDef($3, $5, $6);}
+            |   '+' '(' VOID ')' method_sel compound_stmt       {$$=ClassMethodDefNode::createClassMethodDef($5, $6);}
             ;
 
 instance_method_def
-            :   '-' '(' type ')' ID compound_stmt
-            |   '-' '(' VOID ')' ID compound_stmt
-            |   '-' '(' type ')' method_sel compound_stmt
-            |   '-' '(' VOID ')' method_sel compound_stmt
+            :   '-' '(' type ')' ID compound_stmt               {$$=InstanceMethodDefNode::createInstanceMethodDef($3, $5, $6);}
+            |   '-' '(' VOID ')' ID compound_stmt               {$$=InstanceMethodDefNode::createInstanceMethodDef($5, $6);}
+            |   '-' '(' type ')' method_sel compound_stmt       {$$=InstanceMethodDefNode::createInstanceMethodDef($3, $5, $6);}
+            |   '-' '(' VOID ')' method_sel compound_stmt       {$$=InstanceMethodDefNode::createInstanceMethodDef($5, $6);}
             ;
 
-decl        :   type declarator_list
+decl        :   type declarator_list    {$$=DeclNode::createDecl($1, $2);}
             ;
 
 declarator_list
-            :   init_decl
-            |   declarator_list ',' init_decl
+            :   init_decl                           {$$=DeclaratorListNode::createExternalDeclList($1);}
+            |   declarator_list ',' init_decl       {$$=DeclaratorListNode::addExternalDecl($1, $3);}
             ;
 
-declarator  :   ID
-            |   declarator '[' expr ']'
+declarator  :   ID                          {$$=DeclaratorNode::createDeclarator($1);}
+            |   declarator '[' expr ']'     {$$=DeclaratorNode::addArrayAccess($1, $3);}
             ;
 
-init_decl   :   declarator
-            |   declarator '=' initializer
-            |   declarator '[' ']' '=' initializer
+init_decl   :   declarator                              {$$=InitDeclNode::createDeclarator($1);}
+            |   declarator '=' initializer              {$$=InitDeclNode::createInitialized($1, $3);}
+            |   declarator '[' ']' '=' initializer      {$$=InitDeclNode::createArrayInitialized($1, $5);}
             ;
 
-initializer :   expr
-            |   '{' initializer_list_e '}'
+initializer :   expr                            {$$=InitializerNode::createExpr($1);}
+            |   '{' initializer_list_e '}'      {$$=InitializerNode::createArrayInitializer($2);}
             ;
 
 initializer_list_e
-            :   /* empty */
-            |   initializer_list
+            :   /* empty */             {$$=InitializerListNode::createInitializerList();}
+            |   initializer_list        {$$=$1}
             ;
 
 initializer_list
-            :   initializer
-            |   initializer_list ',' initializer
+            :   initializer                             {$$=InitializerListNode::createInitializerList($1);}
+            |   initializer_list ',' initializer        {$$=InitializerListNode::addInitializer($1, $3);}
             ;
 
-expr_list_e :
-            |   expr_list
+expr_list_e :   /* empty */     {$$=nullptr}
+            |   expr_list       {$$=$1}
             ;
 
-expr_list   :   expr
-            |   expr_list ',' expr
+expr_list   :   expr                    {$$=ExprListNode::createExprList($1);}
+            |   expr_list ',' expr      {$$=ExprListNode::addExprToList($1, $3);}
             ;
 
 compound_stmt
-            :   '{' stmt_list_e '}'
+            :   '{' stmt_list_e '}'     {$$=StmtNode::createCompound($2);}
             ;
 
-stmt_list_e :   /* empty */
-            |   stmt_list
+stmt_list_e :   /* empty */     {$$=StmtListNode::createStmtList();}
+            |   stmt_list       {$$=$1}
             ;
 
-stmt_list   :   stmt
-            |   stmt_list stmt
+stmt_list   :   stmt                {$$=StmtListNode::createStmtList($1);}
+            |   stmt_list stmt      {$$=StmtListNode::addStmtToList($1, $2);}
             ;
 
-stmt        :   ';'
-            |   expr ';'
-            |   RETURN expr_e ';'
-            |   if_stmt
-            |   for_stmt
-            |   while_stmt
-            |   do_while_stmt
-            |   compound_stmt
-            |   decl ';'
+stmt        :   ';'                 {$$=StmtNode::createEmpty();}
+            |   expr ';'            {$$=StmtNode::createExpr($1);}
+            |   RETURN expr_e ';'   {$$=StmtNode::createReturn($2);}
+            |   if_stmt             {$$=$1}
+            |   for_stmt            {$$=$1}
+            |   while_stmt          {$$=$1}
+            |   do_while_stmt       {$$=$1}
+            |   compound_stmt       {$$=$1}
+            |   decl ';'            {$$=StmtNode::createDeclaration($1);}
             ;
 
-expr_e      :   /* empty */
-            |   expr
+expr_e      :   /* empty */     {$$=nullptr}
+            |   expr            {$$=$1}
             ;
 
-if_stmt     :   IF '(' expr ')' stmt    %prec NO_ELSE
-            |   IF '(' expr ')' stmt ELSE stmt
+if_stmt     :   IF '(' expr ')' stmt    %prec NO_ELSE       {$$=StmtNode::createIf($3, $5);}
+            |   IF '(' expr ')' stmt ELSE stmt              {$$=StmtNode::createIf($3, $5, $7);}
             ;
 
-for_stmt    :   FOR '(' expr_e ';' expr_e ';' expr_e ')' stmt
-            |   FOR '(' decl ';' expr_e ';' expr_e ')' stmt
-            |   FOR '(' ID IN expr ')' stmt
-            |   FOR '(' type ID IN expr ')' stmt
+for_stmt    :   FOR '(' expr_e ';' expr_e ';' expr_e ')' stmt   {$$=StmtNode::createFor($3, $5, $7, $9);}
+            |   FOR '(' decl ';' expr_e ';' expr_e ')' stmt     {$$=StmtNode::createFor($3, $5, $7, $9);}
+            |   FOR '(' ID IN expr ')' stmt                     {$$=StmtNode::createForIn($3, $5, $7);}
+            |   FOR '(' type ID IN expr ')' stmt                {$$=StmtNode::createTypedForIn($3, $4, $6, $8);}
             ;
 
-while_stmt  :   WHILE '(' expr ')' stmt
+while_stmt  :   WHILE '(' expr ')' stmt     {$$=StmtNode::createWhile($3, $5);}
             ;
 
 do_while_stmt
-            :   DO stmt WHILE '(' expr ')' ';'
+            :   DO stmt WHILE '(' expr ')' ';'      {$$=StmtNode::createDoWhile($2, $5);}
             ;
 
-expr        :   ID
-            |   literal
-            |   ATSIGN '[' expr_list_e ']'
-            |   ATSIGN '(' expr ')'
-            |   NIL
-            |   '(' expr ')'
-            |   '[' receiver msg_sel ']'
-            |   SELF
-            |   '-' expr    %prec UMINUS
-            |   '!' expr
-            |   expr INC
-            |   expr DEC
-            |   expr '+' expr
-            |   expr '-' expr
-            |   expr '*' expr
-            |   expr '/' expr
-            |   expr EQUAL expr
-            |   expr NEQUAL expr
-            |   expr '>' expr
-            |   expr '<' expr
-            |   expr LESS_EQUAL expr
-            |   expr GREATER_EQUAL expr
-            |   expr AND expr
-            |   expr OR expr
-            |   expr '=' expr
-            |   expr '[' expr ']'
-            |   ID '(' expr_list_e ')'
-            |   expr '.' expr
-            |   expr ARROW expr
+expr        :   ID                              {$$=ExprNode::createIdentifier($1);}
+            |   literal                         {$$=ExprNode::createLiteral($1);}
+            |   ATSIGN '[' expr_list_e ']'      {$$=ExprNode::createObjcArrayLiteral($3);}
+            |   ATSIGN '(' expr ')'             {$$=ExprNode::createObjcBoxedExpr($3);}
+            |   NIL                             {$$=ExprNode::createNil();}
+            |   '(' expr ')'                    {$$=ExprNode::createBoxedExpr($2);}
+            |   '[' receiver msg_sel ']'        {$$=ExprNode::createMessageSend($2, $3);}
+            |   SELF                            {$$=ExprNode::createSelf();}
+            |   '-' expr    %prec UMINUS        {$$=ExprNode::createUnaryMinus($2);}
+            |   '!' expr                        {$$=ExprNode::createNot($2);}
+            |   expr INC                        {$$=ExprNode::createPostInc($1);}
+            |   expr DEC                        {$$=ExprNode::createPostDec($1);}
+            |   expr '+' expr                   {$$=ExprNode::createAddition($1, $3);}
+            |   expr '-' expr                   {$$=ExprNode::createSubtraction($1, $3);}
+            |   expr '*' expr                   {$$=ExprNode::createMultiplication($1, $3);}
+            |   expr '/' expr                   {$$=ExprNode::createDivision($1, $3);}
+            |   expr EQUAL expr                 {$$=ExprNode::createEqual($1, $3);}
+            |   expr NEQUAL expr                {$$=ExprNode::createNotEqual($1, $3);}
+            |   expr '>' expr                   {$$=ExprNode::createGreater($1, $3);}
+            |   expr '<' expr                   {$$=ExprNode::createLess($1, $3);}
+            |   expr LESS_EQUAL expr            {$$=ExprNode::createLessOrEqual($1, $3);}
+            |   expr GREATER_EQUAL expr         {$$=ExprNode::createGreaterOrEqual($1, $3);}
+            |   expr AND expr                   {$$=ExprNode::createAnd($1, $3);}
+            |   expr OR expr                    {$$=ExprNode::createOr($1, $3);}
+            |   expr '=' expr                   {$$=ExprNode::createAssign($1, $3);}
+            |   expr '[' expr ']'               {$$=ExprNode::createArrayAccess($1, $3);}
+            |   ID '(' expr_list_e ')'          {$$=ExprNode::createFunctionCall($1, $3);}
+            |   expr '.' expr                   {$$=ExprNode::createDot($1, $3);}
+            |   expr ARROW expr                 {$$=ExprNode::createArrow($1, $3);}
             ;
 
-receiver    :   SUPER
-            |   expr
+receiver    :   SUPER       {$$=ReceiverNode::createSuper();}
+            |   expr        {$$=ReceiverNode::createExpr($1);}
             ;
 
-msg_sel     :   ID
-            |   msg_arg_list
+msg_sel     :   ID                  {$$=MsgSelectorNode::createSimpleSel($1);}
+            |   msg_arg_list        {$$=MsgSelectorNode::createArgumentList($1);}
             ;
 
 msg_arg_list
-            :   msg_arg
-            |   msg_arg_list msg_arg
+            :   msg_arg                     {$$=MsgArgListNode::createMsgArgList($1);}
+            |   msg_arg_list msg_arg        {$$=MsgArgListNode::addMsgArg($1, $2);}
             ;
 
-msg_arg     :   ID ':' expr
+msg_arg     :   ID ':' expr     {$$=MsgArgNode::createMsgArg($1, $3);}
             ;
 
-literal     :   STRING_LIT
-            |   CHAR_LIT
-            |   BOOL_LIT
-            |   INT_LIT
-            |   FLOAT_LIT
-            |   ATSIGN STRING_LIT
-            |   ATSIGN BOOL_LIT
-            |   ATSIGN INT_LIT
-            |   ATSIGN FLOAT_LIT
+literal     :   STRING_LIT              {$$=ValueNode::createString($1);}
+            |   CHAR_LIT                {$$=ValueNode::createChar($1);}
+            |   BOOL_LIT                {$$=ValueNode::createBool($1);}
+            |   INT_LIT                 {$$=ValueNode::createInt($1);}
+            |   FLOAT_LIT               {$$=ValueNode::createFloat($1);}
+            |   ATSIGN STRING_LIT       {$$=ValueNode::createObjcString($2);}
+            |   ATSIGN BOOL_LIT         {$$=ValueNode::createObjcBool($2);}
+            |   ATSIGN INT_LIT          {$$=ValueNode::createObjcInt($2);}
+            |   ATSIGN FLOAT_LIT        {$$=ValueNode::createObjcFloat($2);}
             ;
 
-func_decl   :   type ID '(' param_list_e ')' ';'
+func_decl   :   type ID '(' param_list_e ')' ';'    {$$=FuncDeclNode::createFuncDecl($1, $2, $4);}
             ;
 
-func_def    :   type ID '(' param_list_e ')' compound_stmt
+func_def    :   type ID '(' param_list_e ')' compound_stmt      {$$=FuncDefNode::createFuncDef($1, $2, $4, $6);}
             ;
 
-param_list_e:   /* empty */
-            |   param_list
+param_list_e:   /* empty */     {$$=ParamListNode::createParamList();}
+            |   param_list      {$$=$1}
             ;
 
-param_list  :   param_decl
-            |   param_list ',' param_decl
+param_list  :   param_decl                      {$$=ParamListNode::createParamList($1);}
+            |   param_list ',' param_decl       {$$=ParamListNode::addParamDecl($1, $3);}
             ;
 
-param_decl  :   type ID
-            |   type ID '[' ']'
-            |   type ID array_size_spec
-            |   type ID array_size_spec '[' ']'
+param_decl  :   type ID                             {$$=ParamDeclNode::createParamDecl($1, $2);}
+            |   type ID '[' ']'                     {$$=ParamDeclNode::createArrayParamDecl($1, $2);}
+            |   type ID array_size_spec             {$$=ParamDeclNode::createSizedArrayParamDecl($1, $2, $3);}
+            |   type ID array_size_spec '[' ']'     {$$=ParamDeclNode::createSizedArrayOfArraysParamDecl($1, $2, $3);}
             ;
 
 array_size_spec
-            :   '[' expr ']'
-            |   array_size_spec '[' expr ']'
+            :   '[' expr ']'                        {$$=ArraySizeSpecNode::createArraySizeSpec($2);}
+            |   array_size_spec '[' expr ']'        {$$=ArraySizeSpecNode::addDimension($1, $3);}
             ;
 
 %%
