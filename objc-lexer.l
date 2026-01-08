@@ -5,8 +5,7 @@
 #include <cstring>
 #include <iomanip>
 #include "objc-parser.hpp"
-
-#define STRING_BUF_SIZE 1024
+#include "utils.h"
 
 typedef enum {
     TOK_KEYWORD,
@@ -278,6 +277,7 @@ OCT      [0-7]
 <INTERFACE_IMPL>{ID} {
     print_token(TOK_CLASS_NAME, yytext);
     set_token_identifier(yytext);
+    add_class_name(yytext);
     BEGIN(INTERFACE_IMPL_AFTER_NAME);
     return CLASS_NAME;
 }
@@ -305,6 +305,7 @@ OCT      [0-7]
 <INTERFACE_IMPL_PARENT>{ID} {
     print_token(TOK_CLASS_NAME, yytext);
     set_token_identifier(yytext);
+    add_class_name(yytext);
     BEGIN(INITIAL);
     return CLASS_NAME;
 }
@@ -319,6 +320,7 @@ OCT      [0-7]
 <CLASS_LIST>{ID} {
     print_token(TOK_CLASS_NAME, yytext);
     set_token_identifier(yytext);
+    add_class_name(yytext);
     BEGIN(CLASS_LIST_AFTER_NAME);
     return CLASS_NAME;
 }
@@ -374,9 +376,15 @@ OCT      [0-7]
 "return"            { print_token(TOK_KEYWORD, yytext); return RETURN; }
 
 {ID}                { 
-    print_token(TOK_IDENTIFIER, yytext);
-    set_token_identifier(yytext);
-    return ID;
+    if (is_class_name(yytext)) {
+        print_token(TOK_CLASS_NAME, yytext);
+        set_token_identifier(yytext);
+        return CLASS_NAME;
+    } else {
+        print_token(TOK_IDENTIFIER, yytext);
+        set_token_identifier(yytext);
+        return ID;
+    }
 }
 
 "+"                 { print_token(TOK_OPERATOR, yytext); return '+'; }
