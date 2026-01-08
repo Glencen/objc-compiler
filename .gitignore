@@ -1,5 +1,14 @@
 *.yy.c
+*.yy.cpp
 *.dot
+*.txt
 *.exe
 *.output
 *.tab.c
+*.tab.h
+*.tab.cpp
+*.tab.hpp
+*.o
+objc-lexer.cpp
+objc-parser.cpp
+objc-parser.hpp
