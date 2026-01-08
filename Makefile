@@ -33,4 +33,6 @@ objc-parser.cpp objc-parser.hpp: objc-parser.y
 clean:
 	rm -f $(OBJ) $(TARGET) objc-lexer.cpp objc-parser.cpp objc-parser.hpp *.output
 
+rebuild: clean all
+
 .PHONY: all clean
