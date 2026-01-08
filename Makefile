@@ -5,11 +5,15 @@ YACC = bison
 YFLAGS = -d
 
 TARGET = objc_compiler
-SOURCES = main.cpp classes.cpp
+SOURCES = main.cpp classes.cpp utils.cpp
 OBJ = $(SOURCES:.cpp=.o) objc-lexer.o objc-parser.o
 
 all: $(TARGET)
-main.o: main.cpp objc-parser.hpp
+
+main.o: main.cpp objc-parser.hpp utils.h
+classes.o: classes.cpp
+utils.o: utils.cpp utils.h
+
 objc-parser.o: objc-parser.cpp objc-parser.hpp
 objc-lexer.o: objc-lexer.cpp objc-parser.hpp
 
