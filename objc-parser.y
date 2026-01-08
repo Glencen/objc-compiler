@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include "classes.h"
+#include "output_utils.h"
 
 using namespace std;
 }
@@ -491,4 +492,5 @@ PropertyNode::Attribute convertAttr(int attribute) {
 void yyerror(const char* s) {
     cout << "Parser error: " << s << " at line " << yylineno << endl;
     cout << "Current token: " << yytext << endl;
+    TokenOutput::getInstance().setParserError();
 }
