@@ -669,6 +669,8 @@ protected:
     list<PropertyNode*> *properties;
     list<ClassMethodDefNode*> *classMethodDefs;
     list<InstanceMethodDefNode*> *instanceMethodDefs;
+    
+    ImplementationDefListNode();
 };
 
 class ImplementationBodyNode : public AstNode {

@@ -20,6 +20,15 @@ void AstNode::appendDotEdge(string &res, const AstNode *child, const string &edg
 
 //--------------------------------------------------------------ValueNode--------------------------------------------------------------
 
+ValueNode::ValueNode() : AstNode() {
+    valueType = NONE;
+    intValue = 0;
+    floatValue = 0;
+    boolValue = false;
+    charValue = 0;
+    stringValue = nullptr;
+}
+
 ValueNode* ValueNode::createInt(int value) {
     ValueNode *node = new ValueNode();
     node->valueType = INT_LIT;
@@ -190,6 +199,11 @@ string ValueNode::toDot() const {
 
 //--------------------------------------------------------------ReceiverNode--------------------------------------------------------------
 
+ReceiverNode::ReceiverNode() : AstNode() {
+    type = NONE;
+    expr = nullptr;
+}
+
 ReceiverNode* ReceiverNode::createExpr(ExprNode *expr) {
     ReceiverNode *node = new ReceiverNode();
     node->type = EXPR;
@@ -227,6 +241,11 @@ string ReceiverNode::toDot() const {
 
 //--------------------------------------------------------------MsgArgNode--------------------------------------------------------------
 
+MsgArgNode::MsgArgNode() : AstNode() {
+    identifier = nullptr;
+    arg = nullptr;
+}
+
 MsgArgNode* MsgArgNode::createMsgArg(ValueNode *identifier, ExprNode *arg) {
     MsgArgNode *node = new MsgArgNode();
     node->identifier = identifier;
@@ -253,6 +272,10 @@ string MsgArgNode::toDot() const {
 }
 
 //--------------------------------------------------------------MsgArgListNode--------------------------------------------------------------
+
+MsgArgListNode::MsgArgListNode() : AstNode() {
+    msgArgs = nullptr;
+}
 
 MsgArgListNode* MsgArgListNode::createMsgArgList(MsgArgNode *arg) {
     MsgArgListNode *node = new MsgArgListNode();
@@ -283,6 +306,12 @@ string MsgArgListNode::toDot() const {
 }
 
 //--------------------------------------------------------------MsgSelectorNode--------------------------------------------------------------
+
+MsgSelectorNode::MsgSelectorNode() : AstNode() {
+    type = NONE;
+    identifier = nullptr;
+    argList = nullptr;
+}
 
 MsgSelectorNode* MsgSelectorNode::createSimpleSel(ValueNode *identifier) {
     MsgSelectorNode *node = new MsgSelectorNode();
@@ -322,6 +351,10 @@ string MsgSelectorNode::toDot() const {
 
 //--------------------------------------------------------------ExprListNode--------------------------------------------------------------
 
+ExprListNode::ExprListNode() : AstNode() {
+    exprList = nullptr;
+}
+
 ExprListNode* ExprListNode::createExprList(ExprNode *expr) {
     ExprListNode *node = new ExprListNode();
     node->exprList = new list<ExprNode*>{expr};
@@ -351,6 +384,22 @@ string ExprListNode::toDot() const {
 }
 
 //--------------------------------------------------------------ExprNode--------------------------------------------------------------
+
+ExprNode::ExprNode() : AstNode() {
+    type = NONE;
+    identifier = nullptr;
+    literalValue = nullptr;
+    left = nullptr;
+    right = nullptr;
+    operand = nullptr;
+    index = nullptr;
+    funcId = nullptr;
+    args = nullptr;
+    receiver = nullptr;
+    selector = nullptr;
+    objcArrayExprList = nullptr;
+    boxedExpr = nullptr;
+}
 
 ExprNode* ExprNode::createIdentifier(ValueNode *value) {
     ExprNode *node = new ExprNode();
@@ -680,6 +729,11 @@ string ExprNode::toDot() const {
 
 //--------------------------------------------------------------TypeNode--------------------------------------------------------------
 
+TypeNode::TypeNode() : AstNode() {
+    kind = NONE;
+    classNameValue = nullptr;
+}
+
 TypeNode* TypeNode::createIntType() {
     TypeNode *node = new TypeNode();
     node->kind = INT;
@@ -746,6 +800,10 @@ string TypeNode::toDot() const {
 
 //--------------------------------------------------------------DeclaratorListNode--------------------------------------------------------------
 
+DeclaratorListNode::DeclaratorListNode() : AstNode() {
+    initDeclList = nullptr;
+}
+
 DeclaratorListNode* DeclaratorListNode::createExternalDeclList(InitDeclNode *initDecl) {
     DeclaratorListNode *node = new DeclaratorListNode();
     node->initDeclList = new list<InitDeclNode*>{initDecl};
@@ -784,6 +842,11 @@ string DeclaratorListNode::toDot() const {
 
 //--------------------------------------------------------------DeclNode--------------------------------------------------------------
 
+DeclNode::DeclNode() : AstNode() {
+    type = nullptr;
+    declaratorList = nullptr;
+}
+
 DeclNode* DeclNode::createDecl(TypeNode *type, DeclaratorListNode *declaratorList) {
     DeclNode *node = new DeclNode();
     node->type = type;
@@ -812,6 +875,16 @@ string DeclNode::toDot() const {
 }
 
 //--------------------------------------------------------------StmtListNode--------------------------------------------------------------
+
+StmtListNode::StmtListNode() : AstNode() {
+    stmts = nullptr;
+}
+
+StmtListNode* StmtListNode::createStmtList() {
+    StmtListNode *node = new StmtListNode();
+    node->stmts = new list<StmtNode*>();
+    return node;
+}
 
 StmtListNode* StmtListNode::createStmtList(StmtNode *stmt) {
     StmtListNode *node = new StmtListNode();
@@ -850,6 +923,21 @@ string StmtListNode::toDot() const {
 }
 
 //--------------------------------------------------------------StmtNode--------------------------------------------------------------
+
+StmtNode::StmtNode() : AstNode() {
+    type = NONE;
+    expr = nullptr;
+    condition = nullptr;
+    thenBranch = nullptr;
+    elseBranch = nullptr;
+    post = nullptr;
+    forInId = nullptr;
+    forInType = nullptr;
+    collection = nullptr;
+    body = nullptr;
+    compound = nullptr;
+    decl = nullptr;
+}
 
 StmtNode* StmtNode::createEmpty() {
     StmtNode *node = new StmtNode();
@@ -997,6 +1085,10 @@ string StmtNode::toDot() const {
 
 //--------------------------------------------------------------ArraySizeSpecNode--------------------------------------------------------------
 
+ArraySizeSpecNode::ArraySizeSpecNode() : AstNode() {
+    sizes = nullptr;
+}
+
 ArraySizeSpecNode* ArraySizeSpecNode::createArraySizeSpec(ExprNode *size) {
     ArraySizeSpecNode *node = new ArraySizeSpecNode();
     node->sizes = new list<ExprNode*>{size};
@@ -1034,6 +1126,13 @@ string ArraySizeSpecNode::toDot() const {
 }
 
 //--------------------------------------------------------------ParamDeclNode--------------------------------------------------------------
+
+ParamDeclNode::ParamDeclNode() : AstNode() {
+    kind = NONE;
+    type = nullptr;
+    identifier = nullptr;
+    arraySizeSpec = nullptr;
+}
 
 ParamDeclNode* ParamDeclNode::createParamDecl(TypeNode *type, ValueNode *identifier) {
     ParamDeclNode *node = new ParamDeclNode();
@@ -1106,6 +1205,10 @@ string ParamDeclNode::toDot() const {
 
 //--------------------------------------------------------------ParamListNode--------------------------------------------------------------
 
+ParamListNode::ParamListNode() : AstNode() {
+    paramList = nullptr;
+}
+
 ParamListNode* ParamListNode::createParamList() {
     ParamListNode *node = new ParamListNode();
     node->paramList = new list<ParamDeclNode*>();
@@ -1150,6 +1253,13 @@ string ParamListNode::toDot() const {
 
 //--------------------------------------------------------------FuncDefNode--------------------------------------------------------------
 
+FuncDefNode::FuncDefNode() : AstNode() {
+    type = nullptr;
+    identifier = nullptr;
+    paramList = nullptr;
+    compoundStmt = nullptr;
+}
+
 FuncDefNode* FuncDefNode::createFuncDef(TypeNode *type, ValueNode *identifier, ParamListNode *paramList, StmtNode *compoundStmt) {
     FuncDefNode *node = new FuncDefNode();
     node->type = type;
@@ -1191,6 +1301,12 @@ string FuncDefNode::toDot() const {
 
 //--------------------------------------------------------------FuncDeclNode--------------------------------------------------------------
 
+FuncDeclNode::FuncDeclNode() : AstNode() {
+    type = nullptr;
+    identifier = nullptr;
+    paramList = nullptr;
+}
+
 FuncDeclNode* FuncDeclNode::createFuncDecl(TypeNode *type, ValueNode *identifier, ParamListNode *paramList) {
     FuncDeclNode *node = new FuncDeclNode();
     node->type = type;
@@ -1225,6 +1341,14 @@ string FuncDeclNode::toDot() const {
 }
 
 //--------------------------------------------------------------MethodParamNode--------------------------------------------------------------
+
+MethodParamNode::MethodParamNode() : AstNode() {
+    kind = NONE;
+    selectorIdentifier = nullptr;
+    type = nullptr;
+    paramIdentifier = nullptr;
+    arraySizeSpec = nullptr;
+}
 
 MethodParamNode* MethodParamNode::createMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ValueNode *paramIdentifier) {
     MethodParamNode *node = new MethodParamNode();
@@ -1348,6 +1472,14 @@ string MethodSelNode::toDot() const {
 
 //--------------------------------------------------------------InstanceMethodDefNode--------------------------------------------------------------
 
+InstanceMethodDefNode::InstanceMethodDefNode() : AstNode() {
+    kind = NONE;
+    type = nullptr;
+    identifier = nullptr;
+    methodSel = nullptr;
+    compoundStmt = nullptr;
+}
+
 InstanceMethodDefNode* InstanceMethodDefNode::createInstanceMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt) {
     InstanceMethodDefNode *node = new InstanceMethodDefNode();
     node->kind = TYPE_ID;
@@ -1424,6 +1556,14 @@ string InstanceMethodDefNode::toDot() const {
 
 //--------------------------------------------------------------ClassMethodDefNode--------------------------------------------------------------
 
+ClassMethodDefNode::ClassMethodDefNode() : AstNode() {
+    kind = NONE;
+    type = nullptr;
+    identifier = nullptr;
+    methodSel = nullptr;
+    compoundStmt = nullptr;
+}
+
 ClassMethodDefNode* ClassMethodDefNode::createClassMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt) {
     ClassMethodDefNode *node = new ClassMethodDefNode();
     node->kind = TYPE_ID;
@@ -1499,6 +1639,12 @@ string ClassMethodDefNode::toDot() const {
 }
 
 //--------------------------------------------------------------ImplementationDefListNode--------------------------------------------------------------
+
+ImplementationDefListNode::ImplementationDefListNode() : AstNode() {
+    properties = nullptr;
+    classMethodDefs = nullptr;
+    instanceMethodDefs = nullptr;
+}
 
 ImplementationDefListNode* ImplementationDefListNode::createImplementationDefList(PropertyNode *property) {
     ImplementationDefListNode *node = new ImplementationDefListNode();
@@ -1594,6 +1740,11 @@ string ImplementationDefListNode::toDot() const {
 
 //--------------------------------------------------------------ImplementationBodyNode--------------------------------------------------------------
 
+ImplementationBodyNode::ImplementationBodyNode() : AstNode() {
+    instanceVars = nullptr;
+    implementationDefList = nullptr;
+}
+
 ImplementationBodyNode* ImplementationBodyNode::createImplementationBody(ImplementationDefListNode *implementationDefList) {
     ImplementationBodyNode *node = new ImplementationBodyNode();
     node->implementationDefList = implementationDefList;
@@ -1628,6 +1779,13 @@ string ImplementationBodyNode::toDot() const {
 }
 
 //--------------------------------------------------------------InstanceMethodDeclNode--------------------------------------------------------------
+
+InstanceMethodDeclNode::InstanceMethodDeclNode() : AstNode() {
+    kind = NONE;
+    type = nullptr;
+    identifier = nullptr;
+    methodSel = nullptr;
+}
 
 InstanceMethodDeclNode* InstanceMethodDeclNode::createInstanceMethodDecl(TypeNode *type, ValueNode *identifier) {
     InstanceMethodDeclNode *node = new InstanceMethodDeclNode();
@@ -1696,6 +1854,13 @@ string InstanceMethodDeclNode::toDot() const {
 
 //--------------------------------------------------------------ClassMethodDeclNode--------------------------------------------------------------
 
+ClassMethodDeclNode::ClassMethodDeclNode() : AstNode() {
+    kind = NONE;
+    type = nullptr;
+    identifier = nullptr;
+    methodSel = nullptr;
+}
+
 ClassMethodDeclNode* ClassMethodDeclNode::createClassMethodDecl(TypeNode *type, ValueNode *identifier) {
     ClassMethodDeclNode *node = new ClassMethodDeclNode();
     node->kind = TYPE_ID;
@@ -1763,6 +1928,12 @@ string ClassMethodDeclNode::toDot() const {
 
 //--------------------------------------------------------------PropertyNode--------------------------------------------------------------
 
+PropertyNode::PropertyNode() : AstNode() {
+    attribute = NONE;
+    type = nullptr;
+    name = nullptr;
+}
+
 PropertyNode* PropertyNode::createProperty(Attribute attr, TypeNode *type, ValueNode *name) {
     PropertyNode *node = new PropertyNode();
     node->attribute = attr;
@@ -1807,6 +1978,12 @@ string PropertyNode::toDot() const {
 }
 
 //--------------------------------------------------------------InterfaceDeclListNode--------------------------------------------------------------
+
+InterfaceDeclListNode::InterfaceDeclListNode() : AstNode() {
+    properties = nullptr;
+    classMethodDecls = nullptr;
+    instanceMethodDecls = nullptr;
+}
 
 InterfaceDeclListNode* InterfaceDeclListNode::createInterfaceDeclList() {
     InterfaceDeclListNode *node = new InterfaceDeclListNode();
@@ -1886,6 +2063,10 @@ string InterfaceDeclListNode::toDot() const {
 
 //--------------------------------------------------------------InitializerListNode--------------------------------------------------------------
 
+InitializerListNode::InitializerListNode() : AstNode() {
+    initializers = nullptr;
+}
+
 InitializerListNode* InitializerListNode::createInitializerList() {
     InitializerListNode *node = new InitializerListNode();
     node->initializers = new list<InitializerNode*>();
@@ -1929,6 +2110,12 @@ string InitializerListNode::toDot() const {
 }
 
 //--------------------------------------------------------------InitializerNode--------------------------------------------------------------
+
+InitializerNode::InitializerNode() : AstNode() {
+    type = NONE;
+    expr = nullptr;
+    initList = nullptr;
+}
 
 InitializerNode* InitializerNode::createExpr(ExprNode *expr) {
     InitializerNode *node = new InitializerNode();
@@ -1974,6 +2161,11 @@ string InitializerNode::toDot() const {
 
 //--------------------------------------------------------------DeclaratorNode--------------------------------------------------------------
 
+DeclaratorNode::DeclaratorNode() : AstNode() {
+    identifier = nullptr;
+    arraySizes = nullptr;
+}
+
 DeclaratorNode* DeclaratorNode::createDeclarator(ValueNode *identifier) {
     DeclaratorNode *node = new DeclaratorNode();
     node->identifier = identifier;
@@ -2016,6 +2208,12 @@ string DeclaratorNode::toDot() const {
 }
 
 //--------------------------------------------------------------InitDeclNode--------------------------------------------------------------
+
+InitDeclNode::InitDeclNode() : AstNode() {
+    type = NONE;
+    declarator = nullptr;
+    initializer = nullptr;
+}
 
 InitDeclNode* InitDeclNode::createDeclarator(DeclaratorNode *declarator) {
     InitDeclNode *node = new InitDeclNode();
@@ -2071,6 +2269,10 @@ string InitDeclNode::toDot() const {
 
 //--------------------------------------------------------------AccessModifierNode--------------------------------------------------------------
 
+AccessModifierNode::AccessModifierNode() : AstNode() {
+    accessType = NONE;
+}
+
 AccessModifierNode* AccessModifierNode::createPublic() {
     AccessModifierNode *node = new AccessModifierNode();
     node->accessType = PUBLIC;
@@ -2110,6 +2312,12 @@ string AccessModifierNode::toDot() const {
 
 //--------------------------------------------------------------InstanceVarDeclNode--------------------------------------------------------------
 
+InstanceVarDeclNode::InstanceVarDeclNode() : AstNode() {
+    accessModifier = nullptr;
+    type = nullptr;
+    initDecl = nullptr;
+}
+
 InstanceVarDeclNode* InstanceVarDeclNode::createInstanceVarDecl(AccessModifierNode *accessModifier, TypeNode *type, InitDeclNode *initDecl) {
     InstanceVarDeclNode *node = new InstanceVarDeclNode();
     node->accessModifier = accessModifier;
@@ -2144,6 +2352,10 @@ string InstanceVarDeclNode::toDot() const {
 }
 
 //--------------------------------------------------------------InstanceVarsDeclListNode--------------------------------------------------------------
+
+InstanceVarsDeclListNode::InstanceVarsDeclListNode() : AstNode() {
+    instanceVarDecls = nullptr;
+}
 
 InstanceVarsDeclListNode* InstanceVarsDeclListNode::createInstanceVarsDeclList(InstanceVarDeclNode *instanceVarDecl) {
     InstanceVarsDeclListNode *node = new InstanceVarsDeclListNode();
@@ -2183,6 +2395,10 @@ string InstanceVarsDeclListNode::toDot() const {
 
 //--------------------------------------------------------------InstanceVarsNode--------------------------------------------------------------
 
+InstanceVarsNode::InstanceVarsNode() : AstNode() {
+    instanceVarsDeclList = nullptr;
+}
+
 InstanceVarsNode* InstanceVarsNode::createInstanceVars() {
     InstanceVarsNode *node = new InstanceVarsNode();
     return node;
@@ -2210,6 +2426,11 @@ string InstanceVarsNode::toDot() const {
 }
 
 //--------------------------------------------------------------InterfaceBodyNode--------------------------------------------------------------
+
+InterfaceBodyNode::InterfaceBodyNode() : AstNode() {
+    instanceVars = nullptr;
+    interfaceDeclList = nullptr;
+}
 
 InterfaceBodyNode* InterfaceBodyNode::createInterfaceBody(InterfaceDeclListNode *interfaceDeclList) {
     InterfaceBodyNode *node = new InterfaceBodyNode();
@@ -2245,6 +2466,12 @@ string InterfaceBodyNode::toDot() const {
 }
 
 //--------------------------------------------------------------ImplementationNode--------------------------------------------------------------
+
+ImplementationNode::ImplementationNode() : AstNode() {
+    className = nullptr;
+    superClassName = nullptr;
+    implementationBody = nullptr;
+}
 
 ImplementationNode* ImplementationNode::createImplementation(ValueNode *className, ImplementationBodyNode *implementationBody) {
     ImplementationNode *node = new ImplementationNode();
@@ -2288,6 +2515,12 @@ string ImplementationNode::toDot() const {
 
 //--------------------------------------------------------------InterfaceNode--------------------------------------------------------------
 
+InterfaceNode::InterfaceNode() : AstNode() {
+    className = nullptr;
+    superClassName = nullptr;
+    interfaceBody = nullptr;
+}
+
 InterfaceNode* InterfaceNode::createInterface(ValueNode *className, InterfaceBodyNode *interfaceBody) {
     InterfaceNode *node = new InterfaceNode();
     node->className = className;
@@ -2330,6 +2563,10 @@ string InterfaceNode::toDot() const {
 
 //--------------------------------------------------------------ClassNameListNode--------------------------------------------------------------
 
+ClassNameListNode::ClassNameListNode() : AstNode() {
+    classFwDeclList = nullptr;
+}
+
 ClassNameListNode* ClassNameListNode::createClassFwDeclList(ValueNode *className) {
     ClassNameListNode *node = new ClassNameListNode();
     node->classFwDeclList = new list<ValueNode*>{className};
@@ -2367,6 +2604,15 @@ string ClassNameListNode::toDot() const {
 }
 
 //--------------------------------------------------------------ExternalDeclNode--------------------------------------------------------------
+
+ExternalDeclNode::ExternalDeclNode() : AstNode() {
+    type = NONE;
+    interface = nullptr;
+    implementation = nullptr;
+    classNames = nullptr;
+    funcDecl = nullptr;
+    funcDef = nullptr;
+}
 
 ExternalDeclNode* ExternalDeclNode::createInterface(InterfaceNode *interface) {
     ExternalDeclNode *node = new ExternalDeclNode();
@@ -2451,6 +2697,10 @@ string ExternalDeclNode::toDot() const {
 
 //--------------------------------------------------------------ExternalDeclListNode--------------------------------------------------------------
 
+ExternalDeclListNode::ExternalDeclListNode() : AstNode() {
+    externalDeclList = nullptr;
+}
+
 ExternalDeclListNode* ExternalDeclListNode::createExternalDeclList() {
     ExternalDeclListNode *node = new ExternalDeclListNode();
     node->externalDeclList = new list<ExternalDeclNode*>();
@@ -2494,6 +2744,10 @@ string ExternalDeclListNode::toDot() const {
 }
 
 //--------------------------------------------------------------ProgramNode--------------------------------------------------------------
+
+ProgramNode::ProgramNode() : AstNode() {
+    externalDeclList = nullptr;
+}
 
 ProgramNode* ProgramNode::createProgram(ExternalDeclListNode *externalDeclList) {
     ProgramNode *node = new ProgramNode();
