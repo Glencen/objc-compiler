@@ -1,15 +1,14 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
-#include "objc_parser.hpp"
+#include "objc-parser.hpp"
+#include "classes.h"
 
 namespace fs = std::filesystem;
 
-extern FILE *yyin;
-
+extern FILE* yyin;
 extern int yyparse();
-
-ProgramNode *root;
+extern ProgramNode* root;
 
 int main(int argc, char* argv[])
 {
@@ -23,23 +22,25 @@ int main(int argc, char* argv[])
 
     yyin = fopen(inputFile.c_str(), "r");
     if (!yyin) {
-        cout << ("Could not open input file: '" + inputFile + "'");
+        std::cerr << "Could not open input file: '" + inputFile + "'" << std::endl;
         return 1;
     }
 
     int parse_result = yyparse();
 
     if (parse_result != 0) {
-        cout << ("Parsing failed with code: '" + std::to_string(parse_result) + "'");
+        std::cerr << "Parsing failed with code: '" + std::to_string(parse_result) + "'" << std::endl;
         return 1;
     }
 
     if (!root) {
-        cout << ("No parse tree generated");
+        std::cerr << "No parse tree generated" << std::endl;
         return 1;
     }
 
-    cout << root->toDot();
+    std::cout << "digraph AST {\n";
+    std::cout << root->toDot();
+    std::cout << "}\n";
 
     return 0;
 }
