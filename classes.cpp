@@ -201,6 +201,7 @@ string ValueNode::toDot() const {
 
 ReceiverNode::ReceiverNode() : AstNode() {
     type = NONE;
+    className = nullptr;
     expr = nullptr;
 }
 
@@ -208,6 +209,13 @@ ReceiverNode* ReceiverNode::createExpr(ExprNode *expr) {
     ReceiverNode *node = new ReceiverNode();
     node->type = EXPR;
     node->expr = expr;
+    return node;
+}
+
+ReceiverNode* ReceiverNode::createClassName(ValueNode *className) {
+    ReceiverNode *node = new ReceiverNode();
+    node->type = CLASS_NAME;
+    node->className = className;
     return node;
 }
 
@@ -227,9 +235,10 @@ ExprNode* ReceiverNode::getExpr() const {
 
 string ReceiverNode::getDotLabel() const {
     switch (type) {
-        case EXPR:      return "EXPR_RECEIVER";
-        case SUPER:     return "SUPER_RECEIVER";
-        default:        return "RECEIVER";
+        case EXPR:          return "EXPR_RECEIVER";
+        case CLASS_NAME:    return "CLASS_RECEIVER";
+        case SUPER:         return "SUPER_RECEIVER";
+        default:            return "RECEIVER";
     }
 }
 

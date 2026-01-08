@@ -430,6 +430,7 @@ expr        :   ID                              {$$=ExprNode::createIdentifier(V
             ;
 
 receiver    :   SUPER       {$$=ReceiverNode::createSuper();}
+            |   CLASS_NAME  {$$=ReceiverNode::createClassName(ValueNode::createClassName($1));}
             |   expr        {$$=ReceiverNode::createExpr($1);}
             ;
 

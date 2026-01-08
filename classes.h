@@ -98,10 +98,12 @@ public:
     enum ReceiverType {
         NONE,
         EXPR,
+        CLASS_NAME,
         SUPER
     };
 
     static ReceiverNode* createExpr(ExprNode *expr);
+    static ReceiverNode* createClassName(ValueNode *className);
     static ReceiverNode* createSuper();
 
     ReceiverType getType() const;
@@ -112,6 +114,7 @@ public:
 
 protected:
     ReceiverType type;
+    ValueNode *className;
     ExprNode *expr;
 
     ReceiverNode();
