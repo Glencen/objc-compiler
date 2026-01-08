@@ -59,9 +59,9 @@ public:
     static ValueNode* createChar(char value);
     static ValueNode* createString(string *value);
     static ValueNode* createNil();
-    static ValueNode* createObjcInt(string *value);
-    static ValueNode* createObjcFloat(string *value);
-    static ValueNode* createObjcBool(string *value);
+    static ValueNode* createObjcInt(int value);
+    static ValueNode* createObjcFloat(float value);
+    static ValueNode* createObjcBool(bool value);
     static ValueNode* createObjcString(string *value);
     static ValueNode* createIdentifier(string *value);
     static ValueNode* createClassName(string *value);

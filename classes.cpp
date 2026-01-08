@@ -61,24 +61,24 @@ ValueNode* ValueNode::createNil() {
     return node;
 }
 
-ValueNode* ValueNode::createObjcInt(string *value) {
+ValueNode* ValueNode::createObjcInt(int value) {
     ValueNode *node = new ValueNode();
     node->valueType = OBJC_INT_LIT;
-    node->stringValue = value;
+    node->intValue = value;
     return node;
 }
 
-ValueNode* ValueNode::createObjcFloat(string *value) {
+ValueNode* ValueNode::createObjcFloat(float value) {
     ValueNode *node = new ValueNode();
     node->valueType = OBJC_FLOAT_LIT;
-    node->stringValue = value;
+    node->floatValue = value;
     return node;
 }
 
-ValueNode* ValueNode::createObjcBool(string *value) {
+ValueNode* ValueNode::createObjcBool(bool value) {
     ValueNode *node = new ValueNode();
     node->valueType = OBJC_BOOL_LIT;
-    node->stringValue = value;
+    node->boolValue = value;
     return node;
 }
 
