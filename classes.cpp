@@ -2304,7 +2304,7 @@ string InstanceVarsDeclListNode::toDot() const {
     if (instanceVarDecls) {
         int i = 0;
         for (InstanceVarDeclNode *instanceVarDecl : *instanceVarDecls) {
-            appendDotEdge(result, instanceVarDecl, "size_" + to_string(i++));
+            appendDotEdge(result, instanceVarDecl, "inst_decl_" + to_string(i++));
         }
     }
     
