@@ -31,7 +31,7 @@ OCT      [0-7]
 
 %x COMMENT
 %x STRING
-%x CHAR
+%x CHARACTER
 %x INTERFACE_IMPL
 %x CLASS_LIST
 %x INTERFACE_IMPL_AFTER_NAME
@@ -168,15 +168,15 @@ OCT      [0-7]
 }
 
 \'       {
-    BEGIN(CHAR);
+    BEGIN(CHARACTER);
     string_buf.clear();
 }
 
-<CHAR>[^'\\\n] {
+<CHARACTER>[^'\\\n] {
     string_buf += yytext[0];
 }
 
-<CHAR>\\[\\"'nrtba] {
+<CHARACTER>\\[\\"'nrtba] {
     switch(yytext[1]) {
         case '\\': string_buf += '\\'; break;
         case '"':  string_buf += '"';  break;
@@ -189,31 +189,31 @@ OCT      [0-7]
     }
 }
 
-<CHAR>\\x{HEX}{1,2} {
+<CHARACTER>\\x{HEX}{1,2} {
     char hex_val = (char)std::strtol(yytext + 2, NULL, 16);
     string_buf += hex_val;
 }
 
-<CHAR>\\[0-7]{1,3} {
+<CHARACTER>\\[0-7]{1,3} {
     char oct_val = (char)std::strtol(yytext + 1, NULL, 8);
     string_buf += oct_val;
 }
 
-<CHAR>\n {
+<CHARACTER>\n {
     BEGIN(INITIAL);
     TokenOutput::getInstance().addToken(TOK_ERROR, "Unclosed char constant");
     TokenOutput::getInstance().flushTokens();
     return TOK_ERROR;
 }
 
-<CHAR><<EOF>> {
+<CHARACTER><<EOF>> {
     BEGIN(INITIAL);
     TokenOutput::getInstance().addToken(TOK_ERROR, "Unclosed char constant");
     TokenOutput::getInstance().flushTokens();
     return TOK_ERROR;
 }
 
-<CHAR>\' {
+<CHARACTER>\' {
     BEGIN(INITIAL);
     if (string_buf.length() == 1) {
         TokenOutput::getInstance().addToken(TOK_CHAR, string_buf);
