@@ -675,24 +675,6 @@ protected:
     ImplementationDefListNode();
 };
 
-class ImplementationBodyNode : public AstNode {
-public:
-    static ImplementationBodyNode* createImplementationBody(ImplementationDefListNode *implementationDefList);
-    static ImplementationBodyNode* createImplementationBody(InstanceVarsNode *instanceVars, ImplementationDefListNode *implementationDefList);
-
-    InstanceVarsNode* getInstanceVars() const;
-    ImplementationDefListNode* getImplementationDefList() const;
-
-    string getDotLabel() const override;
-    string toDot() const override;
-
-protected:
-    InstanceVarsNode *instanceVars;
-    ImplementationDefListNode *implementationDefList;
-
-    ImplementationBodyNode();
-};
-
 class InstanceMethodDeclNode : public AstNode {
 public:
     enum InstanceMethodDeclKind {
@@ -965,11 +947,35 @@ protected:
     InstanceVarsNode();
 };
 
-class InterfaceBodyNode : public AstNode {
+class ImplementationNode : public AstNode {
 public:
-    static InterfaceBodyNode* createInterfaceBody(InterfaceDeclListNode *interfaceDeclList);
-    static InterfaceBodyNode* createInterfaceBody(InstanceVarsNode *instanceVars, InterfaceDeclListNode *interfaceDeclList);
+    static ImplementationNode* createImplementation(ValueNode *className, InstanceVarsNode *instanceVars, ImplementationDefListNode *implDefList);
+    static ImplementationNode* createImplementation(ValueNode *className, ValueNode *superClassName, InstanceVarsNode *instanceVars, ImplementationDefListNode *implDefList);
 
+    ValueNode* getClassName() const;
+    ValueNode* getSuperClassName() const;
+    InstanceVarsNode* getInstanceVars() const;
+    ImplementationDefListNode* getImplDefList() const;
+
+    string getDotLabel() const override;
+    string toDot() const override;
+
+protected:
+    ValueNode *className;
+    ValueNode *superClassName;
+    InstanceVarsNode *instanceVars;
+    ImplementationDefListNode *implDefList;
+
+    ImplementationNode();
+};
+
+class InterfaceNode : public AstNode {
+public:
+    static InterfaceNode* createInterface(ValueNode *className, InstanceVarsNode *instanceVars, InterfaceDeclListNode *interfaceDeclList);
+    static InterfaceNode* createInterface(ValueNode *className, ValueNode *superClassName, InstanceVarsNode *instanceVars, InterfaceDeclListNode *interfaceDeclList);
+
+    ValueNode* getClassName() const;
+    ValueNode* getSuperClassName() const;
     InstanceVarsNode* getInstanceVars() const;
     InterfaceDeclListNode* getInterfaceDeclList() const;
 
@@ -977,48 +983,10 @@ public:
     string toDot() const override;
 
 protected:
+    ValueNode *className;
+    ValueNode *superClassName;
     InstanceVarsNode *instanceVars;
     InterfaceDeclListNode *interfaceDeclList;
-
-    InterfaceBodyNode();
-};
-
-class ImplementationNode : public AstNode {
-public:
-    static ImplementationNode* createImplementation(ValueNode *className, ImplementationBodyNode *implementationBody);
-    static ImplementationNode* createImplementation(ValueNode *className, ValueNode *superClassName, ImplementationBodyNode *implementationBody);
-
-    ValueNode* getClassName() const;
-    ValueNode* getSuperClassName() const;
-    ImplementationBodyNode* getImplementationBody() const;
-
-    string getDotLabel() const override;
-    string toDot() const override;
-
-protected:
-    ValueNode *className;
-    ValueNode *superClassName;
-    ImplementationBodyNode *implementationBody;
-
-    ImplementationNode();
-};
-
-class InterfaceNode : public AstNode {
-public:
-    static InterfaceNode* createInterface(ValueNode *className, InterfaceBodyNode *interfaceBody);
-    static InterfaceNode* createInterface(ValueNode *className, ValueNode *superClassName, InterfaceBodyNode *interfaceBody);
-
-    ValueNode* getClassName() const;
-    ValueNode* getSuperClassName() const;
-    InterfaceBodyNode* getInterfaceBody() const;
-
-    string getDotLabel() const override;
-    string toDot() const override;
-
-protected:
-    ValueNode *className;
-    ValueNode *superClassName;
-    InterfaceBodyNode *interfaceBody;
 
     InterfaceNode();
 };

@@ -56,7 +56,6 @@ PropertyNode::Attribute convertAttr(int attribute);
     InstanceMethodDefNode *instance_method_def_node;
     ClassMethodDefNode *class_method_def_node;
     ImplementationDefListNode *implementation_def_list_node;
-    ImplementationBodyNode *implementation_body_node;
     InstanceMethodDeclNode *instance_method_decl_node;
     ClassMethodDeclNode *class_method_decl_node;
     PropertyNode *property_node;
@@ -69,7 +68,6 @@ PropertyNode::Attribute convertAttr(int attribute);
     InstanceVarDeclNode *instance_var_decl_node;
     InstanceVarsDeclListNode *instance_vars_decl_list_node;
     InstanceVarsNode *instance_vars_node;
-    InterfaceBodyNode *interface_body_node;
     ImplementationNode *implementation_node;
     InterfaceNode *interface_node;
     ClassNameListNode *class_name_list_node;
@@ -141,8 +139,7 @@ PropertyNode::Attribute convertAttr(int attribute);
 %type <method_sel_node>                 method_sel
 %type <instance_method_def_node>        instance_method_def
 %type <class_method_def_node>           class_method_def
-%type <implementation_def_list_node>    implementation_def_list
-%type <implementation_body_node>        implementation_body
+%type <implementation_def_list_node>    impl_def_list_e impl_def_list
 %type <instance_method_decl_node>       instance_method_decl
 %type <class_method_decl_node>          class_method_decl
 %type <property_node>                   property
@@ -156,7 +153,6 @@ PropertyNode::Attribute convertAttr(int attribute);
 %type <instance_var_decl_node>          instance_var_decl
 %type <instance_vars_decl_list_node>    instance_var_decl_list
 %type <instance_vars_node>              instance_vars
-%type <interface_body_node>             interface_body
 %type <implementation_node>             class_implementation
 %type <interface_node>                  class_interface
 %type <class_name_list_node>            class_name_list
@@ -206,17 +202,13 @@ class_name_list
             ;
 
 class_interface
-            :   INTERFACE CLASS_NAME ':' CLASS_NAME interface_body END  {$$=InterfaceNode::createInterface(ValueNode::createClassName($2), ValueNode::createClassName($4), $5);}
-            |   INTERFACE CLASS_NAME interface_body END                 {$$=InterfaceNode::createInterface(ValueNode::createClassName($2), $3);}
-            ;
-
-interface_body
-            :   instance_vars interface_decl_list   {$$=InterfaceBodyNode::createInterfaceBody($1, $2);}
-            |   interface_decl_list                 {$$=InterfaceBodyNode::createInterfaceBody($1);}
+            :   INTERFACE CLASS_NAME ':' CLASS_NAME instance_vars interface_decl_list END  {$$=InterfaceNode::createInterface(ValueNode::createClassName($2), ValueNode::createClassName($4), $5, $6);}
+            |   INTERFACE CLASS_NAME instance_vars interface_decl_list END                 {$$=InterfaceNode::createInterface(ValueNode::createClassName($2), $3, $4);}
             ;
 
 instance_vars
-            :   '{' '}'                             {$$=InstanceVarsNode::createInstanceVars();}
+            :   /* empty */                         {$$=nullptr;}
+            |   '{' '}'                             {$$=InstanceVarsNode::createInstanceVars();}
             |   '{' instance_var_decl_list '}'      {$$=InstanceVarsNode::createInstanceVars($2);}
             ;
 
@@ -237,7 +229,7 @@ access_modifier
             ;
 
 interface_decl_list
-            :   /* empty */                                     {$$=InterfaceDeclListNode::createInterfaceDeclList();}
+            :   /* empty */                                     {$$=nullptr;}
             |   interface_decl_list property                    {$$=InterfaceDeclListNode::addProperty($1, $2);}
             |   interface_decl_list class_method_decl           {$$=InterfaceDeclListNode::addClassMethodDecl($1, $2);}
             |   interface_decl_list instance_method_decl        {$$=InterfaceDeclListNode::addInstanceMethodDecl($1, $2);}
@@ -284,22 +276,22 @@ type        :   INT                 {$$=TypeNode::createIntType();}
             ;
 
 class_implementation
-            :   IMPLEMENTATION CLASS_NAME implementation_body END                   {$$=ImplementationNode::createImplementation(ValueNode::createClassName($2), $3);}
-            |   IMPLEMENTATION CLASS_NAME ':' CLASS_NAME implementation_body END    {$$=ImplementationNode::createImplementation(ValueNode::createClassName($2), ValueNode::createClassName($4), $5);}
+            :   IMPLEMENTATION CLASS_NAME instance_vars impl_def_list_e END                   {$$=ImplementationNode::createImplementation(ValueNode::createClassName($2), $3, $4);}
+            |   IMPLEMENTATION CLASS_NAME ':' CLASS_NAME instance_vars impl_def_list_e END    {$$=ImplementationNode::createImplementation(ValueNode::createClassName($2), ValueNode::createClassName($4), $5, $6);}
             ;
 
-implementation_body
-            :   instance_vars implementation_def_list       {$$=ImplementationBodyNode::createImplementationBody($1, $2);}
-            |   implementation_def_list                     {$$=ImplementationBodyNode::createImplementationBody($1);}
+impl_def_list_e
+            :   /* empty */     {$$=nullptr;}
+            |   impl_def_list   {$$=$1;}
             ;
 
-implementation_def_list
+impl_def_list
             :   property                                        {$$=ImplementationDefListNode::createImplementationDefList($1);}
             |   class_method_def                                {$$=ImplementationDefListNode::createImplementationDefList($1);}
             |   instance_method_def                             {$$=ImplementationDefListNode::createImplementationDefList($1);}
-            |   implementation_def_list property                {$$=ImplementationDefListNode::addProperty($1, $2);}
-            |   implementation_def_list class_method_def        {$$=ImplementationDefListNode::addClassMethodDef($1, $2);}
-            |   implementation_def_list instance_method_def     {$$=ImplementationDefListNode::addInstanceMethodDef($1, $2);}
+            |   impl_def_list property                          {$$=ImplementationDefListNode::addProperty($1, $2);}
+            |   impl_def_list class_method_def                  {$$=ImplementationDefListNode::addClassMethodDef($1, $2);}
+            |   impl_def_list instance_method_def               {$$=ImplementationDefListNode::addInstanceMethodDef($1, $2);}
             ;
 
 class_method_def

@@ -1724,46 +1724,6 @@ string ImplementationDefListNode::toDot() const {
     return result;
 }
 
-//--------------------------------------------------------------ImplementationBodyNode--------------------------------------------------------------
-
-ImplementationBodyNode::ImplementationBodyNode() : AstNode() {
-    instanceVars = nullptr;
-    implementationDefList = nullptr;
-}
-
-ImplementationBodyNode* ImplementationBodyNode::createImplementationBody(ImplementationDefListNode *implementationDefList) {
-    ImplementationBodyNode *node = new ImplementationBodyNode();
-    node->implementationDefList = implementationDefList;
-    return node;
-}
-
-ImplementationBodyNode* ImplementationBodyNode::createImplementationBody(InstanceVarsNode *instanceVars, ImplementationDefListNode *implementationDefList) {
-    ImplementationBodyNode *node = new ImplementationBodyNode();
-    node->instanceVars = instanceVars;
-    node->implementationDefList = implementationDefList;
-    return node;
-}
-
-InstanceVarsNode* ImplementationBodyNode::getInstanceVars() const {
-    return instanceVars;
-}
-
-ImplementationDefListNode* ImplementationBodyNode::getImplementationDefList() const {
-    return implementationDefList;
-}
-
-string ImplementationBodyNode::getDotLabel() const {
-    return "IMPLEMENTATION_BODY";
-}
-
-string ImplementationBodyNode::toDot() const {
-    string result;
-    appendDotNode(result);
-    appendDotEdge(result, instanceVars, "instance_vars");
-    appendDotEdge(result, implementationDefList, "implementation_def_list");
-    return result;
-}
-
 //--------------------------------------------------------------InstanceMethodDeclNode--------------------------------------------------------------
 
 InstanceMethodDeclNode::InstanceMethodDeclNode() : AstNode() {
@@ -2383,66 +2343,29 @@ string InstanceVarsNode::toDot() const {
     return result;
 }
 
-//--------------------------------------------------------------InterfaceBodyNode--------------------------------------------------------------
-
-InterfaceBodyNode::InterfaceBodyNode() : AstNode() {
-    instanceVars = nullptr;
-    interfaceDeclList = nullptr;
-}
-
-InterfaceBodyNode* InterfaceBodyNode::createInterfaceBody(InterfaceDeclListNode *interfaceDeclList) {
-    InterfaceBodyNode *node = new InterfaceBodyNode();
-    node->interfaceDeclList = interfaceDeclList;
-    return node;
-}
-
-InterfaceBodyNode* InterfaceBodyNode::createInterfaceBody(InstanceVarsNode *instanceVars, InterfaceDeclListNode *interfaceDeclList) {
-    InterfaceBodyNode *node = new InterfaceBodyNode();
-    node->instanceVars = instanceVars;
-    node->interfaceDeclList = interfaceDeclList;
-    return node;
-}
-
-InstanceVarsNode* InterfaceBodyNode::getInstanceVars() const {
-    return instanceVars;
-}
-
-InterfaceDeclListNode* InterfaceBodyNode::getInterfaceDeclList() const {
-    return interfaceDeclList;
-}
-
-string InterfaceBodyNode::getDotLabel() const {
-    return "INTERFACE_BODY";
-}
-
-string InterfaceBodyNode::toDot() const {
-    string result;
-    appendDotNode(result);
-    appendDotEdge(result, instanceVars, "instance_vars");
-    appendDotEdge(result, interfaceDeclList, "interface_decl_list");
-    return result;
-}
-
 //--------------------------------------------------------------ImplementationNode--------------------------------------------------------------
 
 ImplementationNode::ImplementationNode() : AstNode() {
     className = nullptr;
     superClassName = nullptr;
-    implementationBody = nullptr;
+    instanceVars = nullptr;
+    implDefList = nullptr;
 }
 
-ImplementationNode* ImplementationNode::createImplementation(ValueNode *className, ImplementationBodyNode *implementationBody) {
+ImplementationNode* ImplementationNode::createImplementation(ValueNode *className, InstanceVarsNode *instanceVars, ImplementationDefListNode *implDefList) {
     ImplementationNode *node = new ImplementationNode();
     node->className = className;
-    node->implementationBody = implementationBody;
+    node->instanceVars = instanceVars;
+    node->implDefList = implDefList;
     return node;
 }
 
-ImplementationNode* ImplementationNode::createImplementation(ValueNode *className, ValueNode *superClassName, ImplementationBodyNode *implementationBody) {
+ImplementationNode* ImplementationNode::createImplementation(ValueNode *className, ValueNode *superClassName, InstanceVarsNode *instanceVars, ImplementationDefListNode *implDefList) {
     ImplementationNode *node = new ImplementationNode();
     node->className = className;
     node->superClassName = superClassName;
-    node->implementationBody = implementationBody;
+    node->instanceVars = instanceVars;
+    node->implDefList = implDefList;
     return node;
 }
 
@@ -2454,8 +2377,12 @@ ValueNode* ImplementationNode::getSuperClassName() const {
     return superClassName;
 }
 
-ImplementationBodyNode* ImplementationNode::getImplementationBody() const {
-    return implementationBody;
+InstanceVarsNode* ImplementationNode::getInstanceVars() const {
+    return instanceVars;
+}
+
+ImplementationDefListNode* ImplementationNode::getImplDefList() const {
+    return implDefList;
 }
 
 string ImplementationNode::getDotLabel() const {
@@ -2467,7 +2394,8 @@ string ImplementationNode::toDot() const {
     appendDotNode(result);
     appendDotEdge(result, className, "class_name");
     appendDotEdge(result, superClassName, "super_class_name");
-    appendDotEdge(result, implementationBody, "implementation_body");
+    appendDotEdge(result, instanceVars, "instance_vars");
+    appendDotEdge(result, implDefList, "impl_def_list");
     return result;
 }
 
@@ -2476,21 +2404,24 @@ string ImplementationNode::toDot() const {
 InterfaceNode::InterfaceNode() : AstNode() {
     className = nullptr;
     superClassName = nullptr;
-    interfaceBody = nullptr;
+    instanceVars = nullptr;
+    interfaceDeclList = nullptr;
 }
 
-InterfaceNode* InterfaceNode::createInterface(ValueNode *className, InterfaceBodyNode *interfaceBody) {
+InterfaceNode* InterfaceNode::createInterface(ValueNode *className, InstanceVarsNode *instanceVars, InterfaceDeclListNode *interfaceDeclList) {
     InterfaceNode *node = new InterfaceNode();
     node->className = className;
-    node->interfaceBody = interfaceBody;
+    node->instanceVars = instanceVars;
+    node->interfaceDeclList = interfaceDeclList;
     return node;
 }
 
-InterfaceNode* InterfaceNode::createInterface(ValueNode *className, ValueNode *superClassName, InterfaceBodyNode *interfaceBody) {
+InterfaceNode* InterfaceNode::createInterface(ValueNode *className, ValueNode *superClassName, InstanceVarsNode *instanceVars, InterfaceDeclListNode *interfaceDeclList) {
     InterfaceNode *node = new InterfaceNode();
     node->className = className;
     node->superClassName = superClassName;
-    node->interfaceBody = interfaceBody;
+    node->instanceVars = instanceVars;
+    node->interfaceDeclList = interfaceDeclList;
     return node;
 }
 
@@ -2502,8 +2433,12 @@ ValueNode* InterfaceNode::getSuperClassName() const {
     return superClassName;
 }
 
-InterfaceBodyNode* InterfaceNode::getInterfaceBody() const {
-    return interfaceBody;
+InstanceVarsNode* InterfaceNode::getInstanceVars() const {
+    return instanceVars;
+}
+
+InterfaceDeclListNode* InterfaceNode::getInterfaceDeclList() const {
+    return interfaceDeclList;
 }
 
 string InterfaceNode::getDotLabel() const {
@@ -2515,7 +2450,8 @@ string InterfaceNode::toDot() const {
     appendDotNode(result);
     appendDotEdge(result, className, "class_name");
     appendDotEdge(result, superClassName, "super_class_name");
-    appendDotEdge(result, interfaceBody, "interface_body");
+    appendDotEdge(result, instanceVars, "instance_vars");
+    appendDotEdge(result, interfaceDeclList, "interface_decl_list");
     return result;
 }
 
