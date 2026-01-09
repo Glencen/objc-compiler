@@ -187,6 +187,8 @@ string ValueNode::getDotLabel() const {
         case OBJC_FLOAT_LIT:    return "OBJ-C float: " + *stringValue;
         case OBJC_BOOL_LIT:     return "OBJ-C bool: " + *stringValue;
         case OBJC_STRING_LIT:   return "OBJ-C string: " + *stringValue;
+        case IDENTIFIER:        return "Identifier: " + *stringValue;
+        case CLASS_NAME:        return "Class name: " + *stringValue;
         default:                return "UNKNOWN_VALUE";
     }
 }
@@ -2605,7 +2607,7 @@ string ClassNameListNode::toDot() const {
     if (classFwDeclList) {
         int i = 0;
         for (ValueNode *classFwDecl : *classFwDeclList) {
-            appendDotEdge(result, classFwDecl, "size_" + to_string(i++));
+            appendDotEdge(result, classFwDecl, "class_name_" + to_string(i++));
         }
     }
     
