@@ -253,16 +253,16 @@ attribute   :   READONLY        {$$=PROP_READONLY;}
 
 class_method_decl
             :   '+' '(' type ')' ID ';'             {$$=ClassMethodDeclNode::createClassMethodDecl($3, ValueNode::createIdentifier($5));}
-            |   '+' '(' VOID ')' ID ';'             {$$=ClassMethodDeclNode::createClassMethodDecl(ValueNode::createIdentifier($5));}
+            |   '+' '(' VOID ')' ID ';'             {$$=ClassMethodDeclNode::createClassMethodDecl(TypeNode::createVoid(), ValueNode::createIdentifier($5));}
             |   '+' '(' type ')' method_sel ';'     {$$=ClassMethodDeclNode::createClassMethodDecl($3, $5);}
-            |   '+' '(' VOID ')' method_sel ';'     {$$=ClassMethodDeclNode::createClassMethodDecl($5);}
+            |   '+' '(' VOID ')' method_sel ';'     {$$=ClassMethodDeclNode::createClassMethodDecl(TypeNode::createVoid(), $5);}
             ;
 
 instance_method_decl
             :   '-' '(' type ')' ID ';'             {$$=InstanceMethodDeclNode::createInstanceMethodDecl($3, ValueNode::createIdentifier($5));}
-            |   '-' '(' VOID ')' ID ';'             {$$=InstanceMethodDeclNode::createInstanceMethodDecl(ValueNode::createIdentifier($5));}
+            |   '-' '(' VOID ')' ID ';'             {$$=InstanceMethodDeclNode::createInstanceMethodDecl(TypeNode::createVoid(), ValueNode::createIdentifier($5));}
             |   '-' '(' type ')' method_sel ';'     {$$=InstanceMethodDeclNode::createInstanceMethodDecl($3, $5);}
-            |   '-' '(' VOID ')' method_sel ';'     {$$=InstanceMethodDeclNode::createInstanceMethodDecl($5);}
+            |   '-' '(' VOID ')' method_sel ';'     {$$=InstanceMethodDeclNode::createInstanceMethodDecl(TypeNode::createVoid(), $5);}
             ;
 
 method_sel  :   method_param                {$$=MethodSelNode::createMethodSel($1);}
@@ -304,16 +304,16 @@ implementation_def_list
 
 class_method_def
             :   '+' '(' type ')' ID compound_stmt               {$$=ClassMethodDefNode::createClassMethodDef($3, ValueNode::createIdentifier($5), $6);}
-            |   '+' '(' VOID ')' ID compound_stmt               {$$=ClassMethodDefNode::createClassMethodDef(ValueNode::createIdentifier($5), $6);}
+            |   '+' '(' VOID ')' ID compound_stmt               {$$=ClassMethodDefNode::createClassMethodDef(TypeNode::createVoid(), ValueNode::createIdentifier($5), $6);}
             |   '+' '(' type ')' method_sel compound_stmt       {$$=ClassMethodDefNode::createClassMethodDef($3, $5, $6);}
-            |   '+' '(' VOID ')' method_sel compound_stmt       {$$=ClassMethodDefNode::createClassMethodDef($5, $6);}
+            |   '+' '(' VOID ')' method_sel compound_stmt       {$$=ClassMethodDefNode::createClassMethodDef(TypeNode::createVoid(), $5, $6);}
             ;
 
 instance_method_def
             :   '-' '(' type ')' ID compound_stmt               {$$=InstanceMethodDefNode::createInstanceMethodDef($3, ValueNode::createIdentifier($5), $6);}
-            |   '-' '(' VOID ')' ID compound_stmt               {$$=InstanceMethodDefNode::createInstanceMethodDef(ValueNode::createIdentifier($5), $6);}
+            |   '-' '(' VOID ')' ID compound_stmt               {$$=InstanceMethodDefNode::createInstanceMethodDef(TypeNode::createVoid(), ValueNode::createIdentifier($5), $6);}
             |   '-' '(' type ')' method_sel compound_stmt       {$$=InstanceMethodDefNode::createInstanceMethodDef($3, $5, $6);}
-            |   '-' '(' VOID ')' method_sel compound_stmt       {$$=InstanceMethodDefNode::createInstanceMethodDef($5, $6);}
+            |   '-' '(' VOID ')' method_sel compound_stmt       {$$=InstanceMethodDefNode::createInstanceMethodDef(TypeNode::createVoid(), $5, $6);}
             ;
 
 decl        :   type declarator_list    {$$=DeclNode::createDecl($1, $2);}
@@ -459,9 +459,11 @@ literal     :   STRING_LIT              {$$=ValueNode::createString($1);}
             ;
 
 func_decl   :   type ID '(' param_list_e ')' ';'    {$$=FuncDeclNode::createFuncDecl($1, ValueNode::createIdentifier($2), $4);}
+            |   VOID ID '(' param_list_e ')' ';'    {$$=FuncDeclNode::createFuncDecl(TypeNode::createVoid(), ValueNode::createIdentifier($2), $4);}
             ;
 
 func_def    :   type ID '(' param_list_e ')' compound_stmt      {$$=FuncDefNode::createFuncDef($1, ValueNode::createIdentifier($2), $4, $6);}
+            |   VOID ID '(' param_list_e ')' compound_stmt      {$$=FuncDefNode::createFuncDef(TypeNode::createVoid(), ValueNode::createIdentifier($2), $4, $6);}
             ;
 
 param_list_e:   /* empty */     {$$=ParamListNode::createParamList();}

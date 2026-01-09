@@ -782,6 +782,12 @@ TypeNode* TypeNode::createClassNameType(ValueNode *classNameValue) {
     return node;
 }
 
+TypeNode* TypeNode::createVoid() {
+    TypeNode *node = new TypeNode();
+    node->kind = VOID;
+    return node;
+}
+
 TypeNode::TypeKind TypeNode::getKind() const {
     return kind;
 }
@@ -798,6 +804,7 @@ string TypeNode::getDotLabel() const {
         case CHAR: return "CHAR";
         case TYPE_ID: return "TYPE_ID";
         case CLASS_NAME: return "CLASS_NAME";
+        case VOID: return "VOID";
         default: return "UNKNOWN_TYPE";
     }
 }
@@ -1509,22 +1516,6 @@ InstanceMethodDefNode* InstanceMethodDefNode::createInstanceMethodDef(TypeNode *
     return node;
 }
 
-InstanceMethodDefNode* InstanceMethodDefNode::createInstanceMethodDef(ValueNode *identifier, StmtNode *compoundStmt) {
-    InstanceMethodDefNode *node = new InstanceMethodDefNode();
-    node->kind = VOID_ID;
-    node->identifier = identifier;
-    node->compoundStmt = compoundStmt;
-    return node;
-}
-
-InstanceMethodDefNode* InstanceMethodDefNode::createInstanceMethodDef(MethodSelNode *methodSel, StmtNode *compoundStmt) {
-    InstanceMethodDefNode *node = new InstanceMethodDefNode();
-    node->kind = VOID_SEL;
-    node->methodSel = methodSel;
-    node->compoundStmt = compoundStmt;
-    return node;
-}
-
 InstanceMethodDefNode::InstanceMethodDefKind InstanceMethodDefNode::getKind() const {
     return kind;
 }
@@ -1588,22 +1579,6 @@ ClassMethodDefNode* ClassMethodDefNode::createClassMethodDef(TypeNode *type, Met
     ClassMethodDefNode *node = new ClassMethodDefNode();
     node->kind = TYPE_SEL;
     node->type = type;
-    node->methodSel = methodSel;
-    node->compoundStmt = compoundStmt;
-    return node;
-}
-
-ClassMethodDefNode* ClassMethodDefNode::createClassMethodDef(ValueNode *identifier, StmtNode *compoundStmt) {
-    ClassMethodDefNode *node = new ClassMethodDefNode();
-    node->kind = VOID_ID;
-    node->identifier = identifier;
-    node->compoundStmt = compoundStmt;
-    return node;
-}
-
-ClassMethodDefNode* ClassMethodDefNode::createClassMethodDef(MethodSelNode *methodSel, StmtNode *compoundStmt) {
-    ClassMethodDefNode *node = new ClassMethodDefNode();
-    node->kind = VOID_SEL;
     node->methodSel = methodSel;
     node->compoundStmt = compoundStmt;
     return node;
@@ -1814,20 +1789,6 @@ InstanceMethodDeclNode* InstanceMethodDeclNode::createInstanceMethodDecl(TypeNod
     return node;
 }
 
-InstanceMethodDeclNode* InstanceMethodDeclNode::createInstanceMethodDecl(ValueNode *identifier) {
-    InstanceMethodDeclNode *node = new InstanceMethodDeclNode();
-    node->kind = VOID_ID;
-    node->identifier = identifier;
-    return node;
-}
-
-InstanceMethodDeclNode* InstanceMethodDeclNode::createInstanceMethodDecl(MethodSelNode *methodSel) {
-    InstanceMethodDeclNode *node = new InstanceMethodDeclNode();
-    node->kind = VOID_SEL;
-    node->methodSel = methodSel;
-    return node;
-}
-
 InstanceMethodDeclNode::InstanceMethodDeclKind InstanceMethodDeclNode::getKind() const {
     return kind;
 }
@@ -1884,20 +1845,6 @@ ClassMethodDeclNode* ClassMethodDeclNode::createClassMethodDecl(TypeNode *type, 
     ClassMethodDeclNode *node = new ClassMethodDeclNode();
     node->kind = TYPE_SEL;
     node->type = type;
-    node->methodSel = methodSel;
-    return node;
-}
-
-ClassMethodDeclNode* ClassMethodDeclNode::createClassMethodDecl(ValueNode *identifier) {
-    ClassMethodDeclNode *node = new ClassMethodDeclNode();
-    node->kind = VOID_ID;
-    node->identifier = identifier;
-    return node;
-}
-
-ClassMethodDeclNode* ClassMethodDeclNode::createClassMethodDecl(MethodSelNode *methodSel) {
-    ClassMethodDeclNode *node = new ClassMethodDeclNode();
-    node->kind = VOID_SEL;
     node->methodSel = methodSel;
     return node;
 }

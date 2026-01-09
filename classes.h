@@ -304,7 +304,8 @@ public:
         BOOL,
         CHAR,
         TYPE_ID,
-        CLASS_NAME
+        CLASS_NAME,
+        VOID
     };
 
     static TypeNode* createIntType();
@@ -313,6 +314,7 @@ public:
     static TypeNode* createBoolType();
     static TypeNode* createIdType();
     static TypeNode* createClassNameType(ValueNode *classNameValue);
+    static TypeNode* createVoid();
 
     TypeKind getKind() const;
     ValueNode* getClassName() const;
@@ -597,8 +599,6 @@ public:
 
     static InstanceMethodDefNode* createInstanceMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt);
     static InstanceMethodDefNode* createInstanceMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt);
-    static InstanceMethodDefNode* createInstanceMethodDef(ValueNode *identifier, StmtNode *compoundStmt);
-    static InstanceMethodDefNode* createInstanceMethodDef(MethodSelNode *methodSel, StmtNode *compoundStmt);
 
     InstanceMethodDefKind getKind() const;
     TypeNode* getType() const;
@@ -631,8 +631,6 @@ public:
 
     static ClassMethodDefNode* createClassMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt);
     static ClassMethodDefNode* createClassMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt);
-    static ClassMethodDefNode* createClassMethodDef(ValueNode *identifier, StmtNode *compoundStmt);
-    static ClassMethodDefNode* createClassMethodDef(MethodSelNode *methodSel, StmtNode *compoundStmt);
 
     ClassMethodDefKind getKind() const;
     TypeNode* getType() const;
@@ -707,8 +705,6 @@ public:
 
     static InstanceMethodDeclNode* createInstanceMethodDecl(TypeNode *type, ValueNode *identifier);
     static InstanceMethodDeclNode* createInstanceMethodDecl(TypeNode *type, MethodSelNode *methodSel);
-    static InstanceMethodDeclNode* createInstanceMethodDecl(ValueNode *identifier);
-    static InstanceMethodDeclNode* createInstanceMethodDecl(MethodSelNode *methodSel);
 
     InstanceMethodDeclKind getKind() const;
     TypeNode* getType() const;
@@ -739,8 +735,6 @@ public:
 
     static ClassMethodDeclNode* createClassMethodDecl(TypeNode *type, ValueNode *identifier);
     static ClassMethodDeclNode* createClassMethodDecl(TypeNode *type, MethodSelNode *methodSel);
-    static ClassMethodDeclNode* createClassMethodDecl(ValueNode *identifier);
-    static ClassMethodDeclNode* createClassMethodDecl(MethodSelNode *methodSel);
 
     ClassMethodDeclKind getKind() const;
     TypeNode* getType() const;
