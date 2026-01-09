@@ -229,7 +229,7 @@ access_modifier
             ;
 
 interface_decl_list
-            :   /* empty */                                     {$$=nullptr;}
+            :   /* empty */                                     {$$=InterfaceDeclListNode::createInterfaceDeclList();}
             |   interface_decl_list property                    {$$=InterfaceDeclListNode::addProperty($1, $2);}
             |   interface_decl_list class_method_decl           {$$=InterfaceDeclListNode::addClassMethodDecl($1, $2);}
             |   interface_decl_list instance_method_decl        {$$=InterfaceDeclListNode::addInstanceMethodDecl($1, $2);}
