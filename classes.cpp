@@ -1627,22 +1627,12 @@ string ClassMethodDefNode::toDot() const {
 //--------------------------------------------------------------ImplementationDefListNode--------------------------------------------------------------
 
 ImplementationDefListNode::ImplementationDefListNode() : AstNode() {
-    properties = nullptr;
     classMethodDefs = nullptr;
     instanceMethodDefs = nullptr;
 }
 
-ImplementationDefListNode* ImplementationDefListNode::createImplementationDefList(PropertyNode *property) {
-    ImplementationDefListNode *node = new ImplementationDefListNode();
-    node->properties = new list<PropertyNode*>{property};
-    node->classMethodDefs = new list<ClassMethodDefNode*>();
-    node->instanceMethodDefs = new list<InstanceMethodDefNode*>();
-    return node;
-}
-
 ImplementationDefListNode* ImplementationDefListNode::createImplementationDefList(ClassMethodDefNode *classMethodDef) {
     ImplementationDefListNode *node = new ImplementationDefListNode();
-    node->properties = new list<PropertyNode*>();
     node->classMethodDefs = new list<ClassMethodDefNode*>{classMethodDef};
     node->instanceMethodDefs = new list<InstanceMethodDefNode*>();
     return node;
@@ -1650,18 +1640,9 @@ ImplementationDefListNode* ImplementationDefListNode::createImplementationDefLis
 
 ImplementationDefListNode* ImplementationDefListNode::createImplementationDefList(InstanceMethodDefNode *instanceMethodDef) {
     ImplementationDefListNode *node = new ImplementationDefListNode();
-    node->properties = new list<PropertyNode*>();
     node->classMethodDefs = new list<ClassMethodDefNode*>();
     node->instanceMethodDefs = new list<InstanceMethodDefNode*>{instanceMethodDef};
     return node;
-}
-
-ImplementationDefListNode* ImplementationDefListNode::addProperty(ImplementationDefListNode *implementationDefList, PropertyNode *property) {
-    if (!implementationDefList->properties) {
-        implementationDefList->properties = new std::list<PropertyNode*>();
-    }
-    implementationDefList->properties->push_back(property);
-    return implementationDefList;
 }
 
 ImplementationDefListNode* ImplementationDefListNode::addClassMethodDef(ImplementationDefListNode *implementationDefList, ClassMethodDefNode *classMethodDef) {
@@ -1680,10 +1661,6 @@ ImplementationDefListNode* ImplementationDefListNode::addInstanceMethodDef(Imple
     return implementationDefList;
 }
 
-list<PropertyNode*>* ImplementationDefListNode::getProperties() const {
-    return properties;
-}
-
 list<ClassMethodDefNode*>* ImplementationDefListNode::getClassMethodDefs() const {
     return classMethodDefs;
 }
@@ -1699,13 +1676,6 @@ string ImplementationDefListNode::getDotLabel() const {
 string ImplementationDefListNode::toDot() const {
     string result;
     appendDotNode(result);
-
-    if (properties) {
-        int i = 0;
-        for (PropertyNode *prop : *properties) {
-            appendDotEdge(result, prop, "prop_" + to_string(i++));
-        }
-    }
 
     if (classMethodDefs) {
         int i = 0;

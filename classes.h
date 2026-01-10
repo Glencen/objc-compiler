@@ -653,14 +653,11 @@ protected:
 
 class ImplementationDefListNode : public AstNode {
 public:
-    static ImplementationDefListNode* createImplementationDefList(PropertyNode *property);
     static ImplementationDefListNode* createImplementationDefList(ClassMethodDefNode *classMethodDef);
     static ImplementationDefListNode* createImplementationDefList(InstanceMethodDefNode *instanceMethodDef);
-    static ImplementationDefListNode* addProperty(ImplementationDefListNode *implementationDefList, PropertyNode *property);
     static ImplementationDefListNode* addClassMethodDef(ImplementationDefListNode *implementationDefList, ClassMethodDefNode *classMethodDef);
     static ImplementationDefListNode* addInstanceMethodDef(ImplementationDefListNode *implementationDefList, InstanceMethodDefNode *instanceMethodDef);
 
-    list<PropertyNode*>* getProperties() const;
     list<ClassMethodDefNode*>* getClassMethodDefs() const;
     list<InstanceMethodDefNode*>* getInstanceMethodDefs() const;
 
@@ -668,7 +665,6 @@ public:
     string toDot() const override;
 
 protected:
-    list<PropertyNode*> *properties;
     list<ClassMethodDefNode*> *classMethodDefs;
     list<InstanceMethodDefNode*> *instanceMethodDefs;
     
