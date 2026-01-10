@@ -179,13 +179,13 @@ string ValueNode::getDotLabel() const {
     switch (valueType) {
         case INT_LIT:           return "int: " + to_string(intValue);
         case FLOAT_LIT:         return "float: " + to_string(floatValue);
-        case BOOL_LIT:          return string("bool: ") + (boolValue ? "YES" : "NO");
+        case BOOL_LIT:          return string("bool: ") + (boolValue ? "true" : "false");
         case CHAR_LIT:          return "char: '" + string(1, charValue) + "'";
         case STRING_LIT:        return "string: " + escapeString(*stringValue);
         case NIL:               return "nil";
         case OBJC_INT_LIT:      return "OBJ-C int: " + to_string(intValue);
         case OBJC_FLOAT_LIT:    return "OBJ-C float: " + to_string(floatValue);
-        case OBJC_BOOL_LIT:     return "OBJ-C bool: " + ((boolValue) ? string("YES") : string("NO"));
+        case OBJC_BOOL_LIT:     return "OBJ-C bool: " + ((boolValue) ? string("true") : string("false"));
         case OBJC_STRING_LIT:   return "OBJ-C string: " + *stringValue;
         case IDENTIFIER:        return "Identifier: " + *stringValue;
         case CLASS_NAME:        return "Class name: " + *stringValue;

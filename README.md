@@ -61,7 +61,7 @@ Listed below are the features that this compiler supports (at least in some way)
 * Property attributes (only `readonly` and `readwrite`)
 
 5. **Data Types**
-* Basic types (`int`, `float`, `char`, `BOOL`)
+* Basic types (`int`, `float`, `char`, `bool`)
 * Class types (`ClassName*`)
 * Special type `id` (dynamic typing)
 * Arrays (multidimensional)
@@ -88,7 +88,7 @@ Listed below are the features that this compiler supports (at least in some way)
 * String (`char*`)
 * Objective-C literals:
   - `@"string"` (`NSString` strings)
-  - `@YES`, `@NO` (object `BOOL`)
+  - `@true`, `@false` (object `bool`)
   - `@42`, `@3.14` (object numbers)
   - `@[]` (arrays)
   - `@()` (boxed expressions)

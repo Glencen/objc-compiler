@@ -337,15 +337,15 @@ OCT      [0-7]
 "@private"          { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return PRIVATE; }
 "@protected"        { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return PROTECTED; }
 
-"YES"               { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); yylval.bool_lit = true; return BOOL_LIT; }
-"NO"                { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); yylval.bool_lit = false; return BOOL_LIT; }
+"true"               { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); yylval.bool_lit = true; return BOOL_LIT; }
+"false"                { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); yylval.bool_lit = false; return BOOL_LIT; }
 "self"              { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return SELF; }
 "super"             { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return SUPER; }
 "nil"               { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return NIL; }
 "readonly"          { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return READONLY; }
 "readwrite"         { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return READWRITE; }
 
-"BOOL"              { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return BOOL; }
+"bool"              { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return BOOL; }
 "int"               { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return INT; }
 "float"             { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return FLOAT; }
 "char"              { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return CHAR; }
