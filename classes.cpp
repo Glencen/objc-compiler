@@ -1853,7 +1853,7 @@ string PropertyNode::getDotLabel() const {
     switch (attribute) {
         case READONLY: return "READONLY_PROPERTY";
         case READWRITE: return "READWRITE_PROPERTY";
-        default: return "UNKNOWN_PROPERTY";
+        default: return "NO_ATTR_PROPERTY";
     }
 }
 
