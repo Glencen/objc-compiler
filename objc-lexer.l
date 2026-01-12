@@ -24,7 +24,7 @@ void set_token_identifier(const std::string& value);
 
 DIGIT    [0-9]
 LETTER   [a-zA-Z_]
-ID       {LETTER}({LETTER}|{DIGIT}|_)*
+ID       ({LETTER}|_)({LETTER}|{DIGIT}|_)*
 WS       [ \t\r]+
 HEX      [0-9a-fA-F]
 OCT      [0-7]
@@ -146,21 +146,21 @@ OCT      [0-7]
     return INT_LIT;
 }
 
-{DIGIT}+\.{DIGIT}*([eE][-+]?{DIGIT}+)?   { 
+{DIGIT}+\.{DIGIT}*([eE][-+]?{DIGIT}+)?[fF]?   { 
     double value = std::strtod(yytext, NULL);
     TokenOutput::getInstance().addTokenFloat(TOK_FLOAT, value);
     set_token_float(value);
     return FLOAT_LIT;
 }
 
-\.{DIGIT}+([eE][-+]?{DIGIT}+)?           { 
+\.{DIGIT}+([eE][-+]?{DIGIT}+)?[fF]?           { 
     double value = std::strtod(yytext, NULL);
     TokenOutput::getInstance().addTokenFloat(TOK_FLOAT, value);
     set_token_float(value);
     return FLOAT_LIT;
 }
 
-{DIGIT}+[eE][-+]?{DIGIT}+                { 
+{DIGIT}+[eE][-+]?{DIGIT}+[fF]?                { 
     double value = std::strtod(yytext, NULL);
     TokenOutput::getInstance().addTokenFloat(TOK_FLOAT, value);
     set_token_float(value);
