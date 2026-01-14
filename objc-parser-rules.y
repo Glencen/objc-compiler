@@ -1,23 +1,5 @@
 %{
-#include <iostream>
-#include <cstdlib>
-#include <cstdio>
-
-using namespace std;
-
-extern int yylex(void);
-void yyerror(char const* s);
-
 %}
-
-%union {
-    int int_lit;
-    char *identifier;
-    char char_lit;
-    float float_lit;
-    bool bool_lit;
-    char *str_lit;
-}
 
 %nonassoc NO_ELSE
 %nonassoc ELSE
@@ -37,20 +19,16 @@ void yyerror(char const* s);
 %token FLOAT
 %token BOOL
 %token CHAR
-%token NSARRAY
-%token NSMUTABLEARRAY
-%token NSSTRING
-%token NSNUMBER
 %token VOID
 %token TYPE_ID
-%token CLASS_NAME
 
-%token 	<int_lit>		INT_LIT
-%token	<float_lit>		FLOAT_LIT
-%token	<bool_lit>		BOOL_LIT
-%token	<identifier>	ID
-%token	<char_lit>		CHAR_LIT
-%token  <str_lit>       STRING_LIT
+%token 	INT_LIT
+%token	FLOAT_LIT
+%token	BOOL_LIT
+%token	ID
+%token  CLASS_NAME
+%token	CHAR_LIT
+%token  STRING_LIT
 
 %token PUBLIC
 %token PROTECTED
@@ -106,17 +84,13 @@ class_name_list
             ;
 
 class_interface
-            :   INTERFACE CLASS_NAME ':' CLASS_NAME interface_body END
-            |   INTERFACE CLASS_NAME interface_body END
-            ;
-
-interface_body
-            :   instance_vars interface_decl_list
-            |   interface_decl_list
+            :   INTERFACE CLASS_NAME ':' CLASS_NAME instance_vars interface_decl_list END
+            |   INTERFACE CLASS_NAME instance_vars interface_decl_list END
             ;
 
 instance_vars
-            :   '{' '}'
+            :   /* empty */
+            |   '{' '}'
             |   '{' instance_var_decl_list '}'
             ;
 
@@ -184,22 +158,20 @@ type        :   INT
             ;
 
 class_implementation
-            :   IMPLEMENTATION CLASS_NAME implementation_body END
-            |   IMPLEMENTATION CLASS_NAME ':' CLASS_NAME implementation_body END
+            :   IMPLEMENTATION CLASS_NAME instance_vars impl_def_list_e END
+            |   IMPLEMENTATION CLASS_NAME ':' CLASS_NAME instance_vars impl_def_list_e END
             ;
 
-implementation_body
-            :   instance_vars implementation_def_list
-            |   implementation_def_list
+impl_def_list_e
+            :   /* empty */
+            |   impl_def_list
             ;
 
-implementation_def_list
-            :   property
-            |   class_method_def
+impl_def_list
+            :   class_method_def
             |   instance_method_def
-            |   implementation_def_list property
-            |   implementation_def_list class_method_def
-            |   implementation_def_list instance_method_def
+            |   impl_def_list class_method_def
+            |   impl_def_list instance_method_def
             ;
 
 class_method_def
@@ -331,6 +303,7 @@ expr        :   ID
             ;
 
 receiver    :   SUPER
+            |   CLASS_NAME
             |   expr
             ;
 
@@ -358,9 +331,11 @@ literal     :   STRING_LIT
             ;
 
 func_decl   :   type ID '(' param_list_e ')' ';'
+            |   VOID ID '(' param_list_e ')' ';'
             ;
 
 func_def    :   type ID '(' param_list_e ')' compound_stmt
+            |   VOID ID '(' param_list_e ')' compound_stmt
             ;
 
 param_list_e:   /* empty */
