@@ -1488,9 +1488,9 @@ string MethodSelNode::toDot() const {
     return result;
 }
 
-//--------------------------------------------------------------InstanceMethodDefNode--------------------------------------------------------------
+//--------------------------------------------------------------MethodDefNode--------------------------------------------------------------
 
-InstanceMethodDefNode::InstanceMethodDefNode() : AstNode() {
+MethodDefNode::MethodDefNode() : AstNode() {
     kind = NONE;
     type = nullptr;
     identifier = nullptr;
@@ -1498,123 +1498,92 @@ InstanceMethodDefNode::InstanceMethodDefNode() : AstNode() {
     compoundStmt = nullptr;
 }
 
-InstanceMethodDefNode* InstanceMethodDefNode::createInstanceMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt) {
-    InstanceMethodDefNode *node = new InstanceMethodDefNode();
-    node->kind = TYPE_ID;
+MethodDefNode* MethodDefNode::createInstanceMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt) {
+    MethodDefNode *node = new MethodDefNode();
+    node->kind = ID;
     node->type = type;
     node->identifier = identifier;
     node->compoundStmt = compoundStmt;
+    node->isInstanceMethodFlag = true;
     return node;
 }
 
-InstanceMethodDefNode* InstanceMethodDefNode::createInstanceMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt) {
-    InstanceMethodDefNode *node = new InstanceMethodDefNode();
-    node->kind = TYPE_SEL;
+MethodDefNode* MethodDefNode::createInstanceMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt) {
+    MethodDefNode *node = new MethodDefNode();
+    node->kind = SEL;
     node->type = type;
     node->methodSel = methodSel;
     node->compoundStmt = compoundStmt;
+    node->isInstanceMethodFlag = true;
     return node;
 }
 
-InstanceMethodDefNode::InstanceMethodDefKind InstanceMethodDefNode::getKind() const {
-    return kind;
-}
-
-TypeNode* InstanceMethodDefNode::getType() const {
-    return type;
-}
-
-ValueNode* InstanceMethodDefNode::getIdentifier() const {
-    return identifier;
-}
-
-MethodSelNode* InstanceMethodDefNode::getMethodSel() const {
-    return methodSel;
-}
-
-StmtNode* InstanceMethodDefNode::getCompoundStmt() const {
-    return compoundStmt;
-}
-
-string InstanceMethodDefNode::getDotLabel() const {
-    switch (kind) {
-        case TYPE_ID:   return "INST_METHOD_DEF_TYPE_NO_ARGS";
-        case TYPE_SEL:   return "INST_METHOD_DEF_TYPE_HAS_ARGS";
-        case VOID_ID:   return "INST_METHOD_DEF_NO_TYPE_NO_ARGS";
-        case VOID_SEL:   return "INST_METHOD_DEF_NO_TYPE_HAS_ARGS";
-        default:        return "UNKNOWN_METHOD_DEF";
-    }
-}
-
-string InstanceMethodDefNode::toDot() const {
-    string result;
-    appendDotNode(result);
-    appendDotEdge(result, type, "type");
-    appendDotEdge(result, identifier, "identifier");
-    appendDotEdge(result, methodSel, "method_sel");
-    appendDotEdge(result, compoundStmt, "compound_stmt");
-    return result;
-}
-
-//--------------------------------------------------------------ClassMethodDefNode--------------------------------------------------------------
-
-ClassMethodDefNode::ClassMethodDefNode() : AstNode() {
-    kind = NONE;
-    type = nullptr;
-    identifier = nullptr;
-    methodSel = nullptr;
-    compoundStmt = nullptr;
-}
-
-ClassMethodDefNode* ClassMethodDefNode::createClassMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt) {
-    ClassMethodDefNode *node = new ClassMethodDefNode();
-    node->kind = TYPE_ID;
+MethodDefNode* MethodDefNode::createClassMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt) {
+    MethodDefNode *node = new MethodDefNode();
+    node->kind = ID;
     node->type = type;
     node->identifier = identifier;
     node->compoundStmt = compoundStmt;
+    node->isInstanceMethodFlag = false;
     return node;
 }
 
-ClassMethodDefNode* ClassMethodDefNode::createClassMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt) {
-    ClassMethodDefNode *node = new ClassMethodDefNode();
-    node->kind = TYPE_SEL;
+MethodDefNode* MethodDefNode::createClassMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt) {
+    MethodDefNode *node = new MethodDefNode();
+    node->kind = SEL;
     node->type = type;
     node->methodSel = methodSel;
     node->compoundStmt = compoundStmt;
+    node->isInstanceMethodFlag = false;
     return node;
 }
 
-ClassMethodDefNode::ClassMethodDefKind ClassMethodDefNode::getKind() const {
+MethodDefNode::MethodDefKind MethodDefNode::getKind() const {
     return kind;
 }
 
-TypeNode* ClassMethodDefNode::getType() const {
+TypeNode* MethodDefNode::getType() const {
     return type;
 }
 
-ValueNode* ClassMethodDefNode::getIdentifier() const {
+ValueNode* MethodDefNode::getIdentifier() const {
     return identifier;
 }
 
-MethodSelNode* ClassMethodDefNode::getMethodSel() const {
+MethodSelNode* MethodDefNode::getMethodSel() const {
     return methodSel;
 }
 
-StmtNode* ClassMethodDefNode::getCompoundStmt() const {
+StmtNode* MethodDefNode::getCompoundStmt() const {
     return compoundStmt;
 }
 
-string ClassMethodDefNode::getDotLabel() const {
-    switch (kind) {
-        case TYPE_ID:   return "CLASS_METHOD_DEF_TYPE_NO_ARGS";
-        case TYPE_SEL:   return "CLASS_METHOD_DEF_TYPE_HAS_ARGS";
-        case VOID_ID:   return "CLASS_METHOD_DEF_NO_TYPE_NO_ARGS";
-        case VOID_SEL:   return "CLASS_METHOD_DEF_NO_TYPE_HAS_ARGS";
-        default:        return "UNKNOWN_METHOD_DEF";
+bool MethodDefNode::isInstanceMethod() const {
+    return isInstanceMethodFlag;
+}
+
+bool MethodDefNode::isClassMethod() const {
+    return !isInstanceMethodFlag;
+}
+
+string MethodDefNode::getDotLabel() const {
+    if (isInstanceMethodFlag) {
+        switch (kind) {
+            case ID:    return "INST_METHOD_DEF_NO_ARGS";
+            case SEL:   return "INST_METHOD_DEF_HAS_ARGS";
+            default:    return "UNKNOWN_METHOD_DEF";
+        }
+    }
+    else {
+        switch (kind) {
+            case ID:    return "CLASS_METHOD_DEF_NO_ARGS";
+            case SEL:   return "CLASS_METHOD_DEF_HAS_ARGS";
+            default:    return "UNKNOWN_METHOD_DEF";
+        }
     }
 }
 
-string ClassMethodDefNode::toDot() const {
+string MethodDefNode::toDot() const {
     string result;
     appendDotNode(result);
     appendDotEdge(result, type, "type");
@@ -1631,41 +1600,41 @@ ImplementationDefListNode::ImplementationDefListNode() : AstNode() {
     instanceMethodDefs = nullptr;
 }
 
-ImplementationDefListNode* ImplementationDefListNode::createImplementationDefList(ClassMethodDefNode *classMethodDef) {
+ImplementationDefListNode* ImplementationDefListNode::createImplementationDefListWithClassMethod(MethodDefNode *classMethodDef) {
     ImplementationDefListNode *node = new ImplementationDefListNode();
-    node->classMethodDefs = new list<ClassMethodDefNode*>{classMethodDef};
-    node->instanceMethodDefs = new list<InstanceMethodDefNode*>();
+    node->classMethodDefs = new list<MethodDefNode*>{classMethodDef};
+    node->instanceMethodDefs = new list<MethodDefNode*>();
     return node;
 }
 
-ImplementationDefListNode* ImplementationDefListNode::createImplementationDefList(InstanceMethodDefNode *instanceMethodDef) {
+ImplementationDefListNode* ImplementationDefListNode::createImplementationDefListWithInstMethod(MethodDefNode *instanceMethodDef) {
     ImplementationDefListNode *node = new ImplementationDefListNode();
-    node->classMethodDefs = new list<ClassMethodDefNode*>();
-    node->instanceMethodDefs = new list<InstanceMethodDefNode*>{instanceMethodDef};
+    node->classMethodDefs = new list<MethodDefNode*>();
+    node->instanceMethodDefs = new list<MethodDefNode*>{instanceMethodDef};
     return node;
 }
 
-ImplementationDefListNode* ImplementationDefListNode::addClassMethodDef(ImplementationDefListNode *implementationDefList, ClassMethodDefNode *classMethodDef) {
+ImplementationDefListNode* ImplementationDefListNode::addClassMethodDef(ImplementationDefListNode *implementationDefList, MethodDefNode *classMethodDef) {
     if (!implementationDefList->classMethodDefs) {
-        implementationDefList->classMethodDefs = new std::list<ClassMethodDefNode*>();
+        implementationDefList->classMethodDefs = new std::list<MethodDefNode*>();
     }
     implementationDefList->classMethodDefs->push_back(classMethodDef);
     return implementationDefList;
 }
 
-ImplementationDefListNode* ImplementationDefListNode::addInstanceMethodDef(ImplementationDefListNode *implementationDefList, InstanceMethodDefNode *instanceMethodDef) {
+ImplementationDefListNode* ImplementationDefListNode::addInstanceMethodDef(ImplementationDefListNode *implementationDefList, MethodDefNode *instanceMethodDef) {
     if (!implementationDefList->instanceMethodDefs) {
-        implementationDefList->instanceMethodDefs = new std::list<InstanceMethodDefNode*>();
+        implementationDefList->instanceMethodDefs = new std::list<MethodDefNode*>();
     }
     implementationDefList->instanceMethodDefs->push_back(instanceMethodDef);
     return implementationDefList;
 }
 
-list<ClassMethodDefNode*>* ImplementationDefListNode::getClassMethodDefs() const {
+list<MethodDefNode*>* ImplementationDefListNode::getClassMethodDefs() const {
     return classMethodDefs;
 }
 
-list<InstanceMethodDefNode*>* ImplementationDefListNode::getInstanceMethodDefs() const {
+list<MethodDefNode*>* ImplementationDefListNode::getInstanceMethodDefs() const {
     return instanceMethodDefs;
 }
 
@@ -1679,14 +1648,14 @@ string ImplementationDefListNode::toDot() const {
 
     if (classMethodDefs) {
         int i = 0;
-        for (ClassMethodDefNode *method : *classMethodDefs) {
+        for (MethodDefNode *method : *classMethodDefs) {
             appendDotEdge(result, method, "class_method_" + to_string(i++));
         }
     }
 
     if (instanceMethodDefs) {
         int i = 0;
-        for (InstanceMethodDefNode *method : *instanceMethodDefs) {
+        for (MethodDefNode *method : *instanceMethodDefs) {
             appendDotEdge(result, method, "instance_method_" + to_string(i++));
         }
     }
@@ -1694,118 +1663,93 @@ string ImplementationDefListNode::toDot() const {
     return result;
 }
 
-//--------------------------------------------------------------InstanceMethodDeclNode--------------------------------------------------------------
+//--------------------------------------------------------------MethodDeclNode--------------------------------------------------------------
 
-InstanceMethodDeclNode::InstanceMethodDeclNode() : AstNode() {
+MethodDeclNode::MethodDeclNode() : AstNode() {
     kind = NONE;
     type = nullptr;
     identifier = nullptr;
     methodSel = nullptr;
 }
 
-InstanceMethodDeclNode* InstanceMethodDeclNode::createInstanceMethodDecl(TypeNode *type, ValueNode *identifier) {
-    InstanceMethodDeclNode *node = new InstanceMethodDeclNode();
-    node->kind = TYPE_ID;
+MethodDeclNode* MethodDeclNode::createInstanceMethodDecl(TypeNode *type, ValueNode *identifier) {
+    MethodDeclNode *node = new MethodDeclNode();
+    node->kind = ID;
     node->type = type;
     node->identifier = identifier;
+    node->isInstanceMethodFlag = true;
     return node;
 }
 
-InstanceMethodDeclNode* InstanceMethodDeclNode::createInstanceMethodDecl(TypeNode *type, MethodSelNode *methodSel) {
-    InstanceMethodDeclNode *node = new InstanceMethodDeclNode();
-    node->kind = TYPE_SEL;
+MethodDeclNode* MethodDeclNode::createInstanceMethodDecl(TypeNode *type, MethodSelNode *methodSel) {
+    MethodDeclNode *node = new MethodDeclNode();
+    node->kind = SEL;
     node->type = type;
     node->methodSel = methodSel;
+    node->isInstanceMethodFlag = true;
     return node;
 }
 
-InstanceMethodDeclNode::InstanceMethodDeclKind InstanceMethodDeclNode::getKind() const {
+MethodDeclNode* MethodDeclNode::createClassMethodDecl(TypeNode *type, ValueNode *identifier) {
+    MethodDeclNode *node = new MethodDeclNode();
+    node->kind = ID;
+    node->type = type;
+    node->identifier = identifier;
+    node->isInstanceMethodFlag = false;
+    return node;
+}
+
+MethodDeclNode* MethodDeclNode::createClassMethodDecl(TypeNode *type, MethodSelNode *methodSel) {
+    MethodDeclNode *node = new MethodDeclNode();
+    node->kind = SEL;
+    node->type = type;
+    node->methodSel = methodSel;
+    node->isInstanceMethodFlag = false;
+    return node;
+}
+
+MethodDeclNode::MethodDeclKind MethodDeclNode::getKind() const {
     return kind;
 }
 
-TypeNode* InstanceMethodDeclNode::getType() const {
+TypeNode* MethodDeclNode::getType() const {
     return type;
 }
 
-ValueNode* InstanceMethodDeclNode::getIdentifier() const {
+ValueNode* MethodDeclNode::getIdentifier() const {
     return identifier;
 }
 
-MethodSelNode* InstanceMethodDeclNode::getMethodSel() const {
+MethodSelNode* MethodDeclNode::getMethodSel() const {
     return methodSel;
 }
 
-string InstanceMethodDeclNode::getDotLabel() const {
-    switch (kind) {
-        case TYPE_ID:   return "INST_METHOD_DECL_TYPE_NO_ARGS";
-        case TYPE_SEL:   return "INST_METHOD_DECL_TYPE_HAS_ARGS";
-        case VOID_ID:   return "INST_METHOD_DECL_NO_TYPE_NO_ARGS";
-        case VOID_SEL:   return "INST_METHOD_DECL_NO_TYPE_HAS_ARGS";
-        default:        return "UNKNOWN_METHOD_DECL";
+bool MethodDeclNode::isInstanceMethod() const {
+    return isInstanceMethodFlag;
+}
+
+bool MethodDeclNode::isClassMethod() const {
+    return !isInstanceMethodFlag;
+}
+
+string MethodDeclNode::getDotLabel() const {
+    if (isInstanceMethodFlag) {
+        switch (kind) {
+            case ID:    return "INST_METHOD_DECL_NO_ARGS";
+            case SEL:   return "INST_METHOD_DECL_HAS_ARGS";
+            default:    return "UNKNOWN_METHOD_DECL";
+        }
+    }
+    else {
+        switch (kind) {
+            case ID:    return "CLASS_METHOD_DECL_NO_ARGS";
+            case SEL:   return "CLASS_METHOD_DECL_HAS_ARGS";
+            default:    return "UNKNOWN_METHOD_DECL";
+        }
     }
 }
 
-string InstanceMethodDeclNode::toDot() const {
-    string result;
-    appendDotNode(result);
-    appendDotEdge(result, type, "type");
-    appendDotEdge(result, identifier, "identifier");
-    appendDotEdge(result, methodSel, "method_sel");
-    return result;
-}
-
-//--------------------------------------------------------------ClassMethodDeclNode--------------------------------------------------------------
-
-ClassMethodDeclNode::ClassMethodDeclNode() : AstNode() {
-    kind = NONE;
-    type = nullptr;
-    identifier = nullptr;
-    methodSel = nullptr;
-}
-
-ClassMethodDeclNode* ClassMethodDeclNode::createClassMethodDecl(TypeNode *type, ValueNode *identifier) {
-    ClassMethodDeclNode *node = new ClassMethodDeclNode();
-    node->kind = TYPE_ID;
-    node->type = type;
-    node->identifier = identifier;
-    return node;
-}
-
-ClassMethodDeclNode* ClassMethodDeclNode::createClassMethodDecl(TypeNode *type, MethodSelNode *methodSel) {
-    ClassMethodDeclNode *node = new ClassMethodDeclNode();
-    node->kind = TYPE_SEL;
-    node->type = type;
-    node->methodSel = methodSel;
-    return node;
-}
-
-ClassMethodDeclNode::ClassMethodDeclKind ClassMethodDeclNode::getKind() const {
-    return kind;
-}
-
-TypeNode* ClassMethodDeclNode::getType() const {
-    return type;
-}
-
-ValueNode* ClassMethodDeclNode::getIdentifier() const {
-    return identifier;
-}
-
-MethodSelNode* ClassMethodDeclNode::getMethodSel() const {
-    return methodSel;
-}
-
-string ClassMethodDeclNode::getDotLabel() const {
-    switch (kind) {
-        case TYPE_ID:   return "CLASS_METHOD_DECL_TYPE_NO_ARGS";
-        case TYPE_SEL:   return "CLASS_METHOD_DECL_TYPE_HAS_ARGS";
-        case VOID_ID:   return "CLASS_METHOD_DECL_NO_TYPE_NO_ARGS";
-        case VOID_SEL:   return "CLASS_METHOD_DECL_NO_TYPE_HAS_ARGS";
-        default:        return "UNKNOWN_METHOD_DECL";
-    }
-}
-
-string ClassMethodDeclNode::toDot() const {
+string MethodDeclNode::toDot() const {
     string result;
     appendDotNode(result);
     appendDotEdge(result, type, "type");
@@ -1876,8 +1820,8 @@ InterfaceDeclListNode::InterfaceDeclListNode() : AstNode() {
 InterfaceDeclListNode* InterfaceDeclListNode::createInterfaceDeclList() {
     InterfaceDeclListNode *node = new InterfaceDeclListNode();
     node->properties = new list<PropertyNode*>();
-    node->classMethodDecls = new list<ClassMethodDeclNode*>();
-    node->instanceMethodDecls = new list<InstanceMethodDeclNode*>();
+    node->classMethodDecls = new list<MethodDeclNode*>();
+    node->instanceMethodDecls = new list<MethodDeclNode*>();
     return node;
 }
 
@@ -1889,17 +1833,17 @@ InterfaceDeclListNode* InterfaceDeclListNode::addProperty(InterfaceDeclListNode 
     return interfaceDeclList;
 }
 
-InterfaceDeclListNode* InterfaceDeclListNode::addClassMethodDecl(InterfaceDeclListNode *interfaceDeclList, ClassMethodDeclNode *classMethodDecl) {
+InterfaceDeclListNode* InterfaceDeclListNode::addClassMethodDecl(InterfaceDeclListNode *interfaceDeclList, MethodDeclNode *classMethodDecl) {
     if (!interfaceDeclList->classMethodDecls) {
-        interfaceDeclList->classMethodDecls = new std::list<ClassMethodDeclNode*>();
+        interfaceDeclList->classMethodDecls = new std::list<MethodDeclNode*>();
     }
     interfaceDeclList->classMethodDecls->push_back(classMethodDecl);
     return interfaceDeclList;
 }
 
-InterfaceDeclListNode* InterfaceDeclListNode::addInstanceMethodDecl(InterfaceDeclListNode *interfaceDeclList, InstanceMethodDeclNode *instanceMethodDecl) {
+InterfaceDeclListNode* InterfaceDeclListNode::addInstanceMethodDecl(InterfaceDeclListNode *interfaceDeclList, MethodDeclNode *instanceMethodDecl) {
     if (!interfaceDeclList->instanceMethodDecls) {
-        interfaceDeclList->instanceMethodDecls = new std::list<InstanceMethodDeclNode*>();
+        interfaceDeclList->instanceMethodDecls = new std::list<MethodDeclNode*>();
     }
     interfaceDeclList->instanceMethodDecls->push_back(instanceMethodDecl);
     return interfaceDeclList;
@@ -1909,11 +1853,11 @@ list<PropertyNode*>* InterfaceDeclListNode::getProperties() const {
     return properties;
 }
 
-list<ClassMethodDeclNode*>* InterfaceDeclListNode::getClassMethodDecls() const {
+list<MethodDeclNode*>* InterfaceDeclListNode::getClassMethodDecls() const {
     return classMethodDecls;
 }
 
-list<InstanceMethodDeclNode*>* InterfaceDeclListNode::getInstanceMethodDecls() const {
+list<MethodDeclNode*>* InterfaceDeclListNode::getInstanceMethodDecls() const {
     return instanceMethodDecls;
 }
 
@@ -1934,14 +1878,14 @@ string InterfaceDeclListNode::toDot() const {
 
     if (classMethodDecls) {
         int i = 0;
-        for (ClassMethodDeclNode *method : *classMethodDecls) {
+        for (MethodDeclNode *method : *classMethodDecls) {
             appendDotEdge(result, method, "class_method_" + to_string(i++));
         }
     }
 
     if (instanceMethodDecls) {
         int i = 0;
-        for (InstanceMethodDeclNode *method : *instanceMethodDecls) {
+        for (MethodDeclNode *method : *instanceMethodDecls) {
             appendDotEdge(result, method, "instance_method_" + to_string(i++));
         }
     }

@@ -587,148 +587,92 @@ protected:
     MethodSelNode();
 };
 
-class InstanceMethodDefNode : public AstNode {
+class MethodDefNode : public AstNode {
 public:
-    enum InstanceMethodDefKind {
+    enum MethodDefKind {
         NONE,
-        TYPE_ID,
-        TYPE_SEL,
-        VOID_ID,
-        VOID_SEL
+        ID,
+        SEL
     };
 
-    static InstanceMethodDefNode* createInstanceMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt);
-    static InstanceMethodDefNode* createInstanceMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt);
+    static MethodDefNode* createInstanceMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt);
+    static MethodDefNode* createInstanceMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt);
+    static MethodDefNode* createClassMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt);
+    static MethodDefNode* createClassMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt);
 
-    InstanceMethodDefKind getKind() const;
+    MethodDefKind getKind() const;
     TypeNode* getType() const;
     ValueNode* getIdentifier() const;
     MethodSelNode* getMethodSel() const;
     StmtNode* getCompoundStmt() const;
+    bool isInstanceMethod() const;
+    bool isClassMethod() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
-    InstanceMethodDefKind kind;
+    MethodDefKind kind;
     TypeNode *type;
     ValueNode *identifier;
     MethodSelNode *methodSel;
     StmtNode *compoundStmt;
+    bool isInstanceMethodFlag;
 
-    InstanceMethodDefNode();
-};
-
-class ClassMethodDefNode : public AstNode {
-public:
-    enum ClassMethodDefKind {
-        NONE,
-        TYPE_ID,
-        TYPE_SEL,
-        VOID_ID,
-        VOID_SEL
-    };
-
-    static ClassMethodDefNode* createClassMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt);
-    static ClassMethodDefNode* createClassMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt);
-
-    ClassMethodDefKind getKind() const;
-    TypeNode* getType() const;
-    ValueNode* getIdentifier() const;
-    MethodSelNode* getMethodSel() const;
-    StmtNode* getCompoundStmt() const;
-
-    string getDotLabel() const override;
-    string toDot() const override;
-
-protected:
-    ClassMethodDefKind kind;
-    TypeNode *type;
-    ValueNode *identifier;
-    MethodSelNode *methodSel;
-    StmtNode *compoundStmt;
-
-    ClassMethodDefNode();
+    MethodDefNode();
 };
 
 class ImplementationDefListNode : public AstNode {
 public:
-    static ImplementationDefListNode* createImplementationDefList(ClassMethodDefNode *classMethodDef);
-    static ImplementationDefListNode* createImplementationDefList(InstanceMethodDefNode *instanceMethodDef);
-    static ImplementationDefListNode* addClassMethodDef(ImplementationDefListNode *implementationDefList, ClassMethodDefNode *classMethodDef);
-    static ImplementationDefListNode* addInstanceMethodDef(ImplementationDefListNode *implementationDefList, InstanceMethodDefNode *instanceMethodDef);
+    static ImplementationDefListNode* createImplementationDefListWithClassMethod(MethodDefNode *classMethodDef);
+    static ImplementationDefListNode* createImplementationDefListWithInstMethod(MethodDefNode *instanceMethodDef);
+    static ImplementationDefListNode* addClassMethodDef(ImplementationDefListNode *implementationDefList, MethodDefNode *classMethodDef);
+    static ImplementationDefListNode* addInstanceMethodDef(ImplementationDefListNode *implementationDefList, MethodDefNode *instanceMethodDef);
 
-    list<ClassMethodDefNode*>* getClassMethodDefs() const;
-    list<InstanceMethodDefNode*>* getInstanceMethodDefs() const;
+    list<MethodDefNode*>* getClassMethodDefs() const;
+    list<MethodDefNode*>* getInstanceMethodDefs() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
-    list<ClassMethodDefNode*> *classMethodDefs;
-    list<InstanceMethodDefNode*> *instanceMethodDefs;
+    list<MethodDefNode*> *classMethodDefs;
+    list<MethodDefNode*> *instanceMethodDefs;
     
     ImplementationDefListNode();
 };
 
-class InstanceMethodDeclNode : public AstNode {
+class MethodDeclNode : public AstNode {
 public:
-    enum InstanceMethodDeclKind {
+    enum MethodDeclKind {
         NONE,
-        TYPE_ID,
-        TYPE_SEL,
-        VOID_ID,
-        VOID_SEL
+        ID,
+        SEL
     };
 
-    static InstanceMethodDeclNode* createInstanceMethodDecl(TypeNode *type, ValueNode *identifier);
-    static InstanceMethodDeclNode* createInstanceMethodDecl(TypeNode *type, MethodSelNode *methodSel);
+    static MethodDeclNode* createInstanceMethodDecl(TypeNode *type, ValueNode *identifier);
+    static MethodDeclNode* createInstanceMethodDecl(TypeNode *type, MethodSelNode *methodSel);
+    static MethodDeclNode* createClassMethodDecl(TypeNode *type, ValueNode *identifier);
+    static MethodDeclNode* createClassMethodDecl(TypeNode *type, MethodSelNode *methodSel);
 
-    InstanceMethodDeclKind getKind() const;
+    MethodDeclKind getKind() const;
     TypeNode* getType() const;
     ValueNode* getIdentifier() const;
     MethodSelNode* getMethodSel() const;
+    bool isInstanceMethod() const;
+    bool isClassMethod() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
-    InstanceMethodDeclKind kind;
+    MethodDeclKind kind;
     TypeNode *type;
     ValueNode *identifier;
     MethodSelNode *methodSel;
+    bool isInstanceMethodFlag;
 
-    InstanceMethodDeclNode();
-};
-
-class ClassMethodDeclNode : public AstNode {
-public:
-    enum ClassMethodDeclKind {
-        NONE,
-        TYPE_ID,
-        TYPE_SEL,
-        VOID_ID,
-        VOID_SEL
-    };
-
-    static ClassMethodDeclNode* createClassMethodDecl(TypeNode *type, ValueNode *identifier);
-    static ClassMethodDeclNode* createClassMethodDecl(TypeNode *type, MethodSelNode *methodSel);
-
-    ClassMethodDeclKind getKind() const;
-    TypeNode* getType() const;
-    ValueNode* getIdentifier() const;
-    MethodSelNode* getMethodSel() const;
-
-    string getDotLabel() const override;
-    string toDot() const override;
-
-protected:
-    ClassMethodDeclKind kind;
-    TypeNode *type;
-    ValueNode *identifier;
-    MethodSelNode *methodSel;
-
-    ClassMethodDeclNode();
+    MethodDeclNode();
 };
 
 class PropertyNode : public AstNode {
@@ -761,20 +705,20 @@ class InterfaceDeclListNode : public AstNode {
 public:
     static InterfaceDeclListNode* createInterfaceDeclList();
     static InterfaceDeclListNode* addProperty(InterfaceDeclListNode *interfaceDeclList, PropertyNode *property);
-    static InterfaceDeclListNode* addClassMethodDecl(InterfaceDeclListNode *interfaceDeclList, ClassMethodDeclNode *classMethodDecl);
-    static InterfaceDeclListNode* addInstanceMethodDecl(InterfaceDeclListNode *interfaceDeclList, InstanceMethodDeclNode *instanceMethodDecl);
+    static InterfaceDeclListNode* addClassMethodDecl(InterfaceDeclListNode *interfaceDeclList, MethodDeclNode *classMethodDecl);
+    static InterfaceDeclListNode* addInstanceMethodDecl(InterfaceDeclListNode *interfaceDeclList, MethodDeclNode *instanceMethodDecl);
 
     list<PropertyNode*>* getProperties() const;
-    list<ClassMethodDeclNode*>* getClassMethodDecls() const;
-    list<InstanceMethodDeclNode*>* getInstanceMethodDecls() const;
+    list<MethodDeclNode*>* getClassMethodDecls() const;
+    list<MethodDeclNode*>* getInstanceMethodDecls() const;
 
     string getDotLabel() const override;
     string toDot() const override;
 
 protected:
     list<PropertyNode*> *properties;
-    list<ClassMethodDeclNode*> *classMethodDecls;
-    list<InstanceMethodDeclNode*> *instanceMethodDecls;
+    list<MethodDeclNode*> *classMethodDecls;
+    list<MethodDeclNode*> *instanceMethodDecls;
 
     InterfaceDeclListNode();
 };
