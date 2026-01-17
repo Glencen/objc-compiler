@@ -160,6 +160,10 @@ string* ValueNode::getClassName() const {
     return stringValue;
 }
 
+void ValueNode::setClassName(string className) {
+    stringValue = &className;
+}
+
 string ValueNode::getDotLabel() const {
     auto escapeString = [](const string &src) {
         string out;
@@ -1061,6 +1065,14 @@ StmtNode* StmtNode::createDeclaration(DeclNode *decl) {
     node->type = DECLARATION;
     node->decl = decl;
     return node;
+}
+
+StmtNode::StmtType StmtNode::getType() const {
+    return type;
+}
+
+StmtListNode* StmtNode::getCompound() const {
+    return compound;
 }
 
 string StmtNode::getDotLabel() const {
@@ -2299,6 +2311,14 @@ ImplementationDefListNode* ImplementationNode::getImplDefList() const {
     return implDefList;
 }
 
+void ImplementationNode::setClassName(string className) {
+    this->className->setClassName(className);
+}
+
+void ImplementationNode::setSuperClassName(string superClassName) {
+    this->superClassName->setClassName(superClassName);
+}
+
 string ImplementationNode::getDotLabel() const {
     return "IMPLEMENTATION";
 }
@@ -2353,6 +2373,14 @@ InstanceVarsNode* InterfaceNode::getInstanceVars() const {
 
 InterfaceDeclListNode* InterfaceNode::getInterfaceDeclList() const {
     return interfaceDeclList;
+}
+
+void InterfaceNode::setClassName(string className) {
+    this->className->setClassName(className);
+}
+
+void InterfaceNode::setSuperClassName(string superClassName) {
+    this->superClassName->setClassName(superClassName);
 }
 
 string InterfaceNode::getDotLabel() const {

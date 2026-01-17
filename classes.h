@@ -7,6 +7,10 @@
 
 using namespace std;
 
+class ConstantsTable;
+class LocalVariablesTable;
+class ClassesTableElement;
+
 class StmtNode;
 class ExprNode;
 class PropertyNode;
@@ -79,6 +83,8 @@ public:
     string* getObjcString() const;
     string* getIdentifier() const;
     string* getClassName() const;
+
+    void setClassName(string className);
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -260,6 +266,11 @@ public:
     static ExprNode* createDot(ExprNode *left, ExprNode *right);
     static ExprNode* createArrow(ExprNode *left, ExprNode *right);
 
+    void fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement);
+    void fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance);
+    void fillLiterals(ConstantsTable* constantTable);
+    void semanticTransform(LocalVariablesTable* localVariables);
+
     ExprType getType() const;
     ValueNode* getIdentifier() const;
     ValueNode* getLiteral() const;
@@ -411,6 +422,14 @@ public:
     static StmtNode* createDoWhile(StmtNode *body, ExprNode *condition);
     static StmtNode* createCompound(StmtListNode *compound);
     static StmtNode* createDeclaration(DeclNode *decl);
+
+    StmtType getType() const;
+    StmtListNode* getCompound() const;
+
+    void fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement);
+    void fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance);
+    void fillLiterals(ConstantsTable* constantTable);
+    void semanticTransform(LocalVariablesTable* localVariables);
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -897,6 +916,9 @@ public:
     InstanceVarsNode* getInstanceVars() const;
     ImplementationDefListNode* getImplDefList() const;
 
+    void setClassName(string className);
+    void setSuperClassName(string superClassName);
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -918,6 +940,9 @@ public:
     ValueNode* getSuperClassName() const;
     InstanceVarsNode* getInstanceVars() const;
     InterfaceDeclListNode* getInterfaceDeclList() const;
+
+    void setClassName(string className);
+    void setSuperClassName(string superClassName);
 
     string getDotLabel() const override;
     string toDot() const override;
