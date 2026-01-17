@@ -159,7 +159,7 @@ class ClassesTable {
 public:
     static map<string, ClassesTableElement*> items;
 
-    static ClassesTableElement* addClass(string name, string *superclassName, bool isImplementation, Class_block_node *classBlock);
+    static ClassesTableElement* addClass(string name, string *superclassName, bool isImplementation, AstNode *classBlock);
 
 	static void initRTL();
     static void toCSVFile(string filepath, char separator = '|');
@@ -222,7 +222,7 @@ public:
     MethodsTableElement(int name, int descriptor, bool isClassMethod, StmtNode* bodyStart, Type* returnType, vector<Type*>* paramsTypes, vector<Type*>* keywordsTypes, string nameStr, string descriptorStr);
 
     string toCSVString(string methodName, char separator = '|');
-    void refTablesToCsvFile(string methodName, string filepath, char separator = '|');
+    void refTablesToCSVFile(string methodName, string filepath, char separator = '|');
     void fillFieldRefs(ConstantsTable *constantTable, ClassesTableElement* classTableElement);
 	void fillMethodRefs(ConstantsTable* constantTable, ClassesTableElement* classTableElement);
 	void fillLiterals(ConstantsTable* constantTable);
