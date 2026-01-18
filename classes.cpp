@@ -1,4 +1,29 @@
 #include "classes.h"
+#include "tables.h"
+
+Type* convertTypeNodeToType(TypeNode* typeNode) {
+    if (!typeNode) return nullptr;
+    switch (typeNode->getKind()) {
+        case TypeNode::INT:
+            return new Type(TypeNode::INT);
+        case TypeNode::FLOAT:
+            return new Type(TypeNode::FLOAT);
+        case TypeNode::BOOL:
+            return new Type(TypeNode::BOOL);
+        case TypeNode::CHAR:
+            return new Type(TypeNode::CHAR);
+        case TypeNode::TYPE_ID:
+            return new Type(TypeNode::TYPE_ID);
+        case TypeNode::CLASS_NAME:
+            return new Type(TypeNode::CLASS_NAME, *typeNode->getClassName()->getClassName());
+        case TypeNode::VOID:
+            return new Type(TypeNode::VOID);
+        default:
+            return nullptr;
+    }
+}
+
+//--------------------------------------------------------------AstNode--------------------------------------------------------------
 
 unsigned int AstNode::maxId = 0;
 
@@ -162,6 +187,44 @@ string* ValueNode::getClassName() const {
 
 void ValueNode::setClassName(string className) {
     stringValue = &className;
+}
+
+void ValueNode::setLocalVarId(int id) {
+    localVarId = id;
+}
+
+int ValueNode::getLocalVarId() const {
+    return localVarId;
+}
+
+void ValueNode::setIsLocalVar(bool val) {
+    isLocalVar = val;
+}
+
+bool ValueNode::getIsLocalVar() const {
+    return isLocalVar;
+}
+
+void ValueNode::fillLiterals(ConstantsTable* constantTable) {
+    switch (valueType) {
+        case INT_LIT:
+            constantTable->findOrAddConstant(INTEGER, intValue);
+            break;
+        case FLOAT_LIT:
+            constantTable->findOrAddConstant(FLOAT, floatValue);
+            break;
+        case STRING_LIT:
+            constantTable->findOrAddConstant(UTF8, *stringValue);
+            break;
+        case OBJC_INT_LIT:
+        case OBJC_FLOAT_LIT:
+        case OBJC_BOOL_LIT:
+        case OBJC_STRING_LIT:
+            constantTable->findOrAddConstant(UTF8, *stringValue);
+            break;
+        default:
+            break;
+    }
 }
 
 string ValueNode::getDotLabel() const {
@@ -386,6 +449,14 @@ ExprListNode* ExprListNode::addExprToList(ExprListNode *exprList, ExprNode *expr
 
 list<ExprNode*>* ExprListNode::getExprList() const {
     return exprList;
+}
+
+void ExprListNode::fillLiterals(ConstantsTable* constantTable) {
+    if (exprList) {
+        for (auto expr : *exprList) {
+            expr->fillLiterals(constantTable);
+        }
+    }
 }
 
 string ExprListNode::getDotLabel() const {
@@ -635,6 +706,339 @@ ExprNode* ExprNode::createArrow(ExprNode *left, ExprNode *right) {
     return node;
 }
 
+void ExprNode::fillLiterals(ConstantsTable* constantTable) {
+    switch (type) {
+        case LITERAL:
+            if (literalValue) {
+                literalValue->fillLiterals(constantTable);
+            }
+            break;
+        case OBJC_ARRAY_LITERAL:
+            if (objcArrayExprList && objcArrayExprList->getExprList()) {
+                for (auto expr : *objcArrayExprList->getExprList()) {
+                    expr->fillLiterals(constantTable);
+                }
+            }
+            break;
+        case OBJC_BOXED_EXPR:
+        case BOXED_EXPR:
+            if (boxedExpr) {
+                boxedExpr->fillLiterals(constantTable);
+            }
+            break;
+        case IDENTIFIER:
+            break;
+        case UNARY_MINUS:
+        case NOT:
+        case POST_INC:
+        case POST_DEC:
+            if (operand) {
+                operand->fillLiterals(constantTable);
+            }
+            break;
+        case ADDITION:
+        case SUBTRACTION:
+        case MULTIPLICATION:
+        case DIVISION:
+        case EQUAL:
+        case NOT_EQUAL:
+        case GREATER:
+        case LESS:
+        case LESS_OR_EQUAL:
+        case GREATER_OR_EQUAL:
+        case AND:
+        case OR:
+        case ASSIGN:
+            if (left) left->fillLiterals(constantTable);
+            if (right) right->fillLiterals(constantTable);
+            break;
+        case ARRAY_ACCESS:
+            if (operand) operand->fillLiterals(constantTable);
+            if (index) index->fillLiterals(constantTable);
+            break;
+        case FUNCTION_CALL:
+            if (args && args->getExprList()) {
+                for (auto expr : *args->getExprList()) {
+                    expr->fillLiterals(constantTable);
+                }
+            }
+            break;
+        case DOT:
+        case ARROW:
+            if (left) left->fillLiterals(constantTable);
+            if (right) right->fillLiterals(constantTable);
+            break;
+        case MESSAGE:
+            if (receiver) {
+                if (receiver->getExpr()) {
+                    receiver->getExpr()->fillLiterals(constantTable);
+                }
+            }
+            if (selector) {
+                if (selector->getType() == MsgSelectorNode::ARGUMENT_LIST &&
+                    selector->getMsgArgList() &&
+                    selector->getMsgArgList()->getMsgArgList()) {
+                    for (auto arg : *selector->getMsgArgList()->getMsgArgList()) {
+                        if (arg->getArg()) {
+                            arg->getArg()->fillLiterals(constantTable);
+                        }
+                    }
+                }
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+void ExprNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
+    switch (type) {
+        case IDENTIFIER: {
+            string name = *identifier->getIdentifier();
+            if (classTableElement && classTableElement->isContainsField(name)) {
+                string descriptor;
+                string className;
+                FieldsTableElement* field = classTableElement->getFieldForRef(name, &descriptor, &className);
+                if (field) {
+                    int fieldRef = constantTable->findOrAddFieldRefConstant(
+                        className, name, descriptor);
+                    setFieldRefConstantId(fieldRef);
+                    setIsFieldAccess(true);
+                    setClassName(className);
+                }
+            }
+            break;
+        }
+        case DOT:
+        case ARROW:
+            if (left) left->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (right) right->fillFieldRefs(constantTable, localVariables, classTableElement);
+            break;
+        case ASSIGN:
+            if (left) left->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (right) right->fillFieldRefs(constantTable, localVariables, classTableElement);
+            break;
+        default:
+            if (left) left->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (right) right->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (operand) operand->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (index) index->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (args) {
+                if (args->getExprList()) {
+                    for (auto expr : *args->getExprList()) {
+                        expr->fillFieldRefs(constantTable, localVariables, classTableElement);
+                    }
+                }
+            }
+            break;
+    }
+}
+
+void ExprNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance) {
+    switch (type) {
+        case FUNCTION_CALL: {
+            string methodName = *funcId->getIdentifier();
+            if (classTableElement && classTableElement->isContainsMethod(methodName)) {
+                string descriptor;
+                string className;
+                MethodsTableElement* method = classTableElement->getMethodForRef(
+                    methodName, &descriptor, &className);
+                if (method) {
+                    int methodRef = constantTable->findOrAddMethodRefConstant(
+                        className, methodName, descriptor);
+                    setMethodRefConstantId(methodRef);
+                    setIsMethodCall(true);
+                    setClassName(className);
+                }
+            }
+            if (args && args->getExprList()) {
+                for (auto expr : *args->getExprList()) {
+                    expr->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
+                }
+            }
+            break;
+        }
+        case MESSAGE: {
+            if (selector) {
+                string selectorName;
+                if (selector->getType() == MsgSelectorNode::SIMPLE_SEL) {
+                    selectorName = *selector->getIdentifier()->getIdentifier();
+                }
+                
+                if (classTableElement) {
+                    string descriptor;
+                    string className;
+                    MethodsTableElement* method = classTableElement->getMethodForRef(
+                        selectorName, &descriptor, &className);
+                    if (method) {
+                        int methodRef = constantTable->findOrAddMethodRefConstant(
+                            className, selectorName, descriptor);
+                        setMethodRefConstantId(methodRef);
+                        setIsMethodCall(true);
+                        setClassName(className);
+                    }
+                }
+            }
+            break;
+        }
+        default:
+            if (left) left->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
+            if (right) right->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
+            if (operand) operand->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
+            if (args && args->getExprList()) {
+                for (auto expr : *args->getExprList()) {
+                    expr->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
+                }
+            }
+            break;
+    }
+}
+
+void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
+    switch (type) {
+        case LITERAL: {
+            if (literalValue) {
+                switch (literalValue->getValueType()) {
+                    case ValueNode::INT_LIT:
+                        setType(new Type(TypeNode::INT));
+                        break;
+                    case ValueNode::FLOAT_LIT:
+                        setType(new Type(TypeNode::FLOAT));
+                        break;
+                    case ValueNode::BOOL_LIT:
+                        setType(new Type(TypeNode::BOOL));
+                        break;
+                    case ValueNode::CHAR_LIT:
+                        setType(new Type(TypeNode::CHAR));
+                        break;
+                    case ValueNode::STRING_LIT:
+                        setType(new Type(TypeNode::CLASS_NAME, "java/lang/String"));
+                        break;
+                    default:
+                        break;
+                }
+            }
+            break;
+        }
+        case IDENTIFIER: {
+            string name = *identifier->getIdentifier();
+            if (localVariables->isContains(name)) {
+                // Это локальная переменная
+                identifier->setIsLocalVar(true);
+                identifier->setLocalVarId(localVariables->items[name]->id);
+                // Устанавливаем тип из таблицы локальных переменных
+                setType(localVariables->items[name]->type);
+            } else {
+                // Это может быть поле или что-то еще
+                // Тип будет установлен в fillFieldRefs
+            }
+            break;
+        }
+        case ADDITION:
+        case SUBTRACTION:
+        case MULTIPLICATION:
+        case DIVISION: {
+            if (left) left->semanticTransform(localVariables);
+            if (right) right->semanticTransform(localVariables);
+            
+            Type* leftType = left ? left->getExprType() : nullptr;
+            Type* rightType = right ? right->getExprType() : nullptr;
+            
+            if (leftType && rightType) {
+                if (leftType->dataType == TypeNode::INT && rightType->dataType == TypeNode::INT) {
+                    setType(new Type(TypeNode::INT));
+                } else if ((leftType->dataType == TypeNode::INT || leftType->dataType == TypeNode::FLOAT) &&
+                          (rightType->dataType == TypeNode::INT || rightType->dataType == TypeNode::FLOAT)) {
+                    setType(new Type(TypeNode::FLOAT));
+                } else {
+                    throw std::runtime_error("Incompatible types for arithmetic operation");
+                }
+            }
+            break;
+        }
+        case ASSIGN: {
+            if (left) left->semanticTransform(localVariables);
+            if (right) right->semanticTransform(localVariables);
+            
+            Type* leftType = left ? left->getExprType() : nullptr;
+            Type* rightType = right ? right->getExprType() : nullptr;
+            
+            if (leftType && rightType) {
+                if (!rightType->isCastableTo(leftType)) {
+                    throw std::runtime_error("Incompatible types in assignment");
+                }
+                setType(leftType);
+            }
+            break;
+        }
+        case EQUAL:
+        case NOT_EQUAL:
+        case GREATER:
+        case LESS:
+        case LESS_OR_EQUAL:
+        case GREATER_OR_EQUAL: {
+            if (left) left->semanticTransform(localVariables);
+            if (right) right->semanticTransform(localVariables);
+            
+            Type* leftType = left ? left->getExprType() : nullptr;
+            Type* rightType = right ? right->getExprType() : nullptr;
+            
+            if (leftType && rightType) {
+                if (!leftType->isCastableTo(rightType) && !rightType->isCastableTo(leftType)) {
+                    throw std::runtime_error("Incompatible types for comparison");
+                }
+                setType(new Type(TypeNode::BOOL));
+            }
+            break;
+        }
+        case AND:
+        case OR: {
+            if (left) left->semanticTransform(localVariables);
+            if (right) right->semanticTransform(localVariables);
+            
+            Type* leftType = left ? left->getExprType() : nullptr;
+            Type* rightType = right ? right->getExprType() : nullptr;
+            
+            if (leftType && rightType) {
+                if (leftType->dataType != TypeNode::BOOL || rightType->dataType != TypeNode::BOOL) {
+                    throw std::runtime_error("Logical operations require boolean operands");
+                }
+                setType(new Type(TypeNode::BOOL));
+            }
+            break;
+        }
+        case FUNCTION_CALL: {
+            if (args && args->getExprList()) {
+                for (auto expr : *args->getExprList()) {
+                    expr->semanticTransform(localVariables);
+                }
+            }
+            break;
+        }
+        case ARRAY_ACCESS: {
+            if (operand) operand->semanticTransform(localVariables);
+            if (index) index->semanticTransform(localVariables);
+            
+            Type* indexType = index ? index->getExprType() : nullptr;
+            if (indexType && indexType->dataType != TypeNode::INT) {
+                throw std::runtime_error("Array index must be integer");
+            }
+            break;
+        }
+        default:
+            if (left) left->semanticTransform(localVariables);
+            if (right) right->semanticTransform(localVariables);
+            if (operand) operand->semanticTransform(localVariables);
+            if (index) index->semanticTransform(localVariables);
+            if (args && args->getExprList()) {
+                for (auto expr : *args->getExprList()) {
+                    expr->semanticTransform(localVariables);
+                }
+            }
+            break;
+    }
+}
+
 ExprNode::ExprType ExprNode::getType() const {
     return type;
 }
@@ -685,6 +1089,54 @@ ExprListNode* ExprNode::getObjcArrayExprList() const {
 
 ExprNode* ExprNode::getBoxedExpr() const {
     return boxedExpr;
+}
+
+void ExprNode::setType(Type* type) {
+    exprType = type;
+
+}
+Type* ExprNode::getExprType() const {
+    return exprType;
+}
+
+void ExprNode::setFieldRefConstantId(int id) {
+    fieldRefConstantId = id;
+}
+
+int ExprNode::getFieldRefConstantId() const {
+    return fieldRefConstantId;
+}
+
+void ExprNode::setMethodRefConstantId(int id) {
+    methodRefConstantId = id;
+}
+
+int ExprNode::getMethodRefConstantId() const {
+    return methodRefConstantId;
+}
+
+void ExprNode::setIsFieldAccess(bool val) {
+    isFieldAccess = val;
+}
+
+bool ExprNode::getIsFieldAccess() const {
+    return isFieldAccess;
+}
+
+void ExprNode::setIsMethodCall(bool val) {
+    isMethodCall = val;
+}
+
+bool ExprNode::getIsMethodCall() const {
+    return isMethodCall;
+}
+
+void ExprNode::setClassName(const string& name) {
+    className = name;
+}
+
+string ExprNode::getClassName() const {
+    return className;
 }
 
 string ExprNode::getDotLabel() const {
@@ -1073,6 +1525,180 @@ StmtNode::StmtType StmtNode::getType() const {
 
 StmtListNode* StmtNode::getCompound() const {
     return compound;
+}
+
+void StmtNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
+    switch (type) {
+        case EXPR:
+            if (expr) expr->fillFieldRefs(constantTable, localVariables, classTableElement);
+            break;
+        case RETURN:
+            if (expr) expr->fillFieldRefs(constantTable, localVariables, classTableElement);
+            break;
+        case IF:
+        case IF_ELSE:
+            if (condition) condition->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (thenBranch) thenBranch->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (elseBranch) elseBranch->fillFieldRefs(constantTable, localVariables, classTableElement);
+            break;
+        case FOR_WITH_EXPR:
+            if (expr) expr->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (condition) condition->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (post) post->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (body) body->fillFieldRefs(constantTable, localVariables, classTableElement);
+            break;
+        case WHILE:
+        case DO_WHILE:
+            if (condition) condition->fillFieldRefs(constantTable, localVariables, classTableElement);
+            if (body) body->fillFieldRefs(constantTable, localVariables, classTableElement);
+            break;
+        case COMPOUND:
+            if (compound && compound->getStmtList()) {
+                for (auto stmt : *compound->getStmtList()) {
+                    stmt->fillFieldRefs(constantTable, localVariables, classTableElement);
+                }
+            }
+            break;
+        case DECLARATION:
+            if (decl && decl->getDeclaratorList() && decl->getDeclaratorList()->getInitDeclList()) {
+                for (auto initDecl : *decl->getDeclaratorList()->getInitDeclList()) {
+                    if (initDecl->getInitializer()) {
+                        // Рекурсивно обрабатываем инициализаторы
+                    }
+                }
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+void StmtNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance) {
+    switch (type) {
+        case EXPR:
+            if (expr) expr->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
+            break;
+        case RETURN:
+            if (expr) expr->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
+            break;
+        case IF:
+        case IF_ELSE:
+            if (condition) condition->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
+            if (thenBranch) thenBranch->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
+            if (elseBranch) elseBranch->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
+            break;
+        case COMPOUND:
+            if (compound && compound->getStmtList()) {
+                for (auto stmt : *compound->getStmtList()) {
+                    stmt->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
+                }
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+void StmtNode::fillLiterals(ConstantsTable* constantTable) {
+    switch (type) {
+        case EXPR:
+            if (expr) expr->fillLiterals(constantTable);
+            break;
+        case RETURN:
+            if (expr) expr->fillLiterals(constantTable);
+            break;
+        case IF:
+        case IF_ELSE:
+            if (condition) condition->fillLiterals(constantTable);
+            if (thenBranch) thenBranch->fillLiterals(constantTable);
+            if (elseBranch) elseBranch->fillLiterals(constantTable);
+            break;
+        case COMPOUND:
+            if (compound && compound->getStmtList()) {
+                for (auto stmt : *compound->getStmtList()) {
+                    stmt->fillLiterals(constantTable);
+                }
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
+    switch (type) {
+        case RETURN: {
+            if (expr) {
+                expr->semanticTransform(localVariables);
+            }
+            break;
+        }
+        case IF:
+        case IF_ELSE: {
+            if (condition) {
+                condition->semanticTransform(localVariables);
+                Type* condType = condition->getExprType();
+                if (condType && condType->dataType != TypeNode::BOOL) {
+                    throw std::runtime_error("Condition must be boolean");
+                }
+            }
+            if (thenBranch) thenBranch->semanticTransform(localVariables);
+            if (elseBranch) elseBranch->semanticTransform(localVariables);
+            break;
+        }
+        case COMPOUND: {
+            if (compound && compound->getStmtList()) {
+                for (auto stmt : *compound->getStmtList()) {
+                    stmt->semanticTransform(localVariables);
+                }
+            }
+            break;
+        }
+        case DECLARATION: {
+            if (decl) {
+                TypeNode* typeNode = decl->getType();
+                if (typeNode && decl->getDeclaratorList() && decl->getDeclaratorList()->getInitDeclList()) {
+                    for (auto initDecl : *decl->getDeclaratorList()->getInitDeclList()) {
+                        if (initDecl->getDeclarator() && initDecl->getDeclarator()->getIdentifier()) {
+                            string varName = *initDecl->getDeclarator()->getIdentifier()->getIdentifier();
+                            Type* varType = nullptr;
+                            switch (typeNode->getKind()) {
+                                case TypeNode::INT:
+                                    varType = new Type(TypeNode::INT);
+                                    break;
+                                case TypeNode::FLOAT:
+                                    varType = new Type(TypeNode::FLOAT);
+                                    break;
+                                case TypeNode::BOOL:
+                                    varType = new Type(TypeNode::BOOL);
+                                    break;
+                                case TypeNode::CHAR:
+                                    varType = new Type(TypeNode::CHAR);
+                                    break;
+                                case TypeNode::CLASS_NAME:
+                                    varType = new Type(TypeNode::CLASS_NAME, 
+                                                     *typeNode->getClassName()->getClassName());
+                                    break;
+                                default:
+                                    break;
+                            }
+                            
+                            if (varType) {
+                                localVariables->findOrAddLocalVariable(varName, varType);
+                                // Обрабатываем инициализатор, если есть
+                                if (initDecl->getInitializer()) {
+                                    // Проверка соответствия типов
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            break;
+        }
+        default:
+            break;
+    }
 }
 
 string StmtNode::getDotLabel() const {
@@ -1576,6 +2202,24 @@ bool MethodDefNode::isInstanceMethod() const {
 
 bool MethodDefNode::isClassMethod() const {
     return !isInstanceMethodFlag;
+}
+
+void MethodDefNode::fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
+    if (compoundStmt) {
+        if (kind == SEL && methodSel && methodSel->getMethodParamList()) {
+            for (auto param : *methodSel->getMethodParamList()) {
+                string paramName = *param->getParamIdentifier()->getIdentifier();
+                Type* paramType = convertTypeNodeToType(param->getType());
+                if (paramType) {
+                    localVariables->findOrAddLocalVariable(paramName, paramType);
+                }
+            }
+        }
+        compoundStmt->fillLiterals(constantTable);
+        compoundStmt->fillFieldRefs(constantTable, localVariables, classTableElement);
+        compoundStmt->fillMethodRefs(constantTable, localVariables, classTableElement, isInstanceMethodFlag);
+        compoundStmt->semanticTransform(localVariables);
+    }
 }
 
 string MethodDefNode::getDotLabel() const {

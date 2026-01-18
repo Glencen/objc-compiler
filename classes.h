@@ -85,6 +85,12 @@ public:
     string* getClassName() const;
 
     void setClassName(string className);
+    void setLocalVarId(int id);
+    int getLocalVarId() const;
+    void setIsLocalVar(bool val);
+    bool getIsLocalVar() const;
+
+    void fillLiterals(ConstantsTable* constantTable);
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -96,6 +102,9 @@ protected:
     bool boolValue;
     char charValue;
     string *stringValue;
+
+    int localVarId;
+    bool isLocalVar;
 
     ValueNode();
 };
@@ -193,6 +202,8 @@ public:
 
     list<ExprNode*>* getExprList() const;
 
+    void fillLiterals(ConstantsTable* constantTable);
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -285,6 +296,19 @@ public:
     ExprListNode* getObjcArrayExprList() const;
     ExprNode* getBoxedExpr() const;
 
+    void setType(Type* type);
+    Type* getExprType() const;
+    void setFieldRefConstantId(int id);
+    int getFieldRefConstantId() const;
+    void setMethodRefConstantId(int id);
+    int getMethodRefConstantId() const;
+    void setIsFieldAccess(bool val);
+    bool getIsFieldAccess() const;
+    void setIsMethodCall(bool val);
+    bool getIsMethodCall() const;
+    void setClassName(const string& name);
+    string getClassName() const;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -302,6 +326,13 @@ protected:
     MsgSelectorNode *selector;
     ExprListNode *objcArrayExprList;
     ExprNode *boxedExpr;
+
+    Type* exprType;
+    int fieldRefConstantId;
+    int methodRefConstantId;
+    bool isFieldAccess;
+    bool isMethodCall;
+    string className;
 
     ExprNode();
 };
@@ -626,6 +657,8 @@ public:
     StmtNode* getCompoundStmt() const;
     bool isInstanceMethod() const;
     bool isClassMethod() const;
+
+    void fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement);
 
     string getDotLabel() const override;
     string toDot() const override;
