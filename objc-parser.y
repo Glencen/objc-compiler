@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include "classes.h"
+#include "types.h"
 #include "output_utils.h"
 
 using namespace std;
@@ -24,7 +25,7 @@ enum PropertyAttr {
     PROP_READWRITE
 };
 
-PropertyNode::Attribute convertAttr(int attribute);
+Attribute convertAttr(int attribute);
 %}
 
 %union {
@@ -473,8 +474,8 @@ array_size_spec
 
 %%
 
-PropertyNode::Attribute convertAttr(int attribute) {
-    return (attribute == PROP_READONLY) ? PropertyNode::Attribute::READONLY : PropertyNode::Attribute::READWRITE;
+Attribute convertAttr(int attribute) {
+    return (attribute == PROP_READONLY) ? Attribute::READONLY : Attribute::READWRITE;
 }
 
 void yyerror(const char* s) {
