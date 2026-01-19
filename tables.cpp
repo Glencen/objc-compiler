@@ -288,37 +288,37 @@ string ConstantsTableElement::toCSVString(char separator) {
 	res += to_string(id) + separator;
 
 	switch (type) {
-        case ConstantType::UTF8:
+        case ConstantType::Utf8:
             res += string("UTF8") + separator;
             res += *utf8String;
             break;
-        case ConstantType::INTEGER:
+        case ConstantType::Integer:
             res += string("Integer") + separator;
             res += to_string(number);
             break;
-        case ConstantType::FLOAT:
+        case ConstantType::Float:
             res += string("Float") + separator;
             res += to_string(floatNumber);
             break;
-        case ConstantType::STRING:
+        case ConstantType::String:
             res += string("String") + separator;
             res += to_string(firstRef);
             break;
-        case ConstantType::CLASS:
+        case ConstantType::Class:
             res += string("Class") + separator;
             res += to_string(firstRef);
             break;
-        case ConstantType::NAME_AND_TYPE:
+        case ConstantType::Name_And_Type:
             res += string("NameAndType") + separator;
             res += to_string(firstRef) + ", ";
             res += to_string(secondRef);
             break;
-        case ConstantType::FIELD_REF:
+        case ConstantType::Field_Ref:
             res += string("FieldRef") + separator;
             res += to_string(firstRef) + ", ";
             res += to_string(secondRef);
             break;
-        case ConstantType::METHOD_REF:
+        case ConstantType::Method_Ref:
             res += string("MethodRef") + separator;
             res += to_string(firstRef) + ", ";
             res += to_string(secondRef);
@@ -333,7 +333,7 @@ string ConstantsTableElement::toCSVString(char separator) {
 //--------------------------------------------------------------ConstantsTable--------------------------------------------------------------
 
 ConstantsTable::ConstantsTable() {
-    items[maxId] = new ConstantsTableElement(maxId, UTF8, "Code");
+    items[maxId] = new ConstantsTableElement(maxId, Utf8, "Code");
     maxId++;
 }
 
@@ -382,7 +382,7 @@ ConstantsTableElement* ConstantsTable::getConstant(int id) {
 }
 
 string ConstantsTable::getConstantString(int id) {
-    if (items[id]->type != ConstantType::UTF8) {
+    if (items[id]->type != ConstantType::Utf8) {
         return "";
     }
     return *items[id]->utf8String;
@@ -401,22 +401,22 @@ void ConstantsTable::toCSVFile(string filename, string filepath, char separator)
 }
 
 int ConstantsTable::findOrAddFieldRefConstant(string className, string fieldName, string descriptor) {
-    int classNameConst = this->findOrAddConstant(ConstantType::UTF8, className);
-    int classConst = this->findOrAddConstant(ConstantType::CLASS, 0, classNameConst);
-    int nameConst = this->findOrAddConstant(ConstantType::UTF8, fieldName);
-    int descriptorConst = this->findOrAddConstant(ConstantType::UTF8, descriptor);
-    int nameAndTypeConst = this->findOrAddConstant(ConstantType::NAME_AND_TYPE, 0, nameConst, descriptorConst);
-    int fieldRefConst = this->findOrAddConstant(ConstantType::FIELD_REF, 0, nameAndTypeConst, classConst);
+    int classNameConst = this->findOrAddConstant(ConstantType::Utf8, className);
+    int classConst = this->findOrAddConstant(ConstantType::Class, 0, classNameConst);
+    int nameConst = this->findOrAddConstant(ConstantType::Utf8, fieldName);
+    int descriptorConst = this->findOrAddConstant(ConstantType::Utf8, descriptor);
+    int nameAndTypeConst = this->findOrAddConstant(ConstantType::Name_And_Type, 0, nameConst, descriptorConst);
+    int fieldRefConst = this->findOrAddConstant(ConstantType::Field_Ref, 0, nameAndTypeConst, classConst);
     return fieldRefConst;
 }
 
 int ConstantsTable::findOrAddMethodRefConstant(string className, string methodName, string descriptor) {
-    int classNameConst = this->findOrAddConstant(ConstantType::UTF8, className);
-    int classConst = this->findOrAddConstant(ConstantType::CLASS, 0, classNameConst);
-    int nameConst = this->findOrAddConstant(ConstantType::UTF8, methodName);
-    int descriptorConst = this->findOrAddConstant(ConstantType::UTF8, descriptor);
-    int nameAndTypeConst = this->findOrAddConstant(ConstantType::NAME_AND_TYPE, 0, nameConst, descriptorConst);
-    int methodRefConst = this->findOrAddConstant(ConstantType::METHOD_REF, 0, nameAndTypeConst, classConst);
+    int classNameConst = this->findOrAddConstant(ConstantType::Utf8, className);
+    int classConst = this->findOrAddConstant(ConstantType::Class, 0, classNameConst);
+    int nameConst = this->findOrAddConstant(ConstantType::Utf8, methodName);
+    int descriptorConst = this->findOrAddConstant(ConstantType::Utf8, descriptor);
+    int nameAndTypeConst = this->findOrAddConstant(ConstantType::Name_And_Type, 0, nameConst, descriptorConst);
+    int methodRefConst = this->findOrAddConstant(ConstantType::Method_Ref, 0, nameAndTypeConst, classConst);
     return methodRefConst;
 }
 
@@ -621,13 +621,13 @@ ClassesTableElement::ClassesTableElement(string name, string *superclassName, bo
     fields = new FieldsTable();
     methods = new MethodsTable();
     properties = new PropertiesTable();
-    this->name = constantTable->findOrAddConstant(ConstantType::UTF8, name);
+    this->name = constantTable->findOrAddConstant(ConstantType::Utf8, name);
     if (superclassName != nullptr) {
-        this->superclassName = constantTable->findOrAddConstant(ConstantType::UTF8, *superclassName);
+        this->superclassName = constantTable->findOrAddConstant(ConstantType::Utf8, *superclassName);
     }
-    thisClass = constantTable->findOrAddConstant(ConstantType::CLASS, 0, this->name);
+    thisClass = constantTable->findOrAddConstant(ConstantType::Class, 0, this->name);
     if (superclassName != nullptr) {
-        this->superclass = constantTable->findOrAddConstant(ConstantType::CLASS, 0, this->superclassName);
+        this->superclass = constantTable->findOrAddConstant(ConstantType::Class, 0, this->superclassName);
     }
     isImplementation = isImplementation;
 }
@@ -1060,8 +1060,8 @@ void ClassesTable::initClassNSObject() {
     constantTable->findOrAddMethodRefConstant("rtl/NSString", "stringWithCStringStatic", "([C)Lrtl/NSString;");
     constantTable->findOrAddMethodRefConstant("java/lang/Class", "getSuperclass", "()Ljava/lang/Class;");
 
-    int strNum = constantTable->findOrAddConstant(ConstantType::UTF8, "nsobject implementation");
-    constantTable->findOrAddConstant(ConstantType::STRING, 0, strNum);
+    int strNum = constantTable->findOrAddConstant(ConstantType::Utf8, "nsobject implementation");
+    constantTable->findOrAddConstant(ConstantType::String, 0, strNum);
 
     items["rtl/NSObject"] = nsobject;
 }
@@ -1324,8 +1324,8 @@ void FieldsTableElement::fillLiterals(ConstantsTable* constantTable) {
 //--------------------------------------------------------------FieldsTable--------------------------------------------------------------
 
 void FieldsTable::addField(ConstantsTable* constantTable, string name, string descriptor, bool isInstance, Type* type, ExprNode* initValue) {
-    int nameId = constantTable->findOrAddConstant(ConstantType::UTF8, name);
-    int descriptorId = constantTable->findOrAddConstant(ConstantType::UTF8, descriptor);
+    int nameId = constantTable->findOrAddConstant(ConstantType::Utf8, name);
+    int descriptorId = constantTable->findOrAddConstant(ConstantType::Utf8, descriptor);
     if (isInstance) {
         FieldsTableElement* field = new FieldsTableElement(nameId, descriptorId, isInstance, maxInstanceIndex, type, name, descriptor, initValue);
         maxInstanceIndex++;
@@ -1495,8 +1495,8 @@ MethodsTableElement* MethodsTable::addMethod(ConstantsTable* constantTable, stri
         string msg = "Method '" + name + "' already exists";
         throw std::runtime_error(msg.c_str());
     }
-    int nameId = constantTable->findOrAddConstant(ConstantType::UTF8, name);
-    int descriptorId = constantTable->findOrAddConstant(ConstantType::UTF8, descriptor);
+    int nameId = constantTable->findOrAddConstant(ConstantType::Utf8, name);
+    int descriptorId = constantTable->findOrAddConstant(ConstantType::Utf8, descriptor);
     MethodsTableElement *method = new MethodsTableElement(nameId, descriptorId, isClassMethod, bodyStart, returnType, paramsTypes, keywordsTypes, name, descriptor);
     items[name] = method;
     return method;
@@ -1543,8 +1543,8 @@ void PropertiesTable::addProperty(ConstantsTable* constantTable, string name, st
         string msg = "Property '" + name + "' already exists";
         throw std::runtime_error(msg.c_str());
     }
-    int nameId = constantTable->findOrAddConstant(ConstantType::UTF8, name);
-    int descriptorId = constantTable->findOrAddConstant(ConstantType::UTF8, descriptor);
+    int nameId = constantTable->findOrAddConstant(ConstantType::Utf8, name);
+    int descriptorId = constantTable->findOrAddConstant(ConstantType::Utf8, descriptor);
     PropertiesTableElement *property = new PropertiesTableElement(nameId, descriptorId, isReadonly, type, name, descriptor);
     items[name] = property;
 }

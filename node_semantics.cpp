@@ -35,19 +35,19 @@ Type* createArrayType(Type* baseType, list<ExprNode*>* arraySizes) {
 void ValueNode::fillLiterals(ConstantsTable* constantTable) {
     switch (valueType) {
         case ValueKind::INT_LIT:
-            constantTable->findOrAddConstant(ConstantType::INTEGER, intValue);
+            constantTable->findOrAddConstant(ConstantType::Integer, intValue);
             break;
         case ValueKind::FLOAT_LIT:
-            constantTable->findOrAddConstant(ConstantType::FLOAT, floatValue);
+            constantTable->findOrAddConstant(ConstantType::Float, floatValue);
             break;
         case ValueKind::STRING_LIT:
-            constantTable->findOrAddConstant(ConstantType::UTF8, *stringValue);
+            constantTable->findOrAddConstant(ConstantType::Utf8, *stringValue);
             break;
         case ValueKind::OBJC_INT_LIT:
         case ValueKind::OBJC_FLOAT_LIT:
         case ValueKind::OBJC_BOOL_LIT:
         case ValueKind::OBJC_STRING_LIT:
-            constantTable->findOrAddConstant(ConstantType::UTF8, *stringValue);
+            constantTable->findOrAddConstant(ConstantType::Utf8, *stringValue);
             break;
         default:
             break;
@@ -516,9 +516,9 @@ void ExprNode::checkTypeCompatibility(Type* leftType, Type* rightType, const str
 void TypeNode::fillLiterals(ConstantsTable* constantTable) {
     if (kind == TypeKind::CLASS_NAME && classNameValue) {
         string className = *classNameValue->getClassName();
-        constantTable->findOrAddConstant(UTF8, className);
-        constantTable->findOrAddConstant(CLASS, 0, 
-            constantTable->findOrAddConstant(UTF8, className));
+        constantTable->findOrAddConstant(ConstantType::Utf8, className);
+        constantTable->findOrAddConstant(ConstantType::Class, 0, 
+            constantTable->findOrAddConstant(ConstantType::Utf8, className));
     }
 }
 

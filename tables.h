@@ -41,14 +41,14 @@ public:
 };
 
 enum ConstantType {
-    UTF8,
-    INTEGER,
-    FLOAT,
-    STRING,
-    CLASS,
-    NAME_AND_TYPE,
-    FIELD_REF,
-    METHOD_REF
+    Utf8,
+    Integer,
+    Float,
+    String,
+    Class,
+    Name_And_Type,
+    Field_Ref,
+    Method_Ref
 };
 
 class ConstantsTableElement {
