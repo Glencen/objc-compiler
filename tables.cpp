@@ -2,6 +2,9 @@
 #include <algorithm>
 #include "tables.h"
 
+map<string, FunctionsTableElement*> FunctionsTable::items;
+map<string, ClassesTableElement*> ClassesTable::items;
+
 //--------------------------------------------------------------Type--------------------------------------------------------------
 
 Type::Type(TypeKind dataType, string className, list<ExprNode*>* arraySizes) {
