@@ -4,43 +4,80 @@
 
 //--------------------------------------------------------------Type--------------------------------------------------------------
 
-Type::Type(TypeKind dataType, string className, ExprNode* arrSize) {
-    if (arrSize != NULL) {
-        if (arrSize->getType() == ExprNode::UNARY_MINUS) {
-            ExprNode* operand = arrSize->getOperand();
-            if (operand->getType() == ExprNode::LITERAL) {
-                ValueNode* value = operand->getLiteral();
-                if (value->getValueKind() == ValueNode::INT_LIT) {
-                    int intValue = value->getInt();
-                    if (intValue > 0) {
-                        string msg = "Negative array size '-" + to_string(intValue) + "'";
-                        throw std::invalid_argument(msg);
+Type::Type(TypeKind dataType, string className, list<ExprNode*>* arraySizes) {
+    this->dataType = dataType;
+    this->className = className;
+    this->arraySizes = arraySizes;
+    this->arrayDimension = arraySizes ? arraySizes->size() : 0;
+    
+    if (arraySizes) {
+        for (ExprNode* size : *arraySizes) {
+            if (size && size->getKind() == ExprKind::UNARY_MINUS) {
+                ExprNode* operand = size->getOperand();
+                if (operand && operand->getKind() == ExprKind::LITERAL) {
+                    ValueNode* value = operand->getLiteral();
+                    if (value->getValueKind() == ValueKind::INT_LIT) {
+                        int intValue = value->getInt();
+                        if (intValue > 0) {
+                            string msg = "Negative array size '-" + to_string(intValue) + "'";
+                            throw std::invalid_argument(msg);
+                        }
                     }
                 }
             }
         }
     }
-    this->dataType = dataType;
-    this->className = className;
-    this->arrSize = arrSize;
 }
 
 Type::Type(TypeKind dataType, string className) {
     this->dataType = dataType;
-	this->className = className;
+    this->className = className;
+    this->arraySizes = nullptr;
+    this->arrayDimension = 0;
 }
 
 Type::Type(TypeKind dataType) {
     this->dataType = dataType;
+    this->className = "";
+    this->arraySizes = nullptr;
+    this->arrayDimension = 0;
 }
 
-Type::Type(TypeKind dataType, ExprNode* arrSize) {
-    if (arrSize != NULL) {
-        if (arrSize->getType() == ExprNode::UNARY_MINUS) {
+Type::Type(TypeKind dataType, list<ExprNode*>* arraySizes) {
+    this->dataType = dataType;
+    this->className = "";
+    this->arraySizes = arraySizes;
+    this->arrayDimension = arraySizes ? arraySizes->size() : 0;
+    if (arraySizes) {
+        for (ExprNode* size : *arraySizes) {
+            if (size && size->getKind() == ExprKind::UNARY_MINUS) {
+                ExprNode* operand = size->getOperand();
+                if (operand && operand->getKind() == ExprKind::LITERAL) {
+                    ValueNode* value = operand->getLiteral();
+                    if (value->getValueKind() == ValueKind::INT_LIT) {
+                        int intValue = value->getInt();
+                        if (intValue > 0) {
+                            string msg = "Negative array size '-" + to_string(intValue) + "'";
+                            throw std::invalid_argument(msg);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+Type::Type(TypeKind dataType, string className, ExprNode* arrSize) {
+    this->dataType = dataType;
+    this->className = className;
+    if (arrSize) {
+        this->arraySizes = new list<ExprNode*>{arrSize};
+        this->arrayDimension = 1;
+        if (arrSize->getKind() == ExprKind::UNARY_MINUS) {
             ExprNode* operand = arrSize->getOperand();
-            if (operand->getType() == ExprNode::LITERAL) {
+            if (operand && operand->getKind() == ExprKind::LITERAL) {
                 ValueNode* value = operand->getLiteral();
-                if (value->getValueKind() == ValueNode::INT_LIT) {
+                if (value->getValueKind() == ValueKind::INT_LIT) {
                     int intValue = value->getInt();
                     if (intValue > 0) {
                         string msg = "Negative array size '-" + to_string(intValue) + "'";
@@ -49,108 +86,115 @@ Type::Type(TypeKind dataType, ExprNode* arrSize) {
                 }
             }
         }
+    } else {
+        this->arraySizes = nullptr;
+        this->arrayDimension = 0;
     }
-    this->dataType = dataType;
-    this->arrSize = arrSize;
 }
 
 Type::Type(TypeKind dataType, string className, int arrSize) {
     this->dataType = dataType;
     this->className = className;
-    this->arrSize = ExprNode::createLiteral(ValueNode::createInt(arrSize));
+    if (arrSize > 0) {
+        this->arraySizes = new list<ExprNode*>{ExprNode::createLiteral(ValueNode::createInt(arrSize))};
+        this->arrayDimension = 1;
+    } else {
+        this->arraySizes = nullptr;
+        this->arrayDimension = 0;
+        if (arrSize < 0) {
+            throw std::invalid_argument("Array size cannot be negative");
+        }
+    }
 }
 
 Type::Type(TypeKind dataType, int arrSize) {
     this->dataType = dataType;
-    this->arrSize = ExprNode::createLiteral(ValueNode::createInt(arrSize));
+    this->className = "";
+    if (arrSize > 0) {
+        this->arraySizes = new list<ExprNode*>{ExprNode::createLiteral(ValueNode::createInt(arrSize))};
+        this->arrayDimension = 1;
+    } else {
+        this->arraySizes = nullptr;
+        this->arrayDimension = 0;
+        if (arrSize < 0) {
+            throw std::invalid_argument("Array size cannot be negative");
+        }
+    }
 }
 
-string Type::toString() {
+string Type::toString() const {
     string res = "";
     switch (dataType) {
-    case TypeKind::INT:
-        res += string("int");
-        break;
-    case TypeKind::CHAR:
-        res += string("char");
-        break;
-    case TypeKind::FLOAT:
-        res += string("float");
-        break;
-    case TypeKind::TYPE_ID:
-        res += string("id");
-        break;
-    case TypeKind::CLASS_NAME:
-        res += className;
-        break;
-    case TypeKind::VOID:
-        res += string("void");
-        break;
-    default:
-        break;
+        case TypeKind::INT: res = "int"; break;
+        case TypeKind::FLOAT: res = "float"; break;
+        case TypeKind::BOOL: res = "bool"; break;
+        case TypeKind::CHAR: res = "char"; break;
+        case TypeKind::TYPE_ID: res = "id"; break;
+        case TypeKind::CLASS_NAME: res = className; break;
+        case TypeKind::VOID: res = "void"; break;
+        default: res = "unknown"; break;
     }
-
-    if (arrSize != NULL) {
-        if (arrSize->getType() == ExprNode::LITERAL) {
-            ValueNode* value = arrSize->getLiteral();
-            if (value->getValueKind() == ValueNode::INT_LIT) {
-                res += '[' + to_string(value->getInt()) + ']';
-            }
-            else {
-                res += "[ literal ]";
+    
+    if (isArray()) {
+        res += "[";
+        if (arraySizes) {
+            for (auto it = arraySizes->begin(); it != arraySizes->end(); ++it) {
+                if (it != arraySizes->begin()) res += ",";
+                if (*it) {
+                    if ((*it)->getKind() == ExprKind::LITERAL) {
+                        ValueNode* value = (*it)->getLiteral();
+                        if (value->getValueKind() == ValueKind::INT_LIT) {
+                            res += to_string(value->getInt());
+                        }
+                    } else {
+                        res += "expr";
+                    }
+                }
             }
         }
-        else {
-            res += string("[ expr(") + to_string(arrSize->getId()) + ") ]";
-        }
+        res += "]";
     }
+    
     return res;
 }
 
-string Type::getDescriptor() {
+string Type::getDescriptor() const {
     string res = "";
-    if (arrSize != NULL) {
-        res += '[';
+    
+    if (isArray()) {
+        for (int i = 0; i < arrayDimension; i++) {
+            res += "[";
+        }
     }
+    
     switch (dataType) {
-    case TypeKind::INT:
-        res += string("I");
-        break;
-    case TypeKind::CHAR:
-        res += string("C");
-        break;
-    case TypeKind::FLOAT:
-        res += string("F");
-        break;
-    case TypeKind::TYPE_ID:
-        res += string("Lrtl/NSObject;");
-        break;
-    case TypeKind::CLASS_NAME:
-        res += 'L' + className + ';';
-        break;
-    case TypeKind::VOID:
-        res += string("V");
-        break;
-    default:
-        break;
+        case TypeKind::INT: res += "I"; break;
+        case TypeKind::FLOAT: res += "F"; break;
+        case TypeKind::BOOL: res += "Z"; break;
+        case TypeKind::CHAR: res += "C"; break;
+        case TypeKind::TYPE_ID: res += "Ljava/lang/Object;"; break;
+        case TypeKind::CLASS_NAME: res += "L" + className + ";"; break;
+        case TypeKind::VOID: res += "V"; break;
+        default: break;
     }
+    
     return res;
 }
 
-bool Type::equal(Type* other) {
-    bool isBouthArray = (arrSize != NULL && other->arrSize != NULL) || (arrSize == NULL && other->arrSize == NULL);
-	return dataType == other->dataType && className == other->className && isBouthArray;
+bool Type::equal(Type* other) const {
+    bool areBothArray = (arraySizes != nullptr && other->arraySizes != nullptr) || (arraySizes == nullptr && other->arraySizes == nullptr);
+	return dataType == other->dataType && className == other->className && areBothArray;
 }
 
 int Type::getDefaultValue() {
     if (dataType == TypeKind::CLASS_NAME) {
-        return NULL;
+        return 0;
     }
     return 0;
 }
 
 bool Type::isCastableTo(Type* other) {
-    if (arrSize != NULL || other->arrSize != NULL) {
+    if (arraySizes != nullptr || other->arraySizes != nullptr) {
         return false;
     }
     if (this->dataType == other->dataType) {
@@ -190,16 +234,27 @@ bool Type::isPrimitive() {
     return dataType == TypeKind::INT || dataType == TypeKind::CHAR || dataType == TypeKind::VOID;
 }
 
+bool Type::isArray() const {
+	return arraySizes != nullptr && !arraySizes->empty();
+}
+
 Type* Type::getSuperType() {
     if (dataType != TypeKind::CLASS_NAME) {
-        throw new std::exception("Type is not a class");
+        throw std::runtime_error("Type is not a class");
     }
+
     ClassesTableElement* thisClass = ClassesTable::items[className];
     string superClassName = thisClass->getSuperClassName();
+
     if (superClassName == "") {
-        return NULL;
+        return nullptr;
     }
-    return new Type(TypeKind::CLASS_NAME, superClassName);
+
+    if (arraySizes && !arraySizes->empty()) {
+        return new Type(TypeKind::CLASS_NAME, superClassName, arraySizes);
+    } else {
+        return new Type(TypeKind::CLASS_NAME, superClassName);
+    }
 }
 
 
@@ -280,7 +335,7 @@ ConstantsTable::ConstantsTable() {
 }
 
 int ConstantsTable::findOrAddConstant(ConstantType type, string utf8String) {
-    int res = findConstant(type, &utf8String, NULL);
+    int res = findConstant(type, &utf8String, 0);
     if (res == -1) {
         res == maxId++;
         items[res] = new ConstantsTableElement(res, type, utf8String);
@@ -289,7 +344,7 @@ int ConstantsTable::findOrAddConstant(ConstantType type, string utf8String) {
 }
 
 int ConstantsTable::findOrAddConstant(ConstantType type, float floatNumber) {
-    int res = findConstant(type, NULL, floatNumber);
+    int res = findConstant(type, nullptr, floatNumber);
     if (res == -1) {
         res == maxId++;
         items[res] = new ConstantsTableElement(res, type, floatNumber);
@@ -298,7 +353,7 @@ int ConstantsTable::findOrAddConstant(ConstantType type, float floatNumber) {
 }
 
 int ConstantsTable::findOrAddConstant(ConstantType type, int number, int firstRef, int secondRef) {
-    int res = findConstant(type, NULL, NULL, number, firstRef, secondRef);
+    int res = findConstant(type, nullptr, 0, number, firstRef, secondRef);
     if (res == -1) {
         res = maxId++;
         items[res] = new ConstantsTableElement(res, type, number, firstRef, secondRef);
@@ -307,10 +362,10 @@ int ConstantsTable::findOrAddConstant(ConstantType type, int number, int firstRe
 }
 
 int ConstantsTable::findConstant(ConstantType type, string *utf8string, float floatNumber, int number, int firstRef, int secondRef) {
-    string compared = utf8string == NULL ? "" : *utf8string;
+    string compared = utf8string == nullptr ? "" : *utf8string;
     auto iter = items.cbegin();
     while (iter != items.cend()) {
-        string curStr = iter->second->utf8String == NULL ? "" : *iter->second->utf8String;
+        string curStr = iter->second->utf8String == nullptr ? "" : *iter->second->utf8String;
         if (iter->second->type == type && curStr == compared && iter->second->number == number && iter->second->firstRef == firstRef && iter->second->secondRef == secondRef) {
             return iter->first;
         }
@@ -343,22 +398,22 @@ void ConstantsTable::toCSVFile(string filename, string filepath, char separator)
 }
 
 int ConstantsTable::findOrAddFieldRefConstant(string className, string fieldName, string descriptor) {
-    int classNameConst = this->findOrAddConstant(UTF8, className);
-    int classConst = this->findOrAddConstant(CLASS, NULL, classNameConst);
-    int nameConst = this->findOrAddConstant(UTF8, fieldName);
-    int descriptorConst = this->findOrAddConstant(UTF8, descriptor);
-    int nameAndTypeConst = this->findOrAddConstant(NAME_AND_TYPE, NULL, nameConst, descriptorConst);
-    int fieldRefConst = this->findOrAddConstant(FIELD_REF, NULL, nameAndTypeConst, classConst);
+    int classNameConst = this->findOrAddConstant(ConstantType::UTF8, className);
+    int classConst = this->findOrAddConstant(ConstantType::CLASS, 0, classNameConst);
+    int nameConst = this->findOrAddConstant(ConstantType::UTF8, fieldName);
+    int descriptorConst = this->findOrAddConstant(ConstantType::UTF8, descriptor);
+    int nameAndTypeConst = this->findOrAddConstant(ConstantType::NAME_AND_TYPE, 0, nameConst, descriptorConst);
+    int fieldRefConst = this->findOrAddConstant(ConstantType::FIELD_REF, 0, nameAndTypeConst, classConst);
     return fieldRefConst;
 }
 
 int ConstantsTable::findOrAddMethodRefConstant(string className, string methodName, string descriptor) {
-    int classNameConst = this->findOrAddConstant(UTF8, className);
-    int classConst = this->findOrAddConstant(CLASS, NULL, classNameConst);
-    int nameConst = this->findOrAddConstant(UTF8, methodName);
-    int descriptorConst = this->findOrAddConstant(UTF8, descriptor);
-    int nameAndTypeConst = this->findOrAddConstant(NAME_AND_TYPE, NULL, nameConst, descriptorConst);
-    int methodRefConst = this->findOrAddConstant(METHOD_REF, NULL, nameAndTypeConst, classConst);
+    int classNameConst = this->findOrAddConstant(ConstantType::UTF8, className);
+    int classConst = this->findOrAddConstant(ConstantType::CLASS, 0, classNameConst);
+    int nameConst = this->findOrAddConstant(ConstantType::UTF8, methodName);
+    int descriptorConst = this->findOrAddConstant(ConstantType::UTF8, descriptor);
+    int nameAndTypeConst = this->findOrAddConstant(ConstantType::NAME_AND_TYPE, 0, nameConst, descriptorConst);
+    int methodRefConst = this->findOrAddConstant(ConstantType::METHOD_REF, 0, nameAndTypeConst, classConst);
     return methodRefConst;
 }
 
@@ -429,7 +484,7 @@ void FunctionsTableElement::addDefaultReturn(StmtNode *lastStatement) {
 
     StmtListNode* stmtList = nullptr;
     
-    if (bodyStart->getKind() == StmtNode::COMPOUND) {
+    if (bodyStart->getKind() == StmtKind::COMPOUND) {
         stmtList = bodyStart->getCompound();
     } else {
         stmtList = StmtListNode::createStmtList(bodyStart);
@@ -479,7 +534,7 @@ void FunctionsTableElement::addDefaultReturn(StmtNode *lastStatement) {
 FunctionsTableElement* FunctionsTable::addFunction(string name, string descriptor, StmtNode *bodyStart, vector<Type*> *params, Type *returnType) {
     if (items.count(name) != 0) {
         string msg = "Function '" + name + "' already exists";
-        throw new exception(msg.c_str());
+        throw std::runtime_error(msg.c_str());
     }
     FunctionsTableElement *function = new FunctionsTableElement(bodyStart, name, descriptor, params, returnType);
     items[name] = function;
@@ -512,7 +567,7 @@ void FunctionsTable::fillFieldRefs() {
 
     if (!isDontContainsMain) {
         string msg = "Function 'main' not found";
-        throw new exception(msg.c_str());
+        throw std::runtime_error(msg.c_str());
     }
 }
 
@@ -537,7 +592,7 @@ void FunctionsTable::fillLiterals() {
 void FunctionsTable::convertToClassProgramMethods() {
     if (items.count("main") == 0) {
         string msg = "Function 'main' not found";
-        throw new exception(msg.c_str());
+        throw std::runtime_error(msg.c_str());
     }
 
     ClassesTableElement* classTableElement = ClassesTable::items["rtl/Program"];
@@ -563,13 +618,13 @@ ClassesTableElement::ClassesTableElement(string name, string *superclassName, bo
     fields = new FieldsTable();
     methods = new MethodsTable();
     properties = new PropertiesTable();
-    this->name = constantTable->findOrAddConstant(UTF8, name);
-    if (superclassName != NULL) {
-        this->superclassName = constantTable->findOrAddConstant(UTF8, *superclassName);
+    this->name = constantTable->findOrAddConstant(ConstantType::UTF8, name);
+    if (superclassName != nullptr) {
+        this->superclassName = constantTable->findOrAddConstant(ConstantType::UTF8, *superclassName);
     }
-    thisClass = constantTable->findOrAddConstant(CLASS, NULL, this->name);
-    if (superclassName != NULL) {
-        this->superclass = constantTable->findOrAddConstant(CLASS, NULL, this->superclassName);
+    thisClass = constantTable->findOrAddConstant(ConstantType::CLASS, 0, this->name);
+    if (superclassName != nullptr) {
+        this->superclass = constantTable->findOrAddConstant(ConstantType::CLASS, 0, this->superclassName);
     }
     isImplementation = isImplementation;
 }
@@ -577,7 +632,7 @@ ClassesTableElement::ClassesTableElement(string name, string *superclassName, bo
 string ClassesTableElement::toCSVString(char separator) {
     string res = "";
     res += to_string(name) + '(' + *constantTable->getConstant(name)->utf8String + ')' + separator;
-    if (superclassName != NULL) {
+    if (superclassName != 0) {
         res += to_string(superclassName) + '(' + *constantTable->getConstant(superclassName)->utf8String + ')' + separator;
     }
     else {
@@ -660,7 +715,7 @@ bool ClassesTableElement::isContainsField(string fieldName) {
         return true;
     }
     else {
-        if (superclassName != NULL) {
+        if (superclassName != 0) {
             return ClassesTable::items[getSuperClassName()]->isContainsField(fieldName);
         }
     }
@@ -675,16 +730,16 @@ FieldsTableElement* ClassesTableElement::getFieldForRef(string name, string *des
             return fields->items[name];
         }
         else {
-            if (superclassName != NULL) {
+            if (superclassName != 0) {
                 return ClassesTable::items[getSuperClassName()]->getFieldForRef(name, descriptor, className);
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 bool ClassesTableElement::isHaveOneOfSuperclass(string name) {
-    if (superclassName == NULL) {
+    if (superclassName == 0) {
         return false;
     }
     else {
@@ -702,7 +757,7 @@ bool ClassesTableElement::isContainsMethod(string methodName) {
         return true;
     }
     else {
-        if (superclassName != NULL) {
+        if (superclassName != 0) {
             return ClassesTable::items[getSuperClassName()]->isContainsMethod(methodName);
         }
     }
@@ -717,12 +772,12 @@ MethodsTableElement* ClassesTableElement::getMethodForRef(string name, string *d
             return methods->items[name];
         }
         else {
-            if (superclassName != NULL) {
+            if (superclassName != 0) {
                 return ClassesTable::items[getSuperClassName()]->getMethodForRef(name, descriptor, className);
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 void ClassesTableElement::semanticTransform() {
@@ -735,8 +790,8 @@ void ClassesTableElement::semanticTransform() {
 
 ClassesTableElement* ClassesTable::addClass(string name, string *superclassName, bool isImplementation, AstNode *classBlock) {
     string fullName = "global/" + name;
-    string* fullSuperclassName = NULL;
-    if (superclassName != NULL) {
+    string* fullSuperclassName = nullptr;
+    if (superclassName != nullptr) {
         if (*superclassName == "NSObject" || *superclassName == "NSString" || *superclassName == "NSArray") {
             fullSuperclassName = new string("rtl/" + *superclassName);
         }
@@ -749,15 +804,15 @@ ClassesTableElement* ClassesTable::addClass(string name, string *superclassName,
 
     if (!isImplementation && items.count(fullName) && items[fullName]->isImplementation) {
         string msg = "Class interface'" + name + "' after implementation";
-        throw new std::exception(msg.c_str());
+        throw std::runtime_error(msg.c_str());
     }
     else if (items.count(fullName) && items[fullName]->isImplementation == isImplementation) {
         string msg = "Rediifnition of class '" + name + "'";
-        throw new std::exception(msg.c_str());
+        throw std::runtime_error(msg.c_str());
     }
-    else if (superclassName != NULL && items.count(fullName) && items[fullName]->constantTable->getConstantString(items[fullName]->superclassName) != *fullSuperclassName) {
+    else if (superclassName != nullptr && items.count(fullName) && items[fullName]->constantTable->getConstantString(items[fullName]->superclassName) != *fullSuperclassName) {
         string msg = "Class '" + name + "' with different superclass";
-        throw new std::exception(msg.c_str());
+        throw std::runtime_error(msg.c_str());
     }
     else if (items.count(fullName) && !items[fullName]->isImplementation && isImplementation) {
         items[fullName]->isImplementation = true;
@@ -771,21 +826,21 @@ ClassesTableElement* ClassesTable::addClass(string name, string *superclassName,
     if (isImplementation) {
         ImplementationNode* implementation = (ImplementationNode*)classBlock;
         implementation->setClassName(fullName);
-        if (fullSuperclassName != NULL) {
+        if (fullSuperclassName != nullptr) {
             implementation->setSuperClassName(*fullSuperclassName);
         }
         else {
-            implementation->setSuperClassName(NULL);
+            implementation->setSuperClassName(nullptr);
         }
     }
     else {
         InterfaceNode* interface = (InterfaceNode*)classBlock;
         interface->setClassName(fullName);
-        if (fullSuperclassName != NULL) {
+        if (fullSuperclassName != nullptr) {
             interface->setSuperClassName(*fullSuperclassName);
         }
         else {
-            interface->setSuperClassName(NULL);
+            interface->setSuperClassName(nullptr);
         }
     }
     return items[fullName];
@@ -852,7 +907,7 @@ string ClassesTable::getFullClassName(string name) {
     }
     if (items.count(fullName) == 0) {
         string msg = "Class '" + name + "' not found";
-        throw new std::exception(msg.c_str());
+        throw std::runtime_error(msg.c_str());
     }
     return fullName;
 }
@@ -866,53 +921,53 @@ void ClassesTable::semanticTransform() {
 }
 
 void ClassesTable::initClassProgram() {
-    ClassesTableElement* Program = new ClassesTableElement("rtl/Program", NULL, true);
+    ClassesTableElement* Program = new ClassesTableElement("rtl/Program", nullptr, true);
     items["rtl/Program"] = Program;
 }
 
 void ClassesTable::initClassInOutFuncs() {
-    ClassesTableElement* inOutFuncs = new ClassesTableElement("rtl/InOutFuncs", NULL, true);
+    ClassesTableElement* inOutFuncs = new ClassesTableElement("rtl/InOutFuncs", nullptr, true);
 
     ConstantsTable* сonstantTable = inOutFuncs->constantTable;
     Type *printIntReturnType = new Type(TypeKind::VOID);
     vector<Type*> *printIntKeywordsType = new vector<Type*>{ new Type(TypeKind::INT) };
     vector<Type*> *printIntParamsType = new vector<Type*>;
-    inOutFuncs->methods->addMethod(сonstantTable, "printInt", "(I)V", true, NULL, printIntReturnType, printIntParamsType, printIntKeywordsType);
+    inOutFuncs->methods->addMethod(сonstantTable, "printInt", "(I)V", true, nullptr, printIntReturnType, printIntParamsType, printIntKeywordsType);
 
     Type* printCharReturnType = new Type(TypeKind::VOID);
     vector<Type*> *printCharKeywordsType = new vector<Type*>{ new Type(TypeKind::CHAR) };
     vector<Type*> *printCharParamsType = new vector<Type*>;
-    inOutFuncs->methods->addMethod(сonstantTable, "printChar", "(C)V", true, NULL, printCharReturnType, printCharParamsType, printCharKeywordsType);
+    inOutFuncs->methods->addMethod(сonstantTable, "printChar", "(C)V", true, nullptr, printCharReturnType, printCharParamsType, printCharKeywordsType);
 
     Type* printStringReturnType = new Type(TypeKind::VOID);
     vector<Type*> *printStringKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "java/lang/String")};
     vector<Type*> *printStringParamsType = new vector<Type*>;
-    inOutFuncs->methods->addMethod(сonstantTable, "printString", "(Ljava/lang/String;)V", true, NULL, printStringReturnType, printStringParamsType, printStringKeywordsType);
+    inOutFuncs->methods->addMethod(сonstantTable, "printString", "(Ljava/lang/String;)V", true, nullptr, printStringReturnType, printStringParamsType, printStringKeywordsType);
 
     Type* printCharArrayReturnType = new Type(TypeKind::VOID);
     vector<Type*> *printCharArrayKeywordsType = new vector<Type*>{ new Type(TypeKind::CHAR, 1024) };
     vector<Type*> *printCharArrayParamsType = new vector<Type*>;
-    inOutFuncs->methods->addMethod(сonstantTable, "printCharArray", "([C)V", true, NULL, printCharArrayReturnType, printCharArrayParamsType, printCharArrayKeywordsType);
+    inOutFuncs->methods->addMethod(сonstantTable, "printCharArray", "([C)V", true, nullptr, printCharArrayReturnType, printCharArrayParamsType, printCharArrayKeywordsType);
 
     Type* printObjectReturnType = new Type(TypeKind::VOID);
     vector<Type*> *printObjectKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "java/lang/Object") };
     vector<Type*> *printObjectParamsType = new vector<Type*>;
-    inOutFuncs->methods->addMethod(сonstantTable, "printObject", "(Ljava/lang/Object;)V", true, NULL, printObjectReturnType, printObjectParamsType, printObjectKeywordsType);
+    inOutFuncs->methods->addMethod(сonstantTable, "printObject", "(Ljava/lang/Object;)V", true, nullptr, printObjectReturnType, printObjectParamsType, printObjectKeywordsType);
 
     Type* readReturnType = new Type(TypeKind::CLASS_NAME, "java/lang/String");
     vector<Type*> *readKeywordsType = new vector<Type*>;
     vector<Type*> *readParamsType = new vector<Type*>;
-    inOutFuncs->methods->addMethod(сonstantTable, "read", "()Ljava/lang/String;", true, NULL, readReturnType, readParamsType, readKeywordsType);
+    inOutFuncs->methods->addMethod(сonstantTable, "read", "()Ljava/lang/String;", true, nullptr, readReturnType, readParamsType, readKeywordsType);
 
     Type* readIntReturnType = new Type(TypeKind::INT);
     vector<Type*> *readIntKeywordsType = new vector<Type*>;
     vector<Type*> *readIntParamsType = new vector<Type*>;
-    inOutFuncs->methods->addMethod(сonstantTable, "readInt", "()I", true, NULL, readIntReturnType, readIntParamsType, readIntKeywordsType);
+    inOutFuncs->methods->addMethod(сonstantTable, "readInt", "()I", true, nullptr, readIntReturnType, readIntParamsType, readIntKeywordsType);
 
     Type* readCharReturnType = new Type(TypeKind::CHAR);
     vector<Type*> *readCharKeywordsType = new vector<Type*>;
     vector<Type*> *readCharParamsType = new vector<Type*>;
-    inOutFuncs->methods->addMethod(сonstantTable, "readChar", "()C", true, NULL, readCharReturnType, readCharParamsType, readCharKeywordsType);
+    inOutFuncs->methods->addMethod(сonstantTable, "readChar", "()C", true, nullptr, readCharReturnType, readCharParamsType, readCharKeywordsType);
 
     сonstantTable->findOrAddFieldRefConstant("java/lang/System", "out", "Ljava/io/PrintStream;");
 
@@ -932,63 +987,63 @@ void ClassesTable::initClassInOutFuncs() {
 }
 
 void ClassesTable::initClassNSObject() {
-    ClassesTableElement* nsobject = new ClassesTableElement("rtl/NSObject", NULL, true);
+    ClassesTableElement* nsobject = new ClassesTableElement("rtl/NSObject", nullptr, true);
     ConstantsTable* constantTable = nsobject->constantTable;
 
     Type* constructorReturnType = new Type(TypeKind::VOID);
     vector<Type*>* constructorKeywordsType = new vector<Type*>;
     vector<Type*>* constructorParamsType = new vector<Type*>;
-    nsobject->methods->addMethod(constantTable, "<init>", "()V", false, NULL, constructorReturnType, constructorParamsType, constructorKeywordsType);
+    nsobject->methods->addMethod(constantTable, "<init>", "()V", false, nullptr, constructorReturnType, constructorParamsType, constructorKeywordsType);
 
     Type* allocReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
     vector<Type*>* allocKeywordsType = new vector<Type*>;
     vector<Type*>* allocParamsType = new vector<Type*>;
-    nsobject->methods->addMethod(constantTable, "allocStatic", "()Lrtl/NSObject;", true, NULL, allocReturnType, allocParamsType, allocKeywordsType);
+    nsobject->methods->addMethod(constantTable, "allocStatic", "()Lrtl/NSObject;", true, nullptr, allocReturnType, allocParamsType, allocKeywordsType);
 
     Type* initReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
     vector<Type*>* initKeywordsType = new vector<Type*>;
     vector<Type*>* initParamsType = new vector<Type*>;
-    nsobject->methods->addMethod(constantTable, "initDynamic", "()Lrtl/NSObject;", false, NULL, initReturnType, initParamsType, initKeywordsType);
+    nsobject->methods->addMethod(constantTable, "initDynamic", "()Lrtl/NSObject;", false, nullptr, initReturnType, initParamsType, initKeywordsType);
 
     Type* newReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
     vector<Type*>* newKeywordsType = new vector<Type*>;
     vector<Type*>* newParamsType = new vector<Type*>;
-    nsobject->methods->addMethod(constantTable, "newStatic", "()Lrtl/NSObject;", true, NULL, newReturnType, newParamsType, newKeywordsType);
+    nsobject->methods->addMethod(constantTable, "newStatic", "()Lrtl/NSObject;", true, nullptr, newReturnType, newParamsType, newKeywordsType);
 
     Type* getClassDynamicReturnType = new Type(TypeKind::CLASS_NAME, "java/lang/Class");
     vector<Type*>* getClassDynamicKeywordsType = new vector<Type*>;
     vector<Type*>* getClassDynamicParamsType = new vector<Type*>;
-    nsobject->methods->addMethod(constantTable, "getClassDynamic", "()Ljava/lang/Class;", false, NULL, getClassDynamicReturnType, getClassDynamicParamsType, getClassDynamicKeywordsType);
+    nsobject->methods->addMethod(constantTable, "getClassDynamic", "()Ljava/lang/Class;", false, nullptr, getClassDynamicReturnType, getClassDynamicParamsType, getClassDynamicKeywordsType);
 
     Type* getClassStaticReturnType = new Type(TypeKind::CLASS_NAME, "java/lang/Class");
     vector<Type*>* getClassStaticKeywordsType = new vector<Type*>;
     vector<Type*>* getClassStaticParamsType = new vector<Type*>;
-    nsobject->methods->addMethod(constantTable, "getClassStatic", "()Ljava/lang/Class;", true, NULL, getClassStaticReturnType, getClassStaticParamsType, getClassStaticKeywordsType);
+    nsobject->methods->addMethod(constantTable, "getClassStatic", "()Ljava/lang/Class;", true, nullptr, getClassStaticReturnType, getClassStaticParamsType, getClassStaticKeywordsType);
 
     Type* isSubclassOfClassReturnType = new Type(TypeKind::INT);
     vector<Type*>* isSubclassOfClassKeywordsType = new vector<Type*>{new Type(TypeKind::CLASS_NAME, "java/lang/Class")};
     vector<Type*>* isSubclassOfClassParamsType = new vector<Type*>;
-    nsobject->methods->addMethod(constantTable, "isSubclassOfClassStatic", "(Ljava/lang/Class;)I", true, NULL, isSubclassOfClassReturnType, isSubclassOfClassParamsType, isSubclassOfClassKeywordsType);
+    nsobject->methods->addMethod(constantTable, "isSubclassOfClassStatic", "(Ljava/lang/Class;)I", true, nullptr, isSubclassOfClassReturnType, isSubclassOfClassParamsType, isSubclassOfClassKeywordsType);
 
     Type* classNameReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
     vector<Type*>* classNameKeywordsType = new vector<Type*>;
     vector<Type*>* classNameParamsType = new vector<Type*>;
-    nsobject->methods->addMethod(constantTable, "classNameDynamic", "()Lrtl/NSString;", false, NULL, classNameReturnType, classNameParamsType, classNameKeywordsType);
+    nsobject->methods->addMethod(constantTable, "classNameDynamic", "()Lrtl/NSString;", false, nullptr, classNameReturnType, classNameParamsType, classNameKeywordsType);
 
     Type* superclassReturnType = new Type(TypeKind::CLASS_NAME, "java/lang/Class");
     vector<Type*>* superclassKeywordsType = new vector<Type*>;
     vector<Type*>* superclassParamsType = new vector<Type*>;
-    nsobject->methods->addMethod(constantTable, "superclassDynamic", "()Ljava/lang/Class;", false, NULL, superclassReturnType, superclassParamsType, superclassKeywordsType);
+    nsobject->methods->addMethod(constantTable, "superclassDynamic", "()Ljava/lang/Class;", false, nullptr, superclassReturnType, superclassParamsType, superclassKeywordsType);
 
     Type* descriptionReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
     vector<Type*>* descriptionKeywordsType = new vector<Type*>;
     vector<Type*>* descriptionParamsType = new vector<Type*>;
-    nsobject->methods->addMethod(constantTable, "descriptionDynamic", "()Lrtl/NSString;", false, NULL, descriptionReturnType, descriptionParamsType, descriptionKeywordsType);
+    nsobject->methods->addMethod(constantTable, "descriptionDynamic", "()Lrtl/NSString;", false, nullptr, descriptionReturnType, descriptionParamsType, descriptionKeywordsType);
 
     Type* isEqualReturnType = new Type(TypeKind::INT);
     vector<Type*>* isEqualKeywordsType = new vector<Type*>{new Type(TypeKind::CLASS_NAME, "rtl/NSObject")};
     vector<Type*>* isEqualParamsType = new vector<Type*>;
-    nsobject->methods->addMethod(constantTable, "isEqualDynamic", "(Lrtl/NSObject;)I", false, NULL, isEqualReturnType, isEqualParamsType, isEqualKeywordsType);
+    nsobject->methods->addMethod(constantTable, "isEqualDynamic", "(Lrtl/NSObject;)I", false, nullptr, isEqualReturnType, isEqualParamsType, isEqualKeywordsType);
 
     constantTable->findOrAddMethodRefConstant("java/lang/Object", "<init>", "()V");
     constantTable->findOrAddMethodRefConstant("rtl/NSObject", "<init>", "()V");
@@ -1002,8 +1057,8 @@ void ClassesTable::initClassNSObject() {
     constantTable->findOrAddMethodRefConstant("rtl/NSString", "stringWithCStringStatic", "([C)Lrtl/NSString;");
     constantTable->findOrAddMethodRefConstant("java/lang/Class", "getSuperclass", "()Ljava/lang/Class;");
 
-    int strNum = constantTable->findOrAddConstant(UTF8, "nsobject implementation");
-    constantTable->findOrAddConstant(STRING, NULL, strNum);
+    int strNum = constantTable->findOrAddConstant(ConstantType::UTF8, "nsobject implementation");
+    constantTable->findOrAddConstant(ConstantType::STRING, 0, strNum);
 
     items["rtl/NSObject"] = nsobject;
 }
@@ -1016,82 +1071,82 @@ void ClassesTable::initClassNSString() {
 	Type* stringReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
 	vector<Type*>* stringKeywordsType = new vector<Type*>;
 	vector<Type*>* stringParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "stringStatic", "()Lrtl/NSString;", true, NULL, stringReturnType, stringParamsType, stringKeywordsType);
+	nsstring->methods->addMethod(constantTable, "stringStatic", "()Lrtl/NSString;", true, nullptr, stringReturnType, stringParamsType, stringKeywordsType);
 
 	Type* stringWithCStringReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
 	vector<Type*>* stringWithCStringKeywordsType = new vector<Type*>{ new Type(TypeKind::CHAR, 1024) };
 	vector<Type*>* stringWithCStringParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "stringWithCStringStatic", "([C)Lrtl/NSString;", true, NULL, stringWithCStringReturnType, stringWithCStringParamsType, stringWithCStringKeywordsType);
+	nsstring->methods->addMethod(constantTable, "stringWithCStringStatic", "([C)Lrtl/NSString;", true, nullptr, stringWithCStringReturnType, stringWithCStringParamsType, stringWithCStringKeywordsType);
 
 	Type* stringWithStringReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
 	vector<Type*>* stringWithStringKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSString")};
 	vector<Type*>* stringWithStringParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "stringWithStringStatic", "(Lrtl/NSString;)Lrtl/NSString;", true, NULL, stringWithStringReturnType, stringWithStringParamsType, stringWithStringKeywordsType);
+	nsstring->methods->addMethod(constantTable, "stringWithStringStatic", "(Lrtl/NSString;)Lrtl/NSString;", true, nullptr, stringWithStringReturnType, stringWithStringParamsType, stringWithStringKeywordsType);
 
 	Type* cStringReturnType = new Type(TypeKind::CHAR, 1024);
 	vector<Type*>* cStringKeywordsType = new vector<Type*>;
 	vector<Type*>* cStringParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "cStringDynamic", "()[C;", false, NULL, cStringReturnType, cStringParamsType, cStringKeywordsType);
+	nsstring->methods->addMethod(constantTable, "cStringDynamic", "()[C;", false, nullptr, cStringReturnType, cStringParamsType, cStringKeywordsType);
 
 	Type* capitalizeStringReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
 	vector<Type*>* capitalizeStringKewordsType = new vector<Type*>;
 	vector<Type*>* capitalizeStringParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "capitalizeStringDynamic", "()Lrtl/NSString;", false, NULL, capitalizeStringReturnType, capitalizeStringParamsType, capitalizeStringKewordsType);
+	nsstring->methods->addMethod(constantTable, "capitalizeStringDynamic", "()Lrtl/NSString;", false, nullptr, capitalizeStringReturnType, capitalizeStringParamsType, capitalizeStringKewordsType);
 
 	Type* characterAtIndexReturnType = new Type(TypeKind::CHAR);
 	vector<Type*>* characterAtIndexKeywordsType = new vector<Type*>{ new Type(TypeKind::INT) };
 	vector<Type*>* characterAtIndexParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "characterAtIndexDynamic", "(I)C;", false, NULL, characterAtIndexReturnType, characterAtIndexParamsType, characterAtIndexKeywordsType);
+	nsstring->methods->addMethod(constantTable, "characterAtIndexDynamic", "(I)C;", false, nullptr, characterAtIndexReturnType, characterAtIndexParamsType, characterAtIndexKeywordsType);
 
 	Type* hasPrefixReturnType = new Type(TypeKind::INT);
 	vector<Type*>* hasPrefixKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
 	vector<Type*>* hasPrefixParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "hasPrefixDynamic", "(Lrtl/NSString;)I", false, NULL, hasPrefixReturnType, hasPrefixParamsType, hasPrefixKeywordsType);
+	nsstring->methods->addMethod(constantTable, "hasPrefixDynamic", "(Lrtl/NSString;)I", false, nullptr, hasPrefixReturnType, hasPrefixParamsType, hasPrefixKeywordsType);
 
 	Type* hasSuffixReturnType = new Type(TypeKind::INT);
 	vector<Type*>* hasSuffixKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
 	vector<Type*>* hasSuffixParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "hasSuffixDynamic", "(Lrtl/NSString;)I", false, NULL, hasSuffixReturnType, hasSuffixParamsType, hasSuffixKeywordsType);
+	nsstring->methods->addMethod(constantTable, "hasSuffixDynamic", "(Lrtl/NSString;)I", false, nullptr, hasSuffixReturnType, hasSuffixParamsType, hasSuffixKeywordsType);
 
 	Type* intValueReturnType = new Type(TypeKind::INT);
 	vector<Type*>* intValueKeywordsType = new vector<Type*>;
 	vector<Type*>* intValueParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "intValueDynamic", "()I", false, NULL, intValueReturnType, intValueParamsType, intValueKeywordsType);
+	nsstring->methods->addMethod(constantTable, "intValueDynamic", "()I", false, nullptr, intValueReturnType, intValueParamsType, intValueKeywordsType);
 
 	Type* isEqualReturnType = new Type(TypeKind::INT);
 	vector<Type*>* isEqualKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSObject") };
 	vector<Type*>* isEqualParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "isEqualDynamic", "(Lrtl/NSObject;)I", false, NULL, isEqualReturnType, isEqualParamsType, isEqualKeywordsType);
+	nsstring->methods->addMethod(constantTable, "isEqualDynamic", "(Lrtl/NSObject;)I", false, nullptr, isEqualReturnType, isEqualParamsType, isEqualKeywordsType);
 
 	Type* isEqualToStringReturnType = new Type(TypeKind::INT);
 	vector<Type*>* isEqualToStringKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
 	vector<Type*>* isEqualToStringParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "isEqualToStringDynamic", "(Lrtl/NSString;)I", false, NULL, isEqualToStringReturnType, isEqualToStringParamsType, isEqualToStringKeywordsType);
+	nsstring->methods->addMethod(constantTable, "isEqualToStringDynamic", "(Lrtl/NSString;)I", false, nullptr, isEqualToStringReturnType, isEqualToStringParamsType, isEqualToStringKeywordsType);
 
 	Type* lengthReturnType = new Type(TypeKind::INT);
 	vector<Type*>* lengthKeywordsType = new vector<Type*>;
 	vector<Type*>* lengthParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "lengthDynamic", "()I", false, NULL, lengthReturnType, lengthParamsType, lengthKeywordsType);
+	nsstring->methods->addMethod(constantTable, "lengthDynamic", "()I", false, nullptr, lengthReturnType, lengthParamsType, lengthKeywordsType);
 
 	Type* lowercaseStringReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
 	vector<Type*>* lowercaseStringKeywordsType = new vector<Type*>;
 	vector<Type*>* lowercaseStringParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "lowercaseStringDynamic", "()Lrtl/NSString;", false, NULL, lowercaseStringReturnType, lowercaseStringParamsType, lowercaseStringKeywordsType);
+	nsstring->methods->addMethod(constantTable, "lowercaseStringDynamic", "()Lrtl/NSString;", false, nullptr, lowercaseStringReturnType, lowercaseStringParamsType, lowercaseStringKeywordsType);
 
 	Type* uppercaseStringReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
 	vector<Type*>* uppercaseStringKeywordsType = new vector<Type*>;
 	vector<Type*>* uppercaseStringParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "uppercaseStringDynamic", "()Lrtl/NSString;", false, NULL, uppercaseStringReturnType, uppercaseStringParamsType, uppercaseStringKeywordsType);
+	nsstring->methods->addMethod(constantTable, "uppercaseStringDynamic", "()Lrtl/NSString;", false, nullptr, uppercaseStringReturnType, uppercaseStringParamsType, uppercaseStringKeywordsType);
 
 	Type* stringByAppendingStringReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
 	vector<Type*>* stringByAppendingStringKeywordsType = new vector<Type*>{new Type(TypeKind::CLASS_NAME, "rtl/NSString")};
 	vector<Type*>* stringByAppendingStringParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "stringByAppendingStringDynamic", "(Lrtl/NSString;)Lrtl/NSString;", false, NULL, stringByAppendingStringReturnType, stringByAppendingStringParamsType, stringByAppendingStringKeywordsType);
+	nsstring->methods->addMethod(constantTable, "stringByAppendingStringDynamic", "(Lrtl/NSString;)Lrtl/NSString;", false, nullptr, stringByAppendingStringReturnType, stringByAppendingStringParamsType, stringByAppendingStringKeywordsType);
 
 	Type* descriptionReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
 	vector<Type*>* descriptionKeywordsType = new vector<Type*>;
 	vector<Type*>* descriptionParamsType = new vector<Type*>;
-	nsstring->methods->addMethod(constantTable, "descriptionDynamic", "()Lrtl/NSString;", false, NULL, descriptionReturnType, descriptionParamsType, descriptionKeywordsType);
+	nsstring->methods->addMethod(constantTable, "descriptionDynamic", "()Lrtl/NSString;", false, nullptr, descriptionReturnType, descriptionParamsType, descriptionKeywordsType);
 
 	constantTable->findOrAddFieldRefConstant("rtl/NSString", "string", "java/lang/String");
 
@@ -1122,92 +1177,92 @@ void ClassesTable::initClassNSArray() {
 	Type* arrayReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSArray");
 	vector<Type*>* arrayKeywordsType = new vector<Type*>;
 	vector<Type*>* arrayParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "arrayStatic", "()Lrtl/NSArray;", true, NULL, arrayReturnType, arrayParamsType, arrayKeywordsType);
+	nsarray->methods->addMethod(constantTable, "arrayStatic", "()Lrtl/NSArray;", true, nullptr, arrayReturnType, arrayParamsType, arrayKeywordsType);
 
 	Type* arrayWithArrayReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSArray");
 	vector<Type*>* arrayWithArrayKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSArray") };
 	vector<Type*>* arrayWithArrayParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "arrayWithArrayStatic", "(Lrtl/NSArray;)Lrtl/NSArray;", true, NULL, arrayWithArrayReturnType, arrayWithArrayParamsType, arrayWithArrayKeywordsType);
+	nsarray->methods->addMethod(constantTable, "arrayWithArrayStatic", "(Lrtl/NSArray;)Lrtl/NSArray;", true, nullptr, arrayWithArrayReturnType, arrayWithArrayParamsType, arrayWithArrayKeywordsType);
 
 	Type* arrayWithObjectsReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSArray");
 	vector<Type*>* arrayWithObjectsKeywordsType = new vector<Type*>;
 	vector<Type*>* arrayWithObjectsParamsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSObject", 1024) };
-	nsarray->methods->addMethod(constantTable, "arrayWithObjectsStatic", "([Lrtl/NSObject;)Lrtl/NSArray;", true, NULL, arrayWithObjectsReturnType, arrayWithObjectsParamsType, arrayWithObjectsKeywordsType);
+	nsarray->methods->addMethod(constantTable, "arrayWithObjectsStatic", "([Lrtl/NSObject;)Lrtl/NSArray;", true, nullptr, arrayWithObjectsReturnType, arrayWithObjectsParamsType, arrayWithObjectsKeywordsType);
 
 	Type* arrayWithObjectReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSArray");
 	vector<Type*>* arrayWithObjectKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSObject") };
 	vector<Type*>* arrayWithObjectParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "arrayWithObjectStatic", "(Lrtl/NSObject;)Lrtl/NSArray;", true, NULL, arrayWithObjectReturnType, arrayWithObjectParamsType, arrayWithObjectKeywordsType);
+	nsarray->methods->addMethod(constantTable, "arrayWithObjectStatic", "(Lrtl/NSObject;)Lrtl/NSArray;", true, nullptr, arrayWithObjectReturnType, arrayWithObjectParamsType, arrayWithObjectKeywordsType);
 
 	Type* arrayByAddingObjectReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSArray");
 	vector<Type*>* arrayByAddingObjectKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSObject") };
 	vector<Type*>* arrayByAddingObjectParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "arrayByAddingObjectDynamic", "(Lrtl/NSObject;)Lrtl/NSArray;", false, NULL, arrayByAddingObjectReturnType, arrayByAddingObjectParamsType, arrayByAddingObjectKeywordsType);
+	nsarray->methods->addMethod(constantTable, "arrayByAddingObjectDynamic", "(Lrtl/NSObject;)Lrtl/NSArray;", false, nullptr, arrayByAddingObjectReturnType, arrayByAddingObjectParamsType, arrayByAddingObjectKeywordsType);
 
 	Type* arrayByAddingObjectsFromArrayReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSArray");
 	vector<Type*>* arrayByAddingObjectsFromArrayKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME,"rtl/NSArray") };
 	vector<Type*>* arrayByAddingObjectsFromArrayParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "arrayByAddingObjectsFromArrayDynamic", "(Lrtl/NSArray;)Lrtl/NSArray;", false, NULL, arrayByAddingObjectsFromArrayReturnType, arrayByAddingObjectsFromArrayParamsType, arrayByAddingObjectsFromArrayParamsType);
+	nsarray->methods->addMethod(constantTable, "arrayByAddingObjectsFromArrayDynamic", "(Lrtl/NSArray;)Lrtl/NSArray;", false, nullptr, arrayByAddingObjectsFromArrayReturnType, arrayByAddingObjectsFromArrayParamsType, arrayByAddingObjectsFromArrayParamsType);
 
 	Type* componentsJoinedByStringReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
 	vector<Type*>* componentsJoinedByStringKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
 	vector<Type*>* componentsJoinedByStringParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "componentsJoinedByStringDynamic", "(Lrtl/NSString;)Lrtl/NSString;", false, NULL, componentsJoinedByStringReturnType, componentsJoinedByStringParamsType, componentsJoinedByStringKeywordsType);
+	nsarray->methods->addMethod(constantTable, "componentsJoinedByStringDynamic", "(Lrtl/NSString;)Lrtl/NSString;", false, nullptr, componentsJoinedByStringReturnType, componentsJoinedByStringParamsType, componentsJoinedByStringKeywordsType);
 
 	Type* containsObjectReturnType = new Type(TypeKind::INT);
 	vector<Type*>* containsObjectKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSObject") };
 	vector<Type*>* containsObjectParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "containsObjectDynamic", "(Lrtl/NSObject;)I", false, NULL, containsObjectReturnType, containsObjectParamsType, containsObjectKeywordsType);
+	nsarray->methods->addMethod(constantTable, "containsObjectDynamic", "(Lrtl/NSObject;)I", false, nullptr, containsObjectReturnType, containsObjectParamsType, containsObjectKeywordsType);
 
 	Type* countReturnType = new Type(TypeKind::INT);
 	vector<Type*>* countKeywordsType = new vector<Type*>;
 	vector<Type*>* countParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "countDynamic", "()I", false, NULL, countReturnType, countParamsType, countKeywordsType);
+	nsarray->methods->addMethod(constantTable, "countDynamic", "()I", false, nullptr, countReturnType, countParamsType, countKeywordsType);
 
 	Type* descriptionReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
 	vector<Type*>* descriptionKeywordsType = new vector<Type*>;
 	vector<Type*>* descriptionParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "descriptionDynamic", "()Lrtl/NSString;", false, NULL, descriptionReturnType, descriptionParamsType, descriptionKeywordsType);
+	nsarray->methods->addMethod(constantTable, "descriptionDynamic", "()Lrtl/NSString;", false, nullptr, descriptionReturnType, descriptionParamsType, descriptionKeywordsType);
 
 	Type* firstObjectReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
 	vector<Type*>* firstObjectKeywordsType = new vector<Type*>;
 	vector<Type*>* firstObjectParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "firstObjectDynamic", "()Lrtl/NSObject;", false, NULL, firstObjectReturnType, firstObjectParamsType, firstObjectKeywordsType);
+	nsarray->methods->addMethod(constantTable, "firstObjectDynamic", "()Lrtl/NSObject;", false, nullptr, firstObjectReturnType, firstObjectParamsType, firstObjectKeywordsType);
 
 	Type* firstObjectCommonWithArrayReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
 	vector<Type*>* firstObjectCommonWithArrayKeywordsType = new vector<Type*>{new Type(TypeKind::CLASS_NAME, "rtl/NSArray")};
 	vector<Type*>* firstObjectCommonWithArrayParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "firstObjectCommonWithArrayDynamic", "(Lrtl/NSArray;)Lrtl/NSObject;", false, NULL, firstObjectCommonWithArrayReturnType, firstObjectCommonWithArrayParamsType, firstObjectCommonWithArrayKeywordsType);
+	nsarray->methods->addMethod(constantTable, "firstObjectCommonWithArrayDynamic", "(Lrtl/NSArray;)Lrtl/NSObject;", false, nullptr, firstObjectCommonWithArrayReturnType, firstObjectCommonWithArrayParamsType, firstObjectCommonWithArrayKeywordsType);
 
 	Type* getObjectsReturnType = new Type(TypeKind::VOID);
 	vector<Type*>* getObjectsKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSObject", 1024) };
 	vector<Type*>* getObjectsParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "getObjectsDynamic", "([Lrtl/NSObject;)V", false, NULL, getObjectsReturnType, getObjectsParamsType, getObjectsKeywordsType);
+	nsarray->methods->addMethod(constantTable, "getObjectsDynamic", "([Lrtl/NSObject;)V", false, nullptr, getObjectsReturnType, getObjectsParamsType, getObjectsKeywordsType);
 
 	Type* indexOfObjectReturnType = new Type(TypeKind::INT);
 	vector<Type*>* indexOfObjectKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSObject") };
 	vector<Type*>* indexOfObjectParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "indexOfObjectDynamic", "(Lrtl/NSObject;)I", false, NULL, indexOfObjectReturnType, indexOfObjectParamsType, indexOfObjectKeywordsType);
+	nsarray->methods->addMethod(constantTable, "indexOfObjectDynamic", "(Lrtl/NSObject;)I", false, nullptr, indexOfObjectReturnType, indexOfObjectParamsType, indexOfObjectKeywordsType);
 
 	Type* initReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSArray");
 	vector<Type*>* initKeywordsType = new vector<Type*>;
 	vector<Type*>* initParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "initDynamic", "()Lrtl/NSArray;", false, NULL, initReturnType, initParamsType, initKeywordsType);
+	nsarray->methods->addMethod(constantTable, "initDynamic", "()Lrtl/NSArray;", false, nullptr, initReturnType, initParamsType, initKeywordsType);
 
 	Type* isEqualToArrayReturnType = new Type(TypeKind::INT);
 	vector<Type*>* isEqualToArrayKeywordsType = new vector<Type*>{ new Type(TypeKind::CLASS_NAME, "rtl/NSArray") };
 	vector<Type*>* isEqualToArrayParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "isEqualToArrayDynamic", "(Lrtl/NSArray;)I", false, NULL, isEqualToArrayReturnType, isEqualToArrayParamsType, isEqualToArrayKeywordsType);
+	nsarray->methods->addMethod(constantTable, "isEqualToArrayDynamic", "(Lrtl/NSArray;)I", false, nullptr, isEqualToArrayReturnType, isEqualToArrayParamsType, isEqualToArrayKeywordsType);
 
 	Type* lastObjectReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
 	vector<Type*>* lastObjectKeywordsType = new vector<Type*>;
 	vector<Type*>* lastObjectParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "lastObjectDynamic", "()Lrtl/NSObject;", false, NULL, lastObjectReturnType, lastObjectParamsType, lastObjectKeywordsType);
+	nsarray->methods->addMethod(constantTable, "lastObjectDynamic", "()Lrtl/NSObject;", false, nullptr, lastObjectReturnType, lastObjectParamsType, lastObjectKeywordsType);
 
 	Type* objectAtIndexReturnType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
 	vector<Type*>* objectAtIndexKeywordsType = new vector<Type*>{ new Type(TypeKind::INT) };
 	vector<Type*>* objectAtIndexParamsType = new vector<Type*>;
-	nsarray->methods->addMethod(constantTable, "objectAtIndexDynamic", "(I)Lrtl/NSObject;", false, NULL, objectAtIndexReturnType, objectAtIndexParamsType, objectAtIndexKeywordsType);
+	nsarray->methods->addMethod(constantTable, "objectAtIndexDynamic", "(I)Lrtl/NSObject;", false, nullptr, objectAtIndexReturnType, objectAtIndexParamsType, objectAtIndexKeywordsType);
 
 	constantTable->findOrAddFieldRefConstant("rtl/NSArray", "array", "[Lrtl/NSObject");
 
@@ -1248,7 +1303,7 @@ string FieldsTableElement::toCSVString(char separator) {
     res += to_string(descriptor) + " (" + descriptorStr + ")" + separator;
     res += string((isInstance ? "true" : "false")) + separator;
     res += type->toString() + separator;
-    if (initialValue == NULL) {
+    if (initialValue == nullptr) {
         res += string("empty");
     }
     else {
@@ -1258,7 +1313,7 @@ string FieldsTableElement::toCSVString(char separator) {
 }
 
 void FieldsTableElement::fillLiterals(ConstantsTable* constantTable) {
-    if (initialValue != NULL) {
+    if (initialValue != nullptr) {
 		initialValue->fillLiterals(constantTable);
     }
 }
@@ -1266,8 +1321,8 @@ void FieldsTableElement::fillLiterals(ConstantsTable* constantTable) {
 //--------------------------------------------------------------FieldsTable--------------------------------------------------------------
 
 void FieldsTable::addField(ConstantsTable* constantTable, string name, string descriptor, bool isInstance, Type* type, ExprNode* initValue) {
-    int nameId = constantTable->findOrAddConstant(UTF8, name);
-    int descriptorId = constantTable->findOrAddConstant(UTF8, descriptor);
+    int nameId = constantTable->findOrAddConstant(ConstantType::UTF8, name);
+    int descriptorId = constantTable->findOrAddConstant(ConstantType::UTF8, descriptor);
     if (isInstance) {
         FieldsTableElement* field = new FieldsTableElement(nameId, descriptorId, isInstance, maxInstanceIndex, type, name, descriptor, initValue);
         maxInstanceIndex++;
@@ -1331,7 +1386,7 @@ string MethodsTableElement::toCSVString(string methodName, char separator) {
 
     res += paramsTypesStr + separator;
     res += keywordsTypesStr + separator;
-    if (bodyStart != NULL) {
+    if (bodyStart != nullptr) {
         res += to_string(bodyStart->getId()) + separator;
     }
     else {
@@ -1385,7 +1440,7 @@ void MethodsTableElement::addDefaultReturn(StmtNode *lastStatement) {
 
     StmtListNode* stmtList = nullptr;
     
-    if (bodyStart->getKind() == StmtNode::COMPOUND) {
+    if (bodyStart->getKind() == StmtKind::COMPOUND) {
         stmtList = bodyStart->getCompound();
     } else {
         stmtList = StmtListNode::createStmtList(bodyStart);
@@ -1435,10 +1490,10 @@ void MethodsTableElement::addDefaultReturn(StmtNode *lastStatement) {
 MethodsTableElement* MethodsTable::addMethod(ConstantsTable* constantTable, string name, string descriptor, bool isClassMethod, StmtNode* bodyStart, Type* returnType, vector<Type*>* paramsTypes, vector<Type*>* keywordsTypes) {
     if (items.count(name) != 0) {
         string msg = "Method '" + name + "' already exists";
-        throw new exception(msg.c_str());
+        throw std::runtime_error(msg.c_str());
     }
-    int nameId = constantTable->findOrAddConstant(UTF8, name);
-    int descriptorId = constantTable->findOrAddConstant(UTF8, descriptor);
+    int nameId = constantTable->findOrAddConstant(ConstantType::UTF8, name);
+    int descriptorId = constantTable->findOrAddConstant(ConstantType::UTF8, descriptor);
     MethodsTableElement *method = new MethodsTableElement(nameId, descriptorId, isClassMethod, bodyStart, returnType, paramsTypes, keywordsTypes, name, descriptor);
     items[name] = method;
     return method;
@@ -1483,10 +1538,10 @@ string PropertiesTableElement::toCSVString(char separator) {
 void PropertiesTable::addProperty(ConstantsTable* constantTable, string name, string descriptor, bool isReadonly, Type* type) {
     if (items.count(name) != 0) {
         string msg = "Property '" + name + "' already exists";
-        throw new exception(msg.c_str());
+        throw std::runtime_error(msg.c_str());
     }
-    int nameId = constantTable->findOrAddConstant(UTF8, name);
-    int descriptorId = constantTable->findOrAddConstant(UTF8, descriptor);
+    int nameId = constantTable->findOrAddConstant(ConstantType::UTF8, name);
+    int descriptorId = constantTable->findOrAddConstant(ConstantType::UTF8, descriptor);
     PropertiesTableElement *property = new PropertiesTableElement(nameId, descriptorId, isReadonly, type, name, descriptor);
     items[name] = property;
 }
@@ -1527,7 +1582,7 @@ int LocalVariablesTable::findOrAddLocalVariable(string name, Type* type) {
     }
     else {
         string msg = "Variable '" + name + "' already exists";
-        throw new exception(msg.c_str());
+        throw std::runtime_error(msg.c_str());
     }
     return items[name]->id;
 }

@@ -3,10 +3,10 @@
 
 #include <map>
 #include <vector>
+#include <list>
 #include "classes.h"
 
 using namespace std;
-using TypeKind = TypeNode::TypeKind;
 
 class LocalVariablesTable;
 class FieldsTable;
@@ -19,21 +19,24 @@ class Type {
 public:
     TypeKind dataType;
     string className;
-    ExprNode *arrSize = NULL;
+    list<ExprNode*>* arraySizes;
+    int arrayDimension;
 
-    Type(TypeKind dataType, string className, ExprNode* arrSize);
+    Type(TypeKind dataType, string className, list<ExprNode*>* arraySizes);
     Type(TypeKind dataType, string className);
     Type(TypeKind dataType);
-    Type(TypeKind dataType, ExprNode* arrSize);
+    Type(TypeKind dataType, list<ExprNode*>* arraySizes);
+    Type(TypeKind dataType, string className, ExprNode* arrSize);
     Type(TypeKind dataType, string className, int arrSize);
     Type(TypeKind dataType, int arrSize);
 
-    string toString();
-    string getDescriptor();
-    bool equal(Type* other);
+    string toString() const;
+    string getDescriptor() const;
+    bool equal(Type* other) const;
     int getDefaultValue();
 	bool isCastableTo(Type* other);
 	bool isPrimitive();
+    bool isArray() const;
 	Type* getSuperType();
 };
 
@@ -52,7 +55,7 @@ class ConstantsTableElement {
 public:
     int id = 0;
     ConstantType type;
-    string *utf8String = NULL;
+    string *utf8String = nullptr;
     int number = 0;
     float floatNumber = 0;
     int firstRef = 0;
@@ -72,7 +75,7 @@ public:
 
     int findOrAddConstant(ConstantType type, string utf8String);
     int findOrAddConstant(ConstantType type, float floatNumber);
-    int findOrAddConstant(ConstantType type, int number = NULL, int firstRef = NULL, int secondRef = NULL);
+    int findOrAddConstant(ConstantType type, int number = 0, int firstRef = 0, int secondRef = 0);
     ConstantsTableElement* getConstant(int id);
     string getConstantString(int id);
 
@@ -83,17 +86,17 @@ public:
     int findOrAddMethodRefConstant(string className, string methodName, string descriptor);
 
 private:
-    int findConstant(ConstantType type, string *utf8string, float floatNumber, int number = NULL, int firstRef = NULL, int secondRef = NULL);
+    int findConstant(ConstantType type, string *utf8string, float floatNumber, int number = 0, int firstRef = 0, int secondRef = 0);
 };
 
 class FunctionsTableElement {
 public:
-    StmtNode *bodyStart = NULL;
-    LocalVariablesTable *localVariables = NULL;
+    StmtNode *bodyStart = nullptr;
+    LocalVariablesTable *localVariables = nullptr;
     string nameStr;
     string descriptorStr;
-    vector<Type*> *parametersTypes = NULL;
-    Type *returnType = NULL;
+    vector<Type*> *parametersTypes = nullptr;
+    Type *returnType = nullptr;
 
     FunctionsTableElement(StmtNode *bodyStart, string nameStr, string descriptorStr, vector<Type*> *params, Type *returnType);
 
@@ -188,7 +191,7 @@ public:
     Type *type;
     string nameStr;
     string descriptorStr;
-	ExprNode *initialValue = NULL;
+	ExprNode *initialValue = nullptr;
 
     FieldsTableElement(int name, int descriptor, bool isInstance, int instanceIndex, Type* type, string nameStr, string descriptorStr, ExprNode* initialValue);
 
@@ -211,11 +214,11 @@ public:
     int name = 0;
     int descriptor = 0;
     bool isClassMethod = false;
-    StmtNode *bodyStart = NULL;
-    LocalVariablesTable *localVariables = NULL;
+    StmtNode *bodyStart = nullptr;
+    LocalVariablesTable *localVariables = nullptr;
     Type *returnType;
-    vector<Type*> *paramsTypes = NULL;
-    vector<Type*> *keywordsTypes = NULL;
+    vector<Type*> *paramsTypes = nullptr;
+    vector<Type*> *keywordsTypes = nullptr;
     string nameStr;
     string descriptorStr;
 
