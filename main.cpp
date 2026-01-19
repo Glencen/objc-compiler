@@ -3,6 +3,7 @@
 #include <filesystem>
 #include "objc-parser.hpp"
 #include "classes.h"
+#include "tables.h"
 #include "output_utils.h"
 
 namespace fs = std::filesystem;
@@ -28,11 +29,21 @@ int main(int argc, char* argv[])
     }
     
     std::string token_file = base_name + "_tokens.txt";
-    std::string ast_file = base_name + "_ast.dot";
+    std::string ast_before_file = base_name + "_ast_before.dot";
+    std::string ast_after_file = base_name + "_ast_after.dot";
+    std::string tables_dir = base_name + "_tables/";
 
     std::cout << "Input file: " << inputFile << std::endl;
     std::cout << "Token output: " << token_file << std::endl;
-    std::cout << "AST output: " << ast_file << std::endl;
+    std::cout << "AST before semantics: " << ast_before_file << std::endl;
+    std::cout << "AST after semantics: " << ast_after_file << std::endl;
+    std::cout << "Tables output directory: " << tables_dir << std::endl;
+
+    if (!fs::exists(tables_dir)) {
+        if (!fs::create_directory(tables_dir)) {
+            std::cerr << "Could not create directory for tables: '" + tables_dir + "'" << std::endl;
+        }
+    }
 
     TokenOutput::getInstance().initialize(token_file);
 
@@ -61,28 +72,76 @@ int main(int argc, char* argv[])
 
     fclose(yyin);
 
-    std::ofstream ast_out(ast_file);
-    if (!ast_out.is_open()) {
-        std::cerr << "Could not open AST file for writing: '" + ast_file + "'" << std::endl;
+    std::ofstream ast_before_out(ast_before_file);
+    if (!ast_before_out.is_open()) {
+        std::cerr << "Could not open AST before file for writing: '" + ast_before_file + "'" << std::endl;
         return 1;
     }
 
-    ast_out << "digraph AST {\n";
-    ast_out << root->toDot();
-    ast_out << "}\n";
-    ast_out.close();
+    ast_before_out << "digraph AST {\n";
+    ast_before_out << root->toDot();
+    ast_before_out << "}\n";
+    ast_before_out.close();
 
     std::cout << "Tokens written to: " << token_file << std::endl;
-    std::cout << "AST written to: " << ast_file << std::endl;
+    std::cout << "AST before semantics written to: " << ast_before_file << std::endl;
 
-    // Опционально: генерация PNG из DOT файла
-    // std::cout << "Generating PNG visualization..." << std::endl;
-    // std::string png_file = base_name + "_ast.png";
-    // std::string command = "dot -Tpng \"" + ast_file + "\" -o \"" + png_file + "\"";
-    // int result = system(command.c_str());
-    // if (result == 0) {
-    //     std::cout << "PNG visualization generated: " << png_file << std::endl;
-    // }
+    try {
+        ClassesTable::initRTL();
+        root->fillTables();
+        root->semanticTransform();
+        ClassesTable::fillFieldRefs();
+        ClassesTable::fillMethodRefs();
+        ClassesTable::fillLiterals();
+        FunctionsTable::fillFieldRefs();
+        FunctionsTable::fillMethodRefs();
+        FunctionsTable::fillLiterals();
+        FunctionsTable::convertToClassProgramMethods();
+        FunctionsTable::semanticTransform();
+        ClassesTable::semanticTransform();
+        
+        std::ofstream ast_after_out(ast_after_file);
+        if (!ast_after_out.is_open()) {
+            std::cerr << "Could not open AST after file for writing: '" + ast_after_file + "'" << std::endl;
+            return 1;
+        }
+
+        ast_after_out << "digraph AST {\n";
+        ast_after_out << root->toDot();
+        ast_after_out << "}\n";
+        ast_after_out.close();
+        
+        std::cout << "\nAST after semantics written to: " << ast_after_file << std::endl;
+        
+        if (!tables_dir.empty() && tables_dir.back() != '/') {
+            tables_dir += '/';
+        }
+        
+        ClassesTable::toCSVFile(tables_dir, '|');
+        
+        std::cout << "CSV tables generated in directory: " << tables_dir << std::endl;
+        
+        std::cout << "\nGenerated tables:" << std::endl;
+        std::cout << "- " << tables_dir << "ClassesTable.csv" << std::endl;
+        
+        if (!ClassesTable::items.empty()) {
+            for (const auto& [className, classElement] : ClassesTable::items) {
+                std::cout << "- " << tables_dir << className << "_ConstantsTable.csv" << std::endl;
+                std::cout << "- " << tables_dir << className << "_FieldsTable.csv" << std::endl;
+                std::cout << "- " << tables_dir << className << "_MethodsTable.csv" << std::endl;
+                std::cout << "- " << tables_dir << className << "_PropertiesTable.csv" << std::endl;
+            }
+        }
+        
+        std::cout << "\nProcessing completed successfully!" << std::endl;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "\nError during semantic analysis: " << e.what() << std::endl;
+        return 1;
+    } catch (...) {
+        std::cerr << "\nUnknown error during semantic analysis!" << std::endl;
+        return 1;
+    }
 
     return 0;
 }
