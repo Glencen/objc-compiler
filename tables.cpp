@@ -10,7 +10,7 @@ Type::Type(TypeKind dataType, string className, ExprNode* arrSize) {
             ExprNode* operand = arrSize->getOperand();
             if (operand->getType() == ExprNode::LITERAL) {
                 ValueNode* value = operand->getLiteral();
-                if (value->getValueType() == ValueNode::INT_LIT) {
+                if (value->getValueKind() == ValueNode::INT_LIT) {
                     int intValue = value->getInt();
                     if (intValue > 0) {
                         string msg = "Negative array size '-" + to_string(intValue) + "'";
@@ -40,7 +40,7 @@ Type::Type(TypeKind dataType, ExprNode* arrSize) {
             ExprNode* operand = arrSize->getOperand();
             if (operand->getType() == ExprNode::LITERAL) {
                 ValueNode* value = operand->getLiteral();
-                if (value->getValueType() == ValueNode::INT_LIT) {
+                if (value->getValueKind() == ValueNode::INT_LIT) {
                     int intValue = value->getInt();
                     if (intValue > 0) {
                         string msg = "Negative array size '-" + to_string(intValue) + "'";
@@ -93,7 +93,7 @@ string Type::toString() {
     if (arrSize != NULL) {
         if (arrSize->getType() == ExprNode::LITERAL) {
             ValueNode* value = arrSize->getLiteral();
-            if (value->getValueType() == ValueNode::INT_LIT) {
+            if (value->getValueKind() == ValueNode::INT_LIT) {
                 res += '[' + to_string(value->getInt()) + ']';
             }
             else {
@@ -429,7 +429,7 @@ void FunctionsTableElement::addDefaultReturn(StmtNode *lastStatement) {
 
     StmtListNode* stmtList = nullptr;
     
-    if (bodyStart->getType() == StmtNode::COMPOUND) {
+    if (bodyStart->getKind() == StmtNode::COMPOUND) {
         stmtList = bodyStart->getCompound();
     } else {
         stmtList = StmtListNode::createStmtList(bodyStart);
@@ -1385,7 +1385,7 @@ void MethodsTableElement::addDefaultReturn(StmtNode *lastStatement) {
 
     StmtListNode* stmtList = nullptr;
     
-    if (bodyStart->getType() == StmtNode::COMPOUND) {
+    if (bodyStart->getKind() == StmtNode::COMPOUND) {
         stmtList = bodyStart->getCompound();
     } else {
         stmtList = StmtListNode::createStmtList(bodyStart);
