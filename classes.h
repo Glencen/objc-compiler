@@ -4,12 +4,14 @@
 #include <iostream>
 #include <string>
 #include <list>
+#include "types.h"
 
-using namespace std;
-
+class Type;
 class ConstantsTable;
 class LocalVariablesTable;
 class ClassesTableElement;
+
+using namespace std;
 
 class StmtNode;
 class ExprNode;
@@ -42,22 +44,6 @@ public:
 
 class ValueNode : public AstNode {
 public:
-    enum ValueKind {
-        NONE,
-        INT_LIT,
-        FLOAT_LIT,
-        BOOL_LIT,
-        CHAR_LIT,
-        STRING_LIT,
-        NIL,
-        OBJC_INT_LIT,
-        OBJC_FLOAT_LIT,
-        OBJC_BOOL_LIT,
-        OBJC_STRING_LIT,
-        IDENTIFIER,
-        CLASS_NAME
-    };
-
     static ValueNode* createInt(int value);
     static ValueNode* createFloat(float value);
     static ValueNode* createBool(bool value);
@@ -91,6 +77,7 @@ public:
     bool getIsLocalVar() const;
 
     void fillLiterals(ConstantsTable* constantTable);
+    void semanticTransform(LocalVariablesTable* localVariables);
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -111,19 +98,14 @@ protected:
 
 class ReceiverNode : public AstNode {
 public:
-    enum ReceiverKind {
-        NONE,
-        EXPR,
-        CLASS_NAME,
-        SUPER
-    };
-
     static ReceiverNode* createExpr(ExprNode *expr);
     static ReceiverNode* createClassName(ValueNode *className);
     static ReceiverNode* createSuper();
 
     ReceiverKind getKind() const;
     ExprNode* getExpr() const;
+
+    void fillLiterals(ConstantsTable* constantTable);
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -160,6 +142,8 @@ public:
 
     list<MsgArgNode*>* getMsgArgList() const;
 
+    void fillLiterals(ConstantsTable* constantTable);
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -171,18 +155,14 @@ protected:
 
 class MsgSelectorNode : public AstNode {
 public:
-    enum MsgSelectorKind {
-        NONE,
-        SIMPLE_SEL,
-        ARGUMENT_LIST
-    };
-
     static MsgSelectorNode* createSimpleSel(ValueNode *identifier);
     static MsgSelectorNode* createArgumentList(MsgArgListNode *list);
 
     MsgSelectorKind getKind() const;
     ValueNode* getIdentifier() const;
     MsgArgListNode* getMsgArgList() const;
+
+    void fillLiterals(ConstantsTable* constantTable);
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -214,39 +194,6 @@ protected:
 
 class ExprNode : public AstNode {
 public:
-    enum ExprKind {
-        NONE,
-        IDENTIFIER,
-        LITERAL,
-        OBJC_ARRAY_LITERAL,
-        OBJC_BOXED_EXPR,
-        NIL,
-        BOXED_EXPR,
-        MESSAGE,
-        SELF,
-        UNARY_MINUS,
-        NOT,
-        POST_INC,
-        POST_DEC,
-        ADDITION,
-        SUBTRACTION,
-        MULTIPLICATION,
-        DIVISION,
-        EQUAL,
-        NOT_EQUAL,
-        GREATER,
-        LESS,
-        LESS_OR_EQUAL,
-        GREATER_OR_EQUAL,
-        AND,
-        OR,
-        ASSIGN,
-        ARRAY_ACCESS,
-        FUNCTION_CALL,
-        DOT,
-        ARROW
-    };
-
     static ExprNode* createIdentifier(ValueNode *value);
     static ExprNode* createLiteral(ValueNode *value);
     static ExprNode* createObjcArrayLiteral(ExprListNode *exprList);
@@ -281,6 +228,8 @@ public:
     void fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance);
     void fillLiterals(ConstantsTable* constantTable);
     void semanticTransform(LocalVariablesTable* localVariables);
+    void processObjcMessage(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance);
+    void checkTypeCompatibility(Type* leftType, Type* rightType, const string& operation);
 
     ExprKind getKind() const;
     ValueNode* getIdentifier() const;
@@ -339,17 +288,6 @@ protected:
 
 class TypeNode : public AstNode {
 public:
-    enum TypeKind {
-        NONE,
-        INT,
-        FLOAT,
-        BOOL,
-        CHAR,
-        TYPE_ID,
-        CLASS_NAME,
-        VOID
-    };
-
     static TypeNode* createIntType();
     static TypeNode* createCharType();
     static TypeNode* createFloatType();
@@ -360,6 +298,8 @@ public:
 
     TypeKind getKind() const;
     ValueNode* getClassName() const;
+
+    void fillLiterals(ConstantsTable* constantTable);
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -378,7 +318,7 @@ public:
 
     list<InitDeclNode*>* getInitDeclList() const;
 
-    void fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement);
+    void fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, TypeNode* typeNode);
     void semanticTransform(LocalVariablesTable* localVariables);
 
     string getDotLabel() const override;
@@ -434,23 +374,6 @@ protected:
 
 class StmtNode : public AstNode {
 public:
-    enum StmtKind {
-        NONE,
-        EMPTY,
-        EXPR,
-        RETURN,
-        IF,
-        IF_ELSE,
-        FOR_WITH_EXPR,
-        FOR_WITH_DECL,
-        FOR_IN,
-        TYPED_FOR_IN,
-        WHILE,
-        DO_WHILE,
-        COMPOUND,
-        DECLARATION
-    };
-
     static StmtNode* createEmpty();
     static StmtNode* createExpr(ExprNode *expr);
     static StmtNode* createReturn(ExprNode *expr);
@@ -500,6 +423,9 @@ public:
 
     list<ExprNode*>* getSizes() const;
 
+    void fillLiterals(ConstantsTable* constantTable);
+    void semanticTransform(LocalVariablesTable* localVariables);
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -511,14 +437,6 @@ protected:
 
 class ParamDeclNode : public AstNode {
 public:
-    enum ParamDeclKind {
-        NONE,
-        IDENTIFIER,
-        ARRAY,
-        SIZED_ARRAY,
-        ARRAY_OF_ARRAYS
-    };
-
     static ParamDeclNode* createParamDecl(TypeNode *type, ValueNode *identifier);
     static ParamDeclNode* createArrayParamDecl(TypeNode *type, ValueNode *identifier);
     static ParamDeclNode* createSizedArrayParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec);
@@ -611,14 +529,6 @@ protected:
 
 class MethodParamNode : public AstNode {
 public:
-    enum MethodParamKind {
-        NONE,
-        IDENTIFIER,
-        ARRAY,
-        SIZED_ARRAY,
-        ARRAY_OF_ARRAYS
-    };
-
     static MethodParamNode* createMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ValueNode *paramIdentifier);
     static MethodParamNode* createArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ValueNode *paramIdentifier);
     static MethodParamNode* createSizedArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier);
@@ -629,6 +539,9 @@ public:
     TypeNode* getType() const;
     ValueNode* getParamIdentifier() const;
     ArraySizeSpecNode* getArraySizeSpec() const;
+
+    void fillLiterals(ConstantsTable* constantTable);
+    void semanticTransform(LocalVariablesTable* localVariables);
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -650,6 +563,8 @@ public:
 
     list<MethodParamNode*>* getMethodParamList() const;
 
+    void fillLiterals(ConstantsTable* constantTable);
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -661,12 +576,6 @@ protected:
 
 class MethodDefNode : public AstNode {
 public:
-    enum MethodDefKind {
-        NONE,
-        ID,
-        SEL
-    };
-
     static MethodDefNode* createInstanceMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt);
     static MethodDefNode* createInstanceMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt);
     static MethodDefNode* createClassMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt);
@@ -722,12 +631,6 @@ protected:
 
 class MethodDeclNode : public AstNode {
 public:
-    enum MethodDeclKind {
-        NONE,
-        ID,
-        SEL
-    };
-
     static MethodDeclNode* createInstanceMethodDecl(TypeNode *type, ValueNode *identifier);
     static MethodDeclNode* createInstanceMethodDecl(TypeNode *type, MethodSelNode *methodSel);
     static MethodDeclNode* createClassMethodDecl(TypeNode *type, ValueNode *identifier);
@@ -757,12 +660,6 @@ protected:
 
 class PropertyNode : public AstNode {
 public:
-    enum Attribute {
-        NONE,
-        READONLY,
-        READWRITE
-    };
-
     static PropertyNode* createProperty(Attribute attr, TypeNode *type, ValueNode *name);
     static PropertyNode* createProperty(TypeNode *type, ValueNode *name);
 
@@ -829,12 +726,6 @@ protected:
 
 class InitializerNode : public AstNode {
 public:
-    enum InitializerKind {
-        NONE,
-        EXPR,
-        ARRAY
-    };
-
     static InitializerNode* createExpr(ExprNode *expr);
     static InitializerNode* createArrayInitializer(InitializerListNode *initList);
 
@@ -879,13 +770,6 @@ protected:
 
 class InitDeclNode : public AstNode {
 public:
-    enum InitDeclKind {
-        NONE,
-        DECLARATOR,
-        INITIALIZED,
-        ARRAY_INITIALIZED
-    };
-
     static InitDeclNode* createDeclarator(DeclaratorNode *declarator);
     static InitDeclNode* createInitialized(DeclaratorNode *declarator, InitializerNode *initializer);
     static InitDeclNode* createArrayInitialized(DeclaratorNode *declarator, InitializerNode *initializer);
@@ -894,8 +778,8 @@ public:
     DeclaratorNode* getDeclarator() const;
     InitializerNode* getInitializer() const;
 
-    void fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement, TypeNode* typeNode);
+    void semanticTransform(LocalVariablesTable* localVariables, TypeNode* typeNode);
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -910,13 +794,6 @@ protected:
 
 class AccessModifierNode : public AstNode {
 public:
-    enum AccessModifier {
-        NONE,
-        PUBLIC,
-        PROTECTED,
-        PRIVATE
-    };
-
     static AccessModifierNode* createPublic();
     static AccessModifierNode* createProtected();
     static AccessModifierNode* createPrivate();
@@ -1065,15 +942,6 @@ protected:
 
 class ExternalDeclNode : public AstNode {
 public:
-    enum ExternalDeclKind {
-        NONE,
-        INTERFACE,
-        IMPLEMENTATION,
-        CLASS_FW_DECL_LIST,
-        FUNC_DECL,
-        FUNC_DEF
-    };
-
     static ExternalDeclNode* createInterface(InterfaceNode *interface);
     static ExternalDeclNode* createImplementation(ImplementationNode *implementation);
     static ExternalDeclNode* createFwClassDeclList(ClassNameListNode *classNames);

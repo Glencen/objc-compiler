@@ -1,27 +1,4 @@
 #include "classes.h"
-#include "tables.h"
-
-Type* convertTypeNodeToType(TypeNode* typeNode) {
-    if (!typeNode) return nullptr;
-    switch (typeNode->getKind()) {
-        case TypeNode::INT:
-            return new Type(TypeNode::INT);
-        case TypeNode::FLOAT:
-            return new Type(TypeNode::FLOAT);
-        case TypeNode::BOOL:
-            return new Type(TypeNode::BOOL);
-        case TypeNode::CHAR:
-            return new Type(TypeNode::CHAR);
-        case TypeNode::TYPE_ID:
-            return new Type(TypeNode::TYPE_ID);
-        case TypeNode::CLASS_NAME:
-            return new Type(TypeNode::CLASS_NAME, *typeNode->getClassName()->getClassName());
-        case TypeNode::VOID:
-            return new Type(TypeNode::VOID);
-        default:
-            return nullptr;
-    }
-}
 
 //--------------------------------------------------------------AstNode--------------------------------------------------------------
 
@@ -46,7 +23,7 @@ void AstNode::appendDotEdge(string &res, const AstNode *child, const string &edg
 //--------------------------------------------------------------ValueNode--------------------------------------------------------------
 
 ValueNode::ValueNode() : AstNode() {
-    valueType = NONE;
+    valueType = ValueKind::NONE;
     intValue = 0;
     floatValue = 0;
     boolValue = false;
@@ -56,88 +33,88 @@ ValueNode::ValueNode() : AstNode() {
 
 ValueNode* ValueNode::createInt(int value) {
     ValueNode *node = new ValueNode();
-    node->valueType = INT_LIT;
+    node->valueType = ValueKind::INT_LIT;
     node->intValue = value;
     return node;
 }
 
 ValueNode* ValueNode::createFloat(float value) {
     ValueNode *node = new ValueNode();
-    node->valueType = FLOAT_LIT;
+    node->valueType = ValueKind::FLOAT_LIT;
     node->floatValue = value;
     return node;
 }
 
 ValueNode* ValueNode::createBool(bool value) {
     ValueNode *node = new ValueNode();
-    node->valueType = BOOL_LIT;
+    node->valueType = ValueKind::BOOL_LIT;
     node->boolValue = value;
     return node;
 }
 
 ValueNode* ValueNode::createChar(char value) {
     ValueNode *node = new ValueNode();
-    node->valueType = CHAR_LIT;
+    node->valueType = ValueKind::CHAR_LIT;
     node->charValue = value;
     return node;
 }
 
 ValueNode* ValueNode::createString(string *value) {
     ValueNode *node = new ValueNode();
-    node->valueType = STRING_LIT;
+    node->valueType = ValueKind::STRING_LIT;
     node->stringValue = value;
     return node;
 }
 
 ValueNode* ValueNode::createNil() {
     ValueNode *node = new ValueNode();
-    node->valueType = NIL;
+    node->valueType = ValueKind::NIL;
     return node;
 }
 
 ValueNode* ValueNode::createObjcInt(int value) {
     ValueNode *node = new ValueNode();
-    node->valueType = OBJC_INT_LIT;
+    node->valueType = ValueKind::OBJC_INT_LIT;
     node->intValue = value;
     return node;
 }
 
 ValueNode* ValueNode::createObjcFloat(float value) {
     ValueNode *node = new ValueNode();
-    node->valueType = OBJC_FLOAT_LIT;
+    node->valueType = ValueKind::OBJC_FLOAT_LIT;
     node->floatValue = value;
     return node;
 }
 
 ValueNode* ValueNode::createObjcBool(bool value) {
     ValueNode *node = new ValueNode();
-    node->valueType = OBJC_BOOL_LIT;
+    node->valueType = ValueKind::OBJC_BOOL_LIT;
     node->boolValue = value;
     return node;
 }
 
 ValueNode* ValueNode::createObjcString(string *value) {
     ValueNode *node = new ValueNode();
-    node->valueType = OBJC_STRING_LIT;
+    node->valueType = ValueKind::OBJC_STRING_LIT;
     node->stringValue = value;
     return node;
 }
 
 ValueNode* ValueNode::createIdentifier(string *value) {
     ValueNode *node = new ValueNode();
-    node->valueType = IDENTIFIER;
+    node->valueType = ValueKind::IDENTIFIER;
     node->stringValue = value;
     return node;
 }
 
 ValueNode* ValueNode::createClassName(string *value) {
     ValueNode *node = new ValueNode();
-    node->valueType = CLASS_NAME;
+    node->valueType = ValueKind::CLASS_NAME;
     node->stringValue = value;
     return node;
 }
 
-ValueNode::ValueKind ValueNode::getValueKind() const {
+ValueKind ValueNode::getValueKind() const {
     return valueType;
 }
 
@@ -205,28 +182,6 @@ bool ValueNode::getIsLocalVar() const {
     return isLocalVar;
 }
 
-void ValueNode::fillLiterals(ConstantsTable* constantTable) {
-    switch (valueType) {
-        case INT_LIT:
-            constantTable->findOrAddConstant(INTEGER, intValue);
-            break;
-        case FLOAT_LIT:
-            constantTable->findOrAddConstant(FLOAT, floatValue);
-            break;
-        case STRING_LIT:
-            constantTable->findOrAddConstant(UTF8, *stringValue);
-            break;
-        case OBJC_INT_LIT:
-        case OBJC_FLOAT_LIT:
-        case OBJC_BOOL_LIT:
-        case OBJC_STRING_LIT:
-            constantTable->findOrAddConstant(UTF8, *stringValue);
-            break;
-        default:
-            break;
-    }
-}
-
 string ValueNode::getDotLabel() const {
     auto escapeString = [](const string &src) {
         string out;
@@ -244,19 +199,19 @@ string ValueNode::getDotLabel() const {
     };
 
     switch (valueType) {
-        case INT_LIT:           return "int: " + to_string(intValue);
-        case FLOAT_LIT:         return "float: " + to_string(floatValue);
-        case BOOL_LIT:          return string("bool: ") + (boolValue ? "true" : "false");
-        case CHAR_LIT:          return "char: '" + string(1, charValue) + "'";
-        case STRING_LIT:        return "string: " + escapeString(*stringValue);
-        case NIL:               return "nil";
-        case OBJC_INT_LIT:      return "OBJ-C int: " + to_string(intValue);
-        case OBJC_FLOAT_LIT:    return "OBJ-C float: " + to_string(floatValue);
-        case OBJC_BOOL_LIT:     return "OBJ-C bool: " + ((boolValue) ? string("true") : string("false"));
-        case OBJC_STRING_LIT:   return "OBJ-C string: " + *stringValue;
-        case IDENTIFIER:        return "Identifier: " + *stringValue;
-        case CLASS_NAME:        return "Class name: " + *stringValue;
-        default:                return "UNKNOWN_VALUE";
+        case ValueKind::INT_LIT:            return "int: " + to_string(intValue);
+        case ValueKind::FLOAT_LIT:          return "float: " + to_string(floatValue);
+        case ValueKind::BOOL_LIT:           return string("bool: ") + (boolValue ? "true" : "false");
+        case ValueKind::CHAR_LIT:           return "char: '" + string(1, charValue) + "'";
+        case ValueKind::STRING_LIT:         return "string: " + escapeString(*stringValue);
+        case ValueKind::NIL:                return "nil";
+        case ValueKind::OBJC_INT_LIT:       return "OBJ-C int: " + to_string(intValue);
+        case ValueKind::OBJC_FLOAT_LIT:     return "OBJ-C float: " + to_string(floatValue);
+        case ValueKind::OBJC_BOOL_LIT:      return "OBJ-C bool: " + ((boolValue) ? string("true") : string("false"));
+        case ValueKind::OBJC_STRING_LIT:    return "OBJ-C string: " + *stringValue;
+        case ValueKind::IDENTIFIER:         return "Identifier: " + *stringValue;
+        case ValueKind::CLASS_NAME:         return "Class name: " + *stringValue;
+        default:                            return "UNKNOWN_VALUE";
     }
 }
 
@@ -269,32 +224,32 @@ string ValueNode::toDot() const {
 //--------------------------------------------------------------ReceiverNode--------------------------------------------------------------
 
 ReceiverNode::ReceiverNode() : AstNode() {
-    kind = NONE;
+    kind = ReceiverKind::NONE;
     className = nullptr;
     expr = nullptr;
 }
 
 ReceiverNode* ReceiverNode::createExpr(ExprNode *expr) {
     ReceiverNode *node = new ReceiverNode();
-    node->kind = EXPR;
+    node->kind = ReceiverKind::EXPR;
     node->expr = expr;
     return node;
 }
 
 ReceiverNode* ReceiverNode::createClassName(ValueNode *className) {
     ReceiverNode *node = new ReceiverNode();
-    node->kind = CLASS_NAME;
+    node->kind = ReceiverKind::CLASS_NAME;
     node->className = className;
     return node;
 }
 
 ReceiverNode* ReceiverNode::createSuper() {
     ReceiverNode *node = new ReceiverNode();
-    node->kind = SUPER;
+    node->kind = ReceiverKind::SUPER;
     return node;
 }
 
-ReceiverNode::ReceiverKind ReceiverNode::getKind() const {
+ReceiverKind ReceiverNode::getKind() const {
     return kind;
 }
 
@@ -304,9 +259,9 @@ ExprNode* ReceiverNode::getExpr() const {
 
 string ReceiverNode::getDotLabel() const {
     switch (kind) {
-        case EXPR:          return "EXPR_RECEIVER";
-        case CLASS_NAME:    return "CLASS_RECEIVER";
-        case SUPER:         return "SUPER_RECEIVER";
+        case ReceiverKind::EXPR:          return "EXPR_RECEIVER";
+        case ReceiverKind::CLASS_NAME:    return "CLASS_RECEIVER";
+        case ReceiverKind::SUPER:         return "SUPER_RECEIVER";
         default:            return "RECEIVER";
     }
 }
@@ -314,6 +269,8 @@ string ReceiverNode::getDotLabel() const {
 string ReceiverNode::toDot() const {
     string result;
     appendDotNode(result);
+    appendDotEdge(result, className, "class_name");
+    appendDotEdge(result, expr, "expr");
     return result;
 }
 
@@ -346,6 +303,8 @@ string MsgArgNode::getDotLabel() const {
 string MsgArgNode::toDot() const {
     string result;
     appendDotNode(result);
+    appendDotEdge(result, identifier, "id");
+    appendDotEdge(result, arg, "arg");
     return result;
 }
 
@@ -380,32 +339,40 @@ string MsgArgListNode::getDotLabel() const {
 string MsgArgListNode::toDot() const {
     string result;
     appendDotNode(result);
+
+    if (msgArgs) {
+        int i = 0;
+        for (MsgArgNode *arg : *msgArgs) {
+            appendDotEdge(result, arg, "arg_" + to_string(i++));
+        }
+    }
+
     return result;
 }
 
 //--------------------------------------------------------------MsgSelectorNode--------------------------------------------------------------
 
 MsgSelectorNode::MsgSelectorNode() : AstNode() {
-    kind = NONE;
+    kind = MsgSelectorKind::NONE;
     identifier = nullptr;
     argList = nullptr;
 }
 
 MsgSelectorNode* MsgSelectorNode::createSimpleSel(ValueNode *identifier) {
     MsgSelectorNode *node = new MsgSelectorNode();
-    node->kind = SIMPLE_SEL;
+    node->kind = MsgSelectorKind::SIMPLE_SEL;
     node->identifier = identifier;
     return node;
 }
 
 MsgSelectorNode* MsgSelectorNode::createArgumentList(MsgArgListNode *list) {
     MsgSelectorNode *node = new MsgSelectorNode();
-    node->kind = ARGUMENT_LIST;
+    node->kind = MsgSelectorKind::ARGUMENT_LIST;
     node->argList = list;
     return node;
 }
 
-MsgSelectorNode::MsgSelectorKind MsgSelectorNode::getKind() const {
+MsgSelectorKind MsgSelectorNode::getKind() const {
     return kind;
 }
 
@@ -418,12 +385,18 @@ MsgArgListNode* MsgSelectorNode::getMsgArgList() const {
 }
 
 string MsgSelectorNode::getDotLabel() const {
-    return "MESSAGE_SELECTOR";
+    switch(kind) {
+        case MsgSelectorKind::SIMPLE_SEL:       return "SIMPLE_SELECTOR";
+        case MsgSelectorKind::ARGUMENT_LIST:    return "ARGUMENT_LIST";
+        default:                                return "UNKNOWN_SELECTOR";
+    }
 }
 
 string MsgSelectorNode::toDot() const {
     string result;
     appendDotNode(result);
+    appendDotEdge(result, identifier, "id");
+    appendDotEdge(result, argList, "arg_list");
     return result;
 }
 
@@ -451,14 +424,6 @@ list<ExprNode*>* ExprListNode::getExprList() const {
     return exprList;
 }
 
-void ExprListNode::fillLiterals(ConstantsTable* constantTable) {
-    if (exprList) {
-        for (auto expr : *exprList) {
-            expr->fillLiterals(constantTable);
-        }
-    }
-}
-
 string ExprListNode::getDotLabel() const {
     return "EXPR_LIST";
 }
@@ -466,13 +431,21 @@ string ExprListNode::getDotLabel() const {
 string ExprListNode::toDot() const {
     string result;
     appendDotNode(result);
+
+    if (exprList) {
+        int i = 0;
+        for (ExprNode *expr : *exprList) {
+            appendDotEdge(result, expr, "expr_" + to_string(i++));
+        }
+    }
+
     return result;
 }
 
 //--------------------------------------------------------------ExprNode--------------------------------------------------------------
 
 ExprNode::ExprNode() : AstNode() {
-    kind = NONE;
+    kind = ExprKind::NONE;
     identifier = nullptr;
     literalValue = nullptr;
     left = nullptr;
@@ -489,48 +462,48 @@ ExprNode::ExprNode() : AstNode() {
 
 ExprNode* ExprNode::createIdentifier(ValueNode *value) {
     ExprNode *node = new ExprNode();
-    node->kind = IDENTIFIER;
+    node->kind = ExprKind::IDENTIFIER;
     node->identifier = value;
     return node;
 }
 
 ExprNode* ExprNode::createLiteral(ValueNode *value) {
     ExprNode *node = new ExprNode();
-    node->kind = LITERAL;
+    node->kind = ExprKind::LITERAL;
     node->literalValue = value;
     return node;
 }
 
 ExprNode* ExprNode::createObjcArrayLiteral(ExprListNode *exprList) {
     ExprNode *node = new ExprNode();
-    node->kind = OBJC_ARRAY_LITERAL;
+    node->kind = ExprKind::OBJC_ARRAY_LITERAL;
     node->objcArrayExprList = exprList;
     return node;
 }
 
 ExprNode* ExprNode::createObjcBoxedExpr(ExprNode *expr) {
     ExprNode *node = new ExprNode();
-    node->kind = OBJC_BOXED_EXPR;
+    node->kind = ExprKind::OBJC_BOXED_EXPR;
     node->boxedExpr = expr;
     return node;
 }
 
 ExprNode* ExprNode::createNil() {
     ExprNode *node = new ExprNode();
-    node->kind = NIL;
+    node->kind = ExprKind::NIL;
     return node;
 }
 
 ExprNode* ExprNode::createBoxedExpr(ExprNode *expr) {
     ExprNode *node = new ExprNode();
-    node->kind = BOXED_EXPR;
+    node->kind = ExprKind::BOXED_EXPR;
     node->boxedExpr = expr;
     return node;
 }
 
 ExprNode* ExprNode::createMessageSend(ReceiverNode *receiver, MsgSelectorNode *selector) {
     ExprNode *node = new ExprNode();
-    node->kind = MESSAGE;
+    node->kind = ExprKind::MESSAGE;
     node->receiver = receiver;
     node->selector = selector;
     return node;
@@ -538,41 +511,41 @@ ExprNode* ExprNode::createMessageSend(ReceiverNode *receiver, MsgSelectorNode *s
 
 ExprNode* ExprNode::createSelf() {
     ExprNode *node = new ExprNode();
-    node->kind = SELF;
+    node->kind = ExprKind::SELF;
     return node;
 }
 
 ExprNode* ExprNode::createUnaryMinus(ExprNode *operand) {
     ExprNode *node = new ExprNode();
-    node->kind = UNARY_MINUS;
+    node->kind = ExprKind::UNARY_MINUS;
     node->operand = operand;
     return node;
 }
 
 ExprNode* ExprNode::createNot(ExprNode *operand) {
     ExprNode *node = new ExprNode();
-    node->kind = NOT;
+    node->kind = ExprKind::NOT;
     node->operand = operand;
     return node;
 }
 
 ExprNode* ExprNode::createPostInc(ExprNode *operand) {
     ExprNode *node = new ExprNode();
-    node->kind = POST_INC;
+    node->kind = ExprKind::POST_INC;
     node->operand = operand;
     return node;
 }
 
 ExprNode* ExprNode::createPostDec(ExprNode *operand) {
     ExprNode *node = new ExprNode();
-    node->kind = POST_DEC;
+    node->kind = ExprKind::POST_DEC;
     node->operand = operand;
     return node;
 }
 
 ExprNode* ExprNode::createAddition(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = ADDITION;
+    node->kind = ExprKind::ADDITION;
     node->left = left;
     node->right = right;
     return node;
@@ -580,7 +553,7 @@ ExprNode* ExprNode::createAddition(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createSubtraction(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = SUBTRACTION;
+    node->kind = ExprKind::SUBTRACTION;
     node->left = left;
     node->right = right;
     return node;
@@ -588,7 +561,7 @@ ExprNode* ExprNode::createSubtraction(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createMultiplication(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = MULTIPLICATION;
+    node->kind = ExprKind::MULTIPLICATION;
     node->left = left;
     node->right = right;
     return node;
@@ -596,7 +569,7 @@ ExprNode* ExprNode::createMultiplication(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createDivision(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = DIVISION;
+    node->kind = ExprKind::DIVISION;
     node->left = left;
     node->right = right;
     return node;
@@ -604,7 +577,7 @@ ExprNode* ExprNode::createDivision(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createEqual(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = EQUAL;
+    node->kind = ExprKind::EQUAL;
     node->left = left;
     node->right = right;
     return node;
@@ -612,7 +585,7 @@ ExprNode* ExprNode::createEqual(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createNotEqual(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = NOT_EQUAL;
+    node->kind = ExprKind::NOT_EQUAL;
     node->left = left;
     node->right = right;
     return node;
@@ -620,7 +593,7 @@ ExprNode* ExprNode::createNotEqual(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createGreater(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = GREATER;
+    node->kind = ExprKind::GREATER;
     node->left = left;
     node->right = right;
     return node;
@@ -628,7 +601,7 @@ ExprNode* ExprNode::createGreater(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createLess(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = LESS;
+    node->kind = ExprKind::LESS;
     node->left = left;
     node->right = right;
     return node;
@@ -636,7 +609,7 @@ ExprNode* ExprNode::createLess(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createLessOrEqual(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = LESS_OR_EQUAL;
+    node->kind = ExprKind::LESS_OR_EQUAL;
     node->left = left;
     node->right = right;
     return node;
@@ -644,7 +617,7 @@ ExprNode* ExprNode::createLessOrEqual(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createGreaterOrEqual(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = GREATER_OR_EQUAL;
+    node->kind = ExprKind::GREATER_OR_EQUAL;
     node->left = left;
     node->right = right;
     return node;
@@ -652,7 +625,7 @@ ExprNode* ExprNode::createGreaterOrEqual(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createAnd(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = AND;
+    node->kind = ExprKind::AND;
     node->left = left;
     node->right = right;
     return node;
@@ -660,7 +633,7 @@ ExprNode* ExprNode::createAnd(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createOr(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = OR;
+    node->kind = ExprKind::OR;
     node->left = left;
     node->right = right;
     return node;
@@ -668,7 +641,7 @@ ExprNode* ExprNode::createOr(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createAssign(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = ASSIGN;
+    node->kind = ExprKind::ASSIGN;
     node->left = left;
     node->right = right;
     return node;
@@ -676,7 +649,7 @@ ExprNode* ExprNode::createAssign(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createArrayAccess(ExprNode *operand, ExprNode *index) {
     ExprNode *node = new ExprNode();
-    node->kind = ARRAY_ACCESS;
+    node->kind = ExprKind::ARRAY_ACCESS;
     node->operand = operand;
     node->index = index;
     return node;
@@ -684,7 +657,7 @@ ExprNode* ExprNode::createArrayAccess(ExprNode *operand, ExprNode *index) {
 
 ExprNode* ExprNode::createFunctionCall(ValueNode *funcId, ExprListNode *args) {
     ExprNode *node = new ExprNode();
-    node->kind = FUNCTION_CALL;
+    node->kind = ExprKind::FUNCTION_CALL;
     node->funcId = funcId;
     node->args = args;
     return node;
@@ -692,7 +665,7 @@ ExprNode* ExprNode::createFunctionCall(ValueNode *funcId, ExprListNode *args) {
 
 ExprNode* ExprNode::createDot(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = DOT;
+    node->kind = ExprKind::DOT;
     node->left = left;
     node->right = right;
     return node;
@@ -700,346 +673,13 @@ ExprNode* ExprNode::createDot(ExprNode *left, ExprNode *right) {
 
 ExprNode* ExprNode::createArrow(ExprNode *left, ExprNode *right) {
     ExprNode *node = new ExprNode();
-    node->kind = ARROW;
+    node->kind = ExprKind::ARROW;
     node->left = left;
     node->right = right;
     return node;
 }
 
-void ExprNode::fillLiterals(ConstantsTable* constantTable) {
-    switch (kind) {
-        case LITERAL:
-            if (literalValue) {
-                literalValue->fillLiterals(constantTable);
-            }
-            break;
-        case OBJC_ARRAY_LITERAL:
-            if (objcArrayExprList && objcArrayExprList->getExprList()) {
-                for (auto expr : *objcArrayExprList->getExprList()) {
-                    expr->fillLiterals(constantTable);
-                }
-            }
-            break;
-        case OBJC_BOXED_EXPR:
-        case BOXED_EXPR:
-            if (boxedExpr) {
-                boxedExpr->fillLiterals(constantTable);
-            }
-            break;
-        case IDENTIFIER:
-            break;
-        case UNARY_MINUS:
-        case NOT:
-        case POST_INC:
-        case POST_DEC:
-            if (operand) {
-                operand->fillLiterals(constantTable);
-            }
-            break;
-        case ADDITION:
-        case SUBTRACTION:
-        case MULTIPLICATION:
-        case DIVISION:
-        case EQUAL:
-        case NOT_EQUAL:
-        case GREATER:
-        case LESS:
-        case LESS_OR_EQUAL:
-        case GREATER_OR_EQUAL:
-        case AND:
-        case OR:
-        case ASSIGN:
-            if (left) left->fillLiterals(constantTable);
-            if (right) right->fillLiterals(constantTable);
-            break;
-        case ARRAY_ACCESS:
-            if (operand) operand->fillLiterals(constantTable);
-            if (index) index->fillLiterals(constantTable);
-            break;
-        case FUNCTION_CALL:
-            if (args && args->getExprList()) {
-                for (auto expr : *args->getExprList()) {
-                    expr->fillLiterals(constantTable);
-                }
-            }
-            break;
-        case DOT:
-        case ARROW:
-            if (left) left->fillLiterals(constantTable);
-            if (right) right->fillLiterals(constantTable);
-            break;
-        case MESSAGE:
-            if (receiver) {
-                if (receiver->getExpr()) {
-                    receiver->getExpr()->fillLiterals(constantTable);
-                }
-            }
-            if (selector) {
-                if (selector->getKind() == MsgSelectorNode::ARGUMENT_LIST &&
-                    selector->getMsgArgList() &&
-                    selector->getMsgArgList()->getMsgArgList()) {
-                    for (auto arg : *selector->getMsgArgList()->getMsgArgList()) {
-                        if (arg->getArg()) {
-                            arg->getArg()->fillLiterals(constantTable);
-                        }
-                    }
-                }
-            }
-            break;
-        default:
-            break;
-    }
-}
-
-void ExprNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
-    switch (kind) {
-        case IDENTIFIER: {
-            string name = *identifier->getIdentifier();
-            if (classTableElement && classTableElement->isContainsField(name)) {
-                string descriptor;
-                string className;
-                FieldsTableElement* field = classTableElement->getFieldForRef(name, &descriptor, &className);
-                if (field) {
-                    int fieldRef = constantTable->findOrAddFieldRefConstant(
-                        className, name, descriptor);
-                    setFieldRefConstantId(fieldRef);
-                    setIsFieldAccess(true);
-                    setClassName(className);
-                }
-            }
-            break;
-        }
-        case DOT:
-        case ARROW:
-            if (left) left->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (right) right->fillFieldRefs(constantTable, localVariables, classTableElement);
-            break;
-        case ASSIGN:
-            if (left) left->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (right) right->fillFieldRefs(constantTable, localVariables, classTableElement);
-            break;
-        default:
-            if (left) left->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (right) right->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (operand) operand->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (index) index->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (args) {
-                if (args->getExprList()) {
-                    for (auto expr : *args->getExprList()) {
-                        expr->fillFieldRefs(constantTable, localVariables, classTableElement);
-                    }
-                }
-            }
-            break;
-    }
-}
-
-void ExprNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance) {
-    switch (kind) {
-        case FUNCTION_CALL: {
-            string methodName = *funcId->getIdentifier();
-            if (classTableElement && classTableElement->isContainsMethod(methodName)) {
-                string descriptor;
-                string className;
-                MethodsTableElement* method = classTableElement->getMethodForRef(
-                    methodName, &descriptor, &className);
-                if (method) {
-                    int methodRef = constantTable->findOrAddMethodRefConstant(
-                        className, methodName, descriptor);
-                    setMethodRefConstantId(methodRef);
-                    setIsMethodCall(true);
-                    setClassName(className);
-                }
-            }
-            if (args && args->getExprList()) {
-                for (auto expr : *args->getExprList()) {
-                    expr->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-                }
-            }
-            break;
-        }
-        case MESSAGE: {
-            if (selector) {
-                string selectorName;
-                if (selector->getKind() == MsgSelectorNode::SIMPLE_SEL) {
-                    selectorName = *selector->getIdentifier()->getIdentifier();
-                }
-                
-                if (classTableElement) {
-                    string descriptor;
-                    string className;
-                    MethodsTableElement* method = classTableElement->getMethodForRef(
-                        selectorName, &descriptor, &className);
-                    if (method) {
-                        int methodRef = constantTable->findOrAddMethodRefConstant(
-                            className, selectorName, descriptor);
-                        setMethodRefConstantId(methodRef);
-                        setIsMethodCall(true);
-                        setClassName(className);
-                    }
-                }
-            }
-            break;
-        }
-        default:
-            if (left) left->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-            if (right) right->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-            if (operand) operand->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-            if (args && args->getExprList()) {
-                for (auto expr : *args->getExprList()) {
-                    expr->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-                }
-            }
-            break;
-    }
-}
-
-void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
-    switch (kind) {
-        case LITERAL: {
-            if (literalValue) {
-                switch (literalValue->getValueKind()) {
-                    case ValueNode::INT_LIT:
-                        setType(new Type(TypeNode::INT));
-                        break;
-                    case ValueNode::FLOAT_LIT:
-                        setType(new Type(TypeNode::FLOAT));
-                        break;
-                    case ValueNode::BOOL_LIT:
-                        setType(new Type(TypeNode::BOOL));
-                        break;
-                    case ValueNode::CHAR_LIT:
-                        setType(new Type(TypeNode::CHAR));
-                        break;
-                    case ValueNode::STRING_LIT:
-                        setType(new Type(TypeNode::CLASS_NAME, "java/lang/String"));
-                        break;
-                    default:
-                        break;
-                }
-            }
-            break;
-        }
-        case IDENTIFIER: {
-            string name = *identifier->getIdentifier();
-            if (localVariables->isContains(name)) {
-                // Это локальная переменная
-                identifier->setIsLocalVar(true);
-                identifier->setLocalVarId(localVariables->items[name]->id);
-                // Устанавливаем тип из таблицы локальных переменных
-                setType(localVariables->items[name]->type);
-            } else {
-                // Это может быть поле или что-то еще
-                // Тип будет установлен в fillFieldRefs
-            }
-            break;
-        }
-        case ADDITION:
-        case SUBTRACTION:
-        case MULTIPLICATION:
-        case DIVISION: {
-            if (left) left->semanticTransform(localVariables);
-            if (right) right->semanticTransform(localVariables);
-            
-            Type* leftType = left ? left->getExprType() : nullptr;
-            Type* rightType = right ? right->getExprType() : nullptr;
-            
-            if (leftType && rightType) {
-                if (leftType->dataType == TypeNode::INT && rightType->dataType == TypeNode::INT) {
-                    setType(new Type(TypeNode::INT));
-                } else if ((leftType->dataType == TypeNode::INT || leftType->dataType == TypeNode::FLOAT) &&
-                          (rightType->dataType == TypeNode::INT || rightType->dataType == TypeNode::FLOAT)) {
-                    setType(new Type(TypeNode::FLOAT));
-                } else {
-                    throw std::runtime_error("Incompatible types for arithmetic operation");
-                }
-            }
-            break;
-        }
-        case ASSIGN: {
-            if (left) left->semanticTransform(localVariables);
-            if (right) right->semanticTransform(localVariables);
-            
-            Type* leftType = left ? left->getExprType() : nullptr;
-            Type* rightType = right ? right->getExprType() : nullptr;
-            
-            if (leftType && rightType) {
-                if (!rightType->isCastableTo(leftType)) {
-                    throw std::runtime_error("Incompatible types in assignment");
-                }
-                setType(leftType);
-            }
-            break;
-        }
-        case EQUAL:
-        case NOT_EQUAL:
-        case GREATER:
-        case LESS:
-        case LESS_OR_EQUAL:
-        case GREATER_OR_EQUAL: {
-            if (left) left->semanticTransform(localVariables);
-            if (right) right->semanticTransform(localVariables);
-            
-            Type* leftType = left ? left->getExprType() : nullptr;
-            Type* rightType = right ? right->getExprType() : nullptr;
-            
-            if (leftType && rightType) {
-                if (!leftType->isCastableTo(rightType) && !rightType->isCastableTo(leftType)) {
-                    throw std::runtime_error("Incompatible types for comparison");
-                }
-                setType(new Type(TypeNode::BOOL));
-            }
-            break;
-        }
-        case AND:
-        case OR: {
-            if (left) left->semanticTransform(localVariables);
-            if (right) right->semanticTransform(localVariables);
-            
-            Type* leftType = left ? left->getExprType() : nullptr;
-            Type* rightType = right ? right->getExprType() : nullptr;
-            
-            if (leftType && rightType) {
-                if (leftType->dataType != TypeNode::BOOL || rightType->dataType != TypeNode::BOOL) {
-                    throw std::runtime_error("Logical operations require boolean operands");
-                }
-                setType(new Type(TypeNode::BOOL));
-            }
-            break;
-        }
-        case FUNCTION_CALL: {
-            if (args && args->getExprList()) {
-                for (auto expr : *args->getExprList()) {
-                    expr->semanticTransform(localVariables);
-                }
-            }
-            break;
-        }
-        case ARRAY_ACCESS: {
-            if (operand) operand->semanticTransform(localVariables);
-            if (index) index->semanticTransform(localVariables);
-            
-            Type* indexType = index ? index->getExprType() : nullptr;
-            if (indexType && indexType->dataType != TypeNode::INT) {
-                throw std::runtime_error("Array index must be integer");
-            }
-            break;
-        }
-        default:
-            if (left) left->semanticTransform(localVariables);
-            if (right) right->semanticTransform(localVariables);
-            if (operand) operand->semanticTransform(localVariables);
-            if (index) index->semanticTransform(localVariables);
-            if (args && args->getExprList()) {
-                for (auto expr : *args->getExprList()) {
-                    expr->semanticTransform(localVariables);
-                }
-            }
-            break;
-    }
-}
-
-ExprNode::ExprKind ExprNode::getKind() const {
+ExprKind ExprNode::getKind() const {
     return kind;
 }
 
@@ -1140,36 +780,36 @@ string ExprNode::getClassName() const {
 
 string ExprNode::getDotLabel() const {
     switch (kind) {
-        case IDENTIFIER:                return "IDENTIFIER";
-        case LITERAL:                   return "LITERAL";
-        case OBJC_ARRAY_LITERAL:        return "@[]";
-        case OBJC_BOXED_EXPR:           return "@()";
-        case NIL:                       return "NIL";
-        case BOXED_EXPR:                return "BOXED_EXPR";
-        case MESSAGE:                   return "MESSAGE";
-        case SELF:                      return "SELF";
-        case UNARY_MINUS:               return "UNARY_MINUS";
-        case NOT:                       return "!";
-        case POST_INC:                  return "POST_INC";
-        case POST_DEC:                  return "POST_DEC";
-        case ADDITION:                  return "+";
-        case SUBTRACTION:               return "-";
-        case MULTIPLICATION:            return "*";
-        case DIVISION:                  return "/";
-        case EQUAL:                     return "==";
-        case NOT_EQUAL:                 return "!=";
-        case GREATER:                   return ">";
-        case LESS:                      return "<";
-        case LESS_OR_EQUAL:             return "<=";
-        case GREATER_OR_EQUAL:          return ">=";
-        case AND:                       return "&&";
-        case OR:                        return "||";
-        case ASSIGN:                    return "=";
-        case ARRAY_ACCESS:              return "[]";
-        case FUNCTION_CALL:             return "FUNC_CALL";
-        case DOT:                       return ".";
-        case ARROW:                     return "->";
-        default:                        return "UNKNOWN_EXPR";
+        case ExprKind::IDENTIFIER:                return "IDENTIFIER";
+        case ExprKind::LITERAL:                   return "LITERAL";
+        case ExprKind::OBJC_ARRAY_LITERAL:        return "@[]";
+        case ExprKind::OBJC_BOXED_EXPR:           return "@()";
+        case ExprKind::NIL:                       return "NIL";
+        case ExprKind::BOXED_EXPR:                return "BOXED_EXPR";
+        case ExprKind::MESSAGE:                   return "MESSAGE";
+        case ExprKind::SELF:                      return "SELF";
+        case ExprKind::UNARY_MINUS:               return "UNARY_MINUS";
+        case ExprKind::NOT:                       return "!";
+        case ExprKind::POST_INC:                  return "POST_INC";
+        case ExprKind::POST_DEC:                  return "POST_DEC";
+        case ExprKind::ADDITION:                  return "+";
+        case ExprKind::SUBTRACTION:               return "-";
+        case ExprKind::MULTIPLICATION:            return "*";
+        case ExprKind::DIVISION:                  return "/";
+        case ExprKind::EQUAL:                     return "==";
+        case ExprKind::NOT_EQUAL:                 return "!=";
+        case ExprKind::GREATER:                   return ">";
+        case ExprKind::LESS:                      return "<";
+        case ExprKind::LESS_OR_EQUAL:             return "<=";
+        case ExprKind::GREATER_OR_EQUAL:          return ">=";
+        case ExprKind::AND:                       return "&&";
+        case ExprKind::OR:                        return "||";
+        case ExprKind::ASSIGN:                    return "=";
+        case ExprKind::ARRAY_ACCESS:              return "[]";
+        case ExprKind::FUNCTION_CALL:             return "FUNC_CALL";
+        case ExprKind::DOT:                       return ".";
+        case ExprKind::ARROW:                     return "->";
+        default:                                  return "UNKNOWN_EXPR";
     }
 }
 
@@ -1196,54 +836,54 @@ string ExprNode::toDot() const {
 //--------------------------------------------------------------TypeNode--------------------------------------------------------------
 
 TypeNode::TypeNode() : AstNode() {
-    kind = NONE;
+    kind = TypeKind::NONE;
     classNameValue = nullptr;
 }
 
 TypeNode* TypeNode::createIntType() {
     TypeNode *node = new TypeNode();
-    node->kind = INT;
+    node->kind = TypeKind::INT;
     return node;
 }
 
 TypeNode* TypeNode::createCharType() {
     TypeNode *node = new TypeNode();
-    node->kind = CHAR;
+    node->kind = TypeKind::CHAR;
     return node;
 }
 
 TypeNode* TypeNode::createFloatType() {
     TypeNode *node = new TypeNode();
-    node->kind = FLOAT;
+    node->kind = TypeKind::FLOAT;
     return node;
 }
 
 TypeNode* TypeNode::createBoolType() {
     TypeNode *node = new TypeNode();
-    node->kind = BOOL;
+    node->kind = TypeKind::BOOL;
     return node;
 }
 
 TypeNode* TypeNode::createIdType() {
     TypeNode *node = new TypeNode();
-    node->kind = TYPE_ID;
+    node->kind = TypeKind::TYPE_ID;
     return node;
 }
 
 TypeNode* TypeNode::createClassNameType(ValueNode *classNameValue) {
     TypeNode *node = new TypeNode();
-    node->kind = CLASS_NAME;
+    node->kind = TypeKind::CLASS_NAME;
     node->classNameValue = classNameValue;
     return node;
 }
 
 TypeNode* TypeNode::createVoid() {
     TypeNode *node = new TypeNode();
-    node->kind = VOID;
+    node->kind = TypeKind::VOID;
     return node;
 }
 
-TypeNode::TypeKind TypeNode::getKind() const {
+TypeKind TypeNode::getKind() const {
     return kind;
 }
 
@@ -1253,14 +893,14 @@ ValueNode* TypeNode::getClassName() const {
 
 string TypeNode::getDotLabel() const {
     switch (kind) {
-        case INT: return "INT";
-        case FLOAT: return "FLOAT";
-        case BOOL: return "BOOL";
-        case CHAR: return "CHAR";
-        case TYPE_ID: return "TYPE_ID";
-        case CLASS_NAME: return "CLASS_NAME";
-        case VOID: return "VOID";
-        default: return "UNKNOWN_TYPE";
+        case TypeKind::INT:         return "INT";
+        case TypeKind::FLOAT:       return "FLOAT";
+        case TypeKind::BOOL:        return "BOOL";
+        case TypeKind::CHAR:        return "CHAR";
+        case TypeKind::TYPE_ID:     return "TYPE_ID";
+        case TypeKind::CLASS_NAME:  return "CLASS_NAME";
+        case TypeKind::VOID:        return "VOID";
+        default:                    return "UNKNOWN_TYPE";
     }
 }
 
@@ -1293,22 +933,6 @@ DeclaratorListNode* DeclaratorListNode::addExternalDecl(DeclaratorListNode *decl
 
 list<InitDeclNode*>* DeclaratorListNode::getInitDeclList() const {
     return initDeclList;
-}
-
-void DeclaratorListNode::fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
-    if (initDeclList) {
-        for (auto initDecl : *initDeclList) {
-            initDecl->fillTables(constantTable, classTableElement);
-        }
-    }
-}
-
-void DeclaratorListNode::semanticTransform(LocalVariablesTable* localVariables) {
-    if (initDeclList) {
-        for (auto initDecl : *initDeclList) {
-            initDecl->semanticTransform(localVariables);
-        }
-    }
 }
 
 string DeclaratorListNode::getDotLabel() const {
@@ -1349,18 +973,6 @@ TypeNode* DeclNode::getType() const {
 
 DeclaratorListNode* DeclNode::getDeclaratorList() const {
     return declaratorList;
-}
-
-void DeclNode::fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
-    if (declaratorList) {
-        declaratorList->fillTables(constantTable, localVariables, classTableElement);
-    }
-}
-
-void DeclNode::semanticTransform(LocalVariablesTable* localVariables) {
-    if (declaratorList) {
-        declaratorList->semanticTransform(localVariables);
-    }
 }
 
 string DeclNode::getDotLabel() const {
@@ -1405,38 +1017,6 @@ list<StmtNode*>* StmtListNode::getStmtList() const {
     return stmts;
 }
 
-void StmtListNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
-    if (stmts) {
-        for (auto stmt : *stmts) {
-            stmt->fillFieldRefs(constantTable, localVariables, classTableElement);
-        }
-    }
-}
-
-void StmtListNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance) {
-    if (stmts) {
-        for (auto stmt : *stmts) {
-            stmt->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-        }
-    }
-}
-
-void StmtListNode::fillLiterals(ConstantsTable* constantTable) {
-    if (stmts) {
-        for (auto stmt : *stmts) {
-            stmt->fillLiterals(constantTable);
-        }
-    }
-}
-
-void StmtListNode::semanticTransform(LocalVariablesTable* localVariables) {
-    if (stmts) {
-        for (auto stmt : *stmts) {
-            stmt->semanticTransform(localVariables);
-        }
-    }
-}
-
 string StmtListNode::getDotLabel() const {
     return "STMT_LIST";
 }
@@ -1458,7 +1038,7 @@ string StmtListNode::toDot() const {
 //--------------------------------------------------------------StmtNode--------------------------------------------------------------
 
 StmtNode::StmtNode() : AstNode() {
-    kind = NONE;
+    kind = StmtKind::NONE;
     expr = nullptr;
     condition = nullptr;
     thenBranch = nullptr;
@@ -1474,27 +1054,27 @@ StmtNode::StmtNode() : AstNode() {
 
 StmtNode* StmtNode::createEmpty() {
     StmtNode *node = new StmtNode();
-    node->kind = EMPTY;
+    node->kind = StmtKind::EMPTY;
     return node;
 }
 
 StmtNode* StmtNode::createExpr(ExprNode *expr) {
     StmtNode *node = new StmtNode();
-    node->kind = EXPR;
+    node->kind = StmtKind::EXPR;
     node->expr = expr;
     return node;
 }
 
 StmtNode* StmtNode::createReturn(ExprNode *expr) {
     StmtNode *node = new StmtNode();
-    node->kind = RETURN;
+    node->kind = StmtKind::RETURN;
     node->expr = expr;
     return node;
 }
 
 StmtNode* StmtNode::createIf(ExprNode *condition, StmtNode *thenBranch) {
     StmtNode *node = new StmtNode();
-    node->kind = IF;
+    node->kind = StmtKind::IF;
     node->condition = condition;
     node->thenBranch = thenBranch;
     return node;
@@ -1502,7 +1082,7 @@ StmtNode* StmtNode::createIf(ExprNode *condition, StmtNode *thenBranch) {
 
 StmtNode* StmtNode::createIfElse(ExprNode *condition, StmtNode *thenBranch, StmtNode *elseBranch) {
     StmtNode *node = new StmtNode();
-    node->kind = IF_ELSE;
+    node->kind = StmtKind::IF_ELSE;
     node->condition = condition;
     node->thenBranch = thenBranch;
     node->elseBranch = elseBranch;
@@ -1511,7 +1091,7 @@ StmtNode* StmtNode::createIfElse(ExprNode *condition, StmtNode *thenBranch, Stmt
 
 StmtNode* StmtNode::createFor(ExprNode *expr, ExprNode *condition, ExprNode *post, StmtNode *body) {
     StmtNode *node = new StmtNode();
-    node->kind = FOR_WITH_EXPR;
+    node->kind = StmtKind::FOR_WITH_EXPR;
     node->expr = expr;
     node->condition = condition;
     node->post = post;
@@ -1521,7 +1101,7 @@ StmtNode* StmtNode::createFor(ExprNode *expr, ExprNode *condition, ExprNode *pos
 
 StmtNode* StmtNode::createFor(DeclNode *decl, ExprNode *condition, ExprNode *post, StmtNode *body) {
     StmtNode *node = new StmtNode();
-    node->kind = FOR_WITH_DECL;
+    node->kind = StmtKind::FOR_WITH_DECL;
     node->decl = decl;
     node->condition = condition;
     node->post = post;
@@ -1531,7 +1111,7 @@ StmtNode* StmtNode::createFor(DeclNode *decl, ExprNode *condition, ExprNode *pos
 
 StmtNode* StmtNode::createForIn(ValueNode *id, ExprNode *collection, StmtNode *body) {
     StmtNode *node = new StmtNode();
-    node->kind = FOR_IN;
+    node->kind = StmtKind::FOR_IN;
     node->forInId = id;
     node->collection = collection;
     node->body = body;
@@ -1540,7 +1120,7 @@ StmtNode* StmtNode::createForIn(ValueNode *id, ExprNode *collection, StmtNode *b
 
 StmtNode* StmtNode::createTypedForIn(TypeNode *type, ValueNode *id, ExprNode *collection, StmtNode *body) {
     StmtNode *node = new StmtNode();
-    node->kind = TYPED_FOR_IN;
+    node->kind = StmtKind::TYPED_FOR_IN;
     node->forInType = type;
     node->forInId = id;
     node->collection = collection;
@@ -1550,7 +1130,7 @@ StmtNode* StmtNode::createTypedForIn(TypeNode *type, ValueNode *id, ExprNode *co
 
 StmtNode* StmtNode::createWhile(ExprNode *condition, StmtNode *body) {
     StmtNode *node = new StmtNode();
-    node->kind = WHILE;
+    node->kind = StmtKind::WHILE;
     node->condition = condition;
     node->body = body;
     return node;
@@ -1558,7 +1138,7 @@ StmtNode* StmtNode::createWhile(ExprNode *condition, StmtNode *body) {
 
 StmtNode* StmtNode::createDoWhile(StmtNode *body, ExprNode *condition) {
     StmtNode *node = new StmtNode();
-    node->kind = DO_WHILE;
+    node->kind = StmtKind::DO_WHILE;
     node->body = body;
     node->condition = condition;
     return node;
@@ -1566,19 +1146,19 @@ StmtNode* StmtNode::createDoWhile(StmtNode *body, ExprNode *condition) {
 
 StmtNode* StmtNode::createCompound(StmtListNode *compound) {
     StmtNode *node = new StmtNode();
-    node->kind = COMPOUND;
+    node->kind = StmtKind::COMPOUND;
     node->compound = compound;
     return node;
 }
 
 StmtNode* StmtNode::createDeclaration(DeclNode *decl) {
     StmtNode *node = new StmtNode();
-    node->kind = DECLARATION;
+    node->kind = StmtKind::DECLARATION;
     node->decl = decl;
     return node;
 }
 
-StmtNode::StmtKind StmtNode::getKind() const {
+StmtKind StmtNode::getKind() const {
     return kind;
 }
 
@@ -1586,195 +1166,21 @@ StmtListNode* StmtNode::getCompound() const {
     return compound;
 }
 
-void StmtNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
-    switch (kind) {
-        case EXPR:
-            if (expr) expr->fillFieldRefs(constantTable, localVariables, classTableElement);
-            break;
-        case RETURN:
-            if (expr) expr->fillFieldRefs(constantTable, localVariables, classTableElement);
-            break;
-        case IF:
-        case IF_ELSE:
-            if (condition) condition->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (thenBranch) thenBranch->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (elseBranch) elseBranch->fillFieldRefs(constantTable, localVariables, classTableElement);
-            break;
-        case FOR_WITH_EXPR:
-            if (expr) expr->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (condition) condition->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (post) post->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (body) body->fillFieldRefs(constantTable, localVariables, classTableElement);
-            break;
-        case WHILE:
-        case DO_WHILE:
-            if (condition) condition->fillFieldRefs(constantTable, localVariables, classTableElement);
-            if (body) body->fillFieldRefs(constantTable, localVariables, classTableElement);
-            break;
-        case COMPOUND:
-            if (compound && compound->getStmtList()) {
-                for (auto stmt : *compound->getStmtList()) {
-                    stmt->fillFieldRefs(constantTable, localVariables, classTableElement);
-                }
-            }
-            break;
-        case DECLARATION:
-            if (decl && decl->getDeclaratorList() && decl->getDeclaratorList()->getInitDeclList()) {
-                for (auto initDecl : *decl->getDeclaratorList()->getInitDeclList()) {
-                    if (initDecl->getInitializer()) {
-                        // Рекурсивно обрабатываем инициализаторы
-                    }
-                }
-            }
-            break;
-        default:
-            break;
-    }
-}
-
-void StmtNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance) {
-    switch (kind) {
-        case EXPR:
-            if (expr) expr->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-            break;
-        case RETURN:
-            if (expr) expr->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-            break;
-        case IF:
-        case IF_ELSE:
-            if (condition) condition->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-            if (thenBranch) thenBranch->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-            if (elseBranch) elseBranch->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-            break;
-        case COMPOUND:
-            if (compound && compound->getStmtList()) {
-                for (auto stmt : *compound->getStmtList()) {
-                    stmt->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
-                }
-            }
-            break;
-        default:
-            break;
-    }
-}
-
-void StmtNode::fillLiterals(ConstantsTable* constantTable) {
-    switch (kind) {
-        case EXPR:
-            if (expr) expr->fillLiterals(constantTable);
-            break;
-        case RETURN:
-            if (expr) expr->fillLiterals(constantTable);
-            break;
-        case IF:
-        case IF_ELSE:
-            if (condition) condition->fillLiterals(constantTable);
-            if (thenBranch) thenBranch->fillLiterals(constantTable);
-            if (elseBranch) elseBranch->fillLiterals(constantTable);
-            break;
-        case COMPOUND:
-            if (compound && compound->getStmtList()) {
-                for (auto stmt : *compound->getStmtList()) {
-                    stmt->fillLiterals(constantTable);
-                }
-            }
-            break;
-        default:
-            break;
-    }
-}
-
-void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
-    switch (kind) {
-        case RETURN: {
-            if (expr) {
-                expr->semanticTransform(localVariables);
-            }
-            break;
-        }
-        case IF:
-        case IF_ELSE: {
-            if (condition) {
-                condition->semanticTransform(localVariables);
-                Type* condType = condition->getExprType();
-                if (condType && condType->dataType != TypeNode::BOOL) {
-                    throw std::runtime_error("Condition must be boolean");
-                }
-            }
-            if (thenBranch) thenBranch->semanticTransform(localVariables);
-            if (elseBranch) elseBranch->semanticTransform(localVariables);
-            break;
-        }
-        case COMPOUND: {
-            if (compound && compound->getStmtList()) {
-                for (auto stmt : *compound->getStmtList()) {
-                    stmt->semanticTransform(localVariables);
-                }
-            }
-            break;
-        }
-        case DECLARATION: {
-            if (decl) {
-                TypeNode* typeNode = decl->getType();
-                if (typeNode && decl->getDeclaratorList() && decl->getDeclaratorList()->getInitDeclList()) {
-                    for (auto initDecl : *decl->getDeclaratorList()->getInitDeclList()) {
-                        if (initDecl->getDeclarator() && initDecl->getDeclarator()->getIdentifier()) {
-                            string varName = *initDecl->getDeclarator()->getIdentifier()->getIdentifier();
-                            Type* varType = nullptr;
-                            switch (typeNode->getKind()) {
-                                case TypeNode::INT:
-                                    varType = new Type(TypeNode::INT);
-                                    break;
-                                case TypeNode::FLOAT:
-                                    varType = new Type(TypeNode::FLOAT);
-                                    break;
-                                case TypeNode::BOOL:
-                                    varType = new Type(TypeNode::BOOL);
-                                    break;
-                                case TypeNode::CHAR:
-                                    varType = new Type(TypeNode::CHAR);
-                                    break;
-                                case TypeNode::CLASS_NAME:
-                                    varType = new Type(TypeNode::CLASS_NAME, 
-                                                     *typeNode->getClassName()->getClassName());
-                                    break;
-                                default:
-                                    break;
-                            }
-                            
-                            if (varType) {
-                                localVariables->findOrAddLocalVariable(varName, varType);
-                                // Обрабатываем инициализатор, если есть
-                                if (initDecl->getInitializer()) {
-                                    // Проверка соответствия типов
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            break;
-        }
-        default:
-            break;
-    }
-}
-
 string StmtNode::getDotLabel() const {
     switch (kind) {
-        case EMPTY:         return "EMPTY_STMT";
-        case EXPR:          return "EXPR_STMT";
-        case RETURN:        return "RETURN";
-        case IF:            return "IF";
-        case IF_ELSE:       return "IF_ELSE";
-        case FOR_WITH_EXPR: return "FOR";
-        case FOR_WITH_DECL: return "FOR";
-        case FOR_IN:        return "FOR_IN";
-        case TYPED_FOR_IN:  return "TYPED_FOR_IN";
-        case WHILE:         return "WHILE";
-        case DO_WHILE:      return "DO_WHILE";
-        case COMPOUND:      return "COMPOUND";
-        case DECLARATION:   return "DECLARATION";
+        case StmtKind::EMPTY:         return "EMPTY_STMT";
+        case StmtKind::EXPR:          return "EXPR_STMT";
+        case StmtKind::RETURN:        return "RETURN";
+        case StmtKind::IF:            return "IF";
+        case StmtKind::IF_ELSE:       return "IF_ELSE";
+        case StmtKind::FOR_WITH_EXPR: return "FOR";
+        case StmtKind::FOR_WITH_DECL: return "FOR";
+        case StmtKind::FOR_IN:        return "FOR_IN";
+        case StmtKind::TYPED_FOR_IN:  return "TYPED_FOR_IN";
+        case StmtKind::WHILE:         return "WHILE";
+        case StmtKind::DO_WHILE:      return "DO_WHILE";
+        case StmtKind::COMPOUND:      return "COMPOUND";
+        case StmtKind::DECLARATION:   return "DECLARATION";
         default:            return "UNKNOWN_STMT";
     }
 }
@@ -1843,7 +1249,7 @@ string ArraySizeSpecNode::toDot() const {
 //--------------------------------------------------------------ParamDeclNode--------------------------------------------------------------
 
 ParamDeclNode::ParamDeclNode() : AstNode() {
-    kind = NONE;
+    kind = ParamDeclKind::NONE;
     type = nullptr;
     identifier = nullptr;
     arraySizeSpec = nullptr;
@@ -1851,7 +1257,7 @@ ParamDeclNode::ParamDeclNode() : AstNode() {
 
 ParamDeclNode* ParamDeclNode::createParamDecl(TypeNode *type, ValueNode *identifier) {
     ParamDeclNode *node = new ParamDeclNode();
-    node->kind = IDENTIFIER;
+    node->kind = ParamDeclKind::IDENTIFIER;
     node->type = type;
     node->identifier = identifier;
     return node;
@@ -1859,7 +1265,7 @@ ParamDeclNode* ParamDeclNode::createParamDecl(TypeNode *type, ValueNode *identif
 
 ParamDeclNode* ParamDeclNode::createArrayParamDecl(TypeNode *type, ValueNode *identifier) {
     ParamDeclNode *node = new ParamDeclNode();
-    node->kind = ARRAY;
+    node->kind = ParamDeclKind::ARRAY;
     node->type = type;
     node->identifier = identifier;
     return node;
@@ -1867,7 +1273,7 @@ ParamDeclNode* ParamDeclNode::createArrayParamDecl(TypeNode *type, ValueNode *id
 
 ParamDeclNode* ParamDeclNode::createSizedArrayParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec) {
     ParamDeclNode *node = new ParamDeclNode();
-    node->kind = SIZED_ARRAY;
+    node->kind = ParamDeclKind::SIZED_ARRAY;
     node->type = type;
     node->identifier = identifier;
     node->arraySizeSpec = arraySizeSpec;
@@ -1876,14 +1282,14 @@ ParamDeclNode* ParamDeclNode::createSizedArrayParamDecl(TypeNode *type, ValueNod
 
 ParamDeclNode* ParamDeclNode::createSizedArrayOfArraysParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec) {
     ParamDeclNode *node = new ParamDeclNode();
-    node->kind = ARRAY_OF_ARRAYS;
+    node->kind = ParamDeclKind::ARRAY_OF_ARRAYS;
     node->type = type;
     node->identifier = identifier;
     node->arraySizeSpec = arraySizeSpec;
     return node;
 }
 
-ParamDeclNode::ParamDeclKind ParamDeclNode::getKind() const {
+ParamDeclKind ParamDeclNode::getKind() const {
     return kind;
 }
 
@@ -1899,28 +1305,13 @@ ArraySizeSpecNode* ParamDeclNode::getSizeSpec() const {
     return arraySizeSpec;
 }
 
-void ParamDeclNode::fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables) {
-    if (identifier) {
-        string paramName = *identifier->getIdentifier();
-        Type* paramType = convertTypeNodeToType(type);
-        
-        if (paramType) {
-            localVariables->findOrAddLocalVariable(paramName, paramType);
-        }
-    }
-}
-
-void ParamDeclNode::semanticTransform(LocalVariablesTable* localVariables) {
-    // Параметры не требуют семантических преобразований
-}
-
 string ParamDeclNode::getDotLabel() const {
     switch (kind) {
-        case IDENTIFIER:        return "PARAM_DECL";
-        case ARRAY:             return "ARRAY_PARAM_DECL";
-        case SIZED_ARRAY:       return "SIZED_ARRAY_PARAM_DECL";
-        case ARRAY_OF_ARRAYS:   return "ARRAY_OF_ARRAYS_PARAM_DECL";
-        default:                return "UNKNOWN_PARAM_DECL";
+        case ParamDeclKind::IDENTIFIER:         return "PARAM_DECL";
+        case ParamDeclKind::ARRAY:              return "ARRAY_PARAM_DECL";
+        case ParamDeclKind::SIZED_ARRAY:        return "SIZED_ARRAY_PARAM_DECL";
+        case ParamDeclKind::ARRAY_OF_ARRAYS:    return "ARRAY_OF_ARRAYS_PARAM_DECL";
+        default:                                return "UNKNOWN_PARAM_DECL";
     }
 }
 
@@ -1961,22 +1352,6 @@ ParamListNode* ParamListNode::addParamDecl(ParamListNode *paramList, ParamDeclNo
 
 list<ParamDeclNode*>* ParamListNode::getParamList() const {
     return paramList;
-}
-
-void ParamListNode::fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables) {
-    if (paramList) {
-        for (auto param : *paramList) {
-            param->fillTables(constantTable, localVariables);
-        }
-    }
-}
-
-void ParamListNode::semanticTransform(LocalVariablesTable* localVariables) {
-    if (paramList) {
-        for (auto param : *paramList) {
-            param->semanticTransform(localVariables);
-        }
-    }
 }
 
 string ParamListNode::getDotLabel() const {
@@ -2031,37 +1406,6 @@ StmtNode* FuncDefNode::getCompoundStmt() const {
     return compoundStmt;
 }
 
-void FuncDefNode::fillTables() {
-    string funcName = *identifier->getIdentifier();
-    Type* returnType = convertTypeNodeToType(type);
-    
-    string descriptor = "(";
-    vector<Type*>* paramsTypes = new vector<Type*>();
-    
-    if (paramList && paramList->getParamList()) {
-        for (auto param : *paramList->getParamList()) {
-            Type* paramType = convertTypeNodeToType(param->getType());
-            if (paramType) {
-                paramsTypes->push_back(paramType);
-                descriptor += paramType->getDescriptor();
-            }
-        }
-    }
-    descriptor += ")" + returnType->getDescriptor();
-    
-    FunctionsTable::addFunction(
-        funcName,
-        descriptor,
-        compoundStmt,
-        paramsTypes,
-        returnType
-    );
-}
-
-void FuncDefNode::semanticTransform() {
-    // Семантические преобразования выполняются на уровне FunctionsTable
-}
-
 string FuncDefNode::getDotLabel() const {
     return "FUNC_DEF";
 }
@@ -2104,10 +1448,6 @@ ParamListNode* FuncDeclNode::getParamList() const {
     return paramList;
 }
 
-void FuncDeclNode::fillTables() {
-    // Функциональные объявления не требуют заполнения таблиц в текущей архитектуре
-}
-
 string FuncDeclNode::getDotLabel() const {
     return "FUNC_DECL";
 }
@@ -2124,7 +1464,7 @@ string FuncDeclNode::toDot() const {
 //--------------------------------------------------------------MethodParamNode--------------------------------------------------------------
 
 MethodParamNode::MethodParamNode() : AstNode() {
-    kind = NONE;
+    kind = MethodParamKind::NONE;
     selectorIdentifier = nullptr;
     type = nullptr;
     paramIdentifier = nullptr;
@@ -2133,7 +1473,7 @@ MethodParamNode::MethodParamNode() : AstNode() {
 
 MethodParamNode* MethodParamNode::createMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ValueNode *paramIdentifier) {
     MethodParamNode *node = new MethodParamNode();
-    node->kind = IDENTIFIER;
+    node->kind = MethodParamKind::IDENTIFIER;
     node->selectorIdentifier = selectorIdentifier;
     node->type = type;
     node->paramIdentifier = paramIdentifier;
@@ -2142,7 +1482,7 @@ MethodParamNode* MethodParamNode::createMethodParam(ValueNode *selectorIdentifie
 
 MethodParamNode* MethodParamNode::createArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ValueNode *paramIdentifier) {
     MethodParamNode *node = new MethodParamNode();
-    node->kind = ARRAY;
+    node->kind = MethodParamKind::ARRAY;
     node->selectorIdentifier = selectorIdentifier;
     node->type = type;
     node->paramIdentifier = paramIdentifier;
@@ -2151,7 +1491,7 @@ MethodParamNode* MethodParamNode::createArrayMethodParam(ValueNode *selectorIden
 
 MethodParamNode* MethodParamNode::createSizedArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier) {
     MethodParamNode *node = new MethodParamNode();
-    node->kind = SIZED_ARRAY;
+    node->kind = MethodParamKind::SIZED_ARRAY;
     node->selectorIdentifier = selectorIdentifier;
     node->type = type;
     node->arraySizeSpec = sizeSpec;
@@ -2161,7 +1501,7 @@ MethodParamNode* MethodParamNode::createSizedArrayMethodParam(ValueNode *selecto
 
 MethodParamNode* MethodParamNode::createSizedArrayOfArraysMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier) {
     MethodParamNode *node = new MethodParamNode();
-    node->kind = ARRAY_OF_ARRAYS;
+    node->kind = MethodParamKind::ARRAY_OF_ARRAYS;
     node->selectorIdentifier = selectorIdentifier;
     node->type = type;
     node->arraySizeSpec = sizeSpec;
@@ -2169,7 +1509,7 @@ MethodParamNode* MethodParamNode::createSizedArrayOfArraysMethodParam(ValueNode 
     return node;
 }
 
-MethodParamNode::MethodParamKind MethodParamNode::getKind() const {
+MethodParamKind MethodParamNode::getKind() const {
     return kind;
 }
 
@@ -2191,11 +1531,11 @@ ArraySizeSpecNode* MethodParamNode::getArraySizeSpec() const {
 
 string MethodParamNode::getDotLabel() const {
     switch (kind) {
-        case IDENTIFIER:        return "METHOD_PARAM";
-        case ARRAY:             return "ARRAY_METHOD_PARAM";
-        case SIZED_ARRAY:       return "SIZED_ARRAY_METHOD_PARAM";
-        case ARRAY_OF_ARRAYS:   return "ARRAY_OF_ARRAYS_METHOD_PARAM";
-        default:                return "UNKNOWN_METHOD_PARAM";
+        case MethodParamKind::IDENTIFIER:           return "METHOD_PARAM";
+        case MethodParamKind::ARRAY:                return "ARRAY_METHOD_PARAM";
+        case MethodParamKind::SIZED_ARRAY:          return "SIZED_ARRAY_METHOD_PARAM";
+        case MethodParamKind::ARRAY_OF_ARRAYS:      return "ARRAY_OF_ARRAYS_METHOD_PARAM";
+        default:                                    return "UNKNOWN_METHOD_PARAM";
     }
 }
 
@@ -2254,7 +1594,7 @@ string MethodSelNode::toDot() const {
 //--------------------------------------------------------------MethodDefNode--------------------------------------------------------------
 
 MethodDefNode::MethodDefNode() : AstNode() {
-    kind = NONE;
+    kind = MethodDefKind::NONE;
     type = nullptr;
     identifier = nullptr;
     methodSel = nullptr;
@@ -2263,7 +1603,7 @@ MethodDefNode::MethodDefNode() : AstNode() {
 
 MethodDefNode* MethodDefNode::createInstanceMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt) {
     MethodDefNode *node = new MethodDefNode();
-    node->kind = ID;
+    node->kind = MethodDefKind::ID;
     node->type = type;
     node->identifier = identifier;
     node->compoundStmt = compoundStmt;
@@ -2273,7 +1613,7 @@ MethodDefNode* MethodDefNode::createInstanceMethodDef(TypeNode *type, ValueNode 
 
 MethodDefNode* MethodDefNode::createInstanceMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt) {
     MethodDefNode *node = new MethodDefNode();
-    node->kind = SEL;
+    node->kind = MethodDefKind::SEL;
     node->type = type;
     node->methodSel = methodSel;
     node->compoundStmt = compoundStmt;
@@ -2283,7 +1623,7 @@ MethodDefNode* MethodDefNode::createInstanceMethodDef(TypeNode *type, MethodSelN
 
 MethodDefNode* MethodDefNode::createClassMethodDef(TypeNode *type, ValueNode *identifier, StmtNode *compoundStmt) {
     MethodDefNode *node = new MethodDefNode();
-    node->kind = ID;
+    node->kind = MethodDefKind::ID;
     node->type = type;
     node->identifier = identifier;
     node->compoundStmt = compoundStmt;
@@ -2293,7 +1633,7 @@ MethodDefNode* MethodDefNode::createClassMethodDef(TypeNode *type, ValueNode *id
 
 MethodDefNode* MethodDefNode::createClassMethodDef(TypeNode *type, MethodSelNode *methodSel, StmtNode *compoundStmt) {
     MethodDefNode *node = new MethodDefNode();
-    node->kind = SEL;
+    node->kind = MethodDefKind::SEL;
     node->type = type;
     node->methodSel = methodSel;
     node->compoundStmt = compoundStmt;
@@ -2301,7 +1641,7 @@ MethodDefNode* MethodDefNode::createClassMethodDef(TypeNode *type, MethodSelNode
     return node;
 }
 
-MethodDefNode::MethodDefKind MethodDefNode::getKind() const {
+MethodDefKind MethodDefNode::getKind() const {
     return kind;
 }
 
@@ -2329,85 +1669,19 @@ bool MethodDefNode::isClassMethod() const {
     return !isInstanceMethodFlag;
 }
 
-void MethodDefNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    LocalVariablesTable* localVariables = new LocalVariablesTable();
-    string methodName;
-    string descriptor;
-    vector<Type*>* paramsTypes = new vector<Type*>();
-    vector<Type*>* keywordsTypes = new vector<Type*>();
-    
-    if (kind == ID) {
-        methodName = *identifier->getIdentifier();
-        descriptor = "()" + convertTypeNodeToType(type)->getDescriptor();
-    } else if (kind == SEL && methodSel && methodSel->getMethodParamList()) {
-        for (auto param : *methodSel->getMethodParamList()) {
-            if (methodName.empty()) {
-                methodName = *param->getSelectorIdentifier()->getIdentifier();
-            } else {
-                methodName += ":" + *param->getSelectorIdentifier()->getIdentifier();
-            }
-            
-            Type* paramType = convertTypeNodeToType(param->getType());
-            if (paramType) {
-                keywordsTypes->push_back(paramType);
-                paramsTypes->push_back(paramType);
-            }
-        }
-        
-        descriptor = "(";
-        for (auto paramType : *paramsTypes) {
-            descriptor += paramType->getDescriptor();
-        }
-        descriptor += ")" + convertTypeNodeToType(type)->getDescriptor();
-    }
-    
-    MethodsTableElement* methodElement = classTableElement->methods->addMethod(
-        constantTable,
-        methodName,
-        descriptor,
-        !isInstanceMethodFlag,
-        compoundStmt,
-        convertTypeNodeToType(type),
-        paramsTypes,
-        keywordsTypes
-    );
-    
-    methodElement->localVariables = localVariables;
-    
-    if (kind == SEL && methodSel && methodSel->getMethodParamList()) {
-        for (auto param : *methodSel->getMethodParamList()) {
-            string paramName = *param->getParamIdentifier()->getIdentifier();
-            Type* paramType = convertTypeNodeToType(param->getType());
-            if (paramType) {
-                localVariables->findOrAddLocalVariable(paramName, paramType);
-            }
-        }
-    }
-    
-    if (compoundStmt) {
-        compoundStmt->fillLiterals(constantTable);
-        compoundStmt->fillFieldRefs(constantTable, localVariables, classTableElement);
-        compoundStmt->fillMethodRefs(constantTable, localVariables, classTableElement, isInstanceMethodFlag);
-    }
-}
-
-void MethodDefNode::semanticTransform() {
-
-}
-
 string MethodDefNode::getDotLabel() const {
     if (isInstanceMethodFlag) {
         switch (kind) {
-            case ID:    return "INST_METHOD_DEF_NO_ARGS";
-            case SEL:   return "INST_METHOD_DEF_HAS_ARGS";
-            default:    return "UNKNOWN_METHOD_DEF";
+            case MethodDefKind::ID:     return "INST_METHOD_DEF_NO_ARGS";
+            case MethodDefKind::SEL:    return "INST_METHOD_DEF_HAS_ARGS";
+            default:                    return "UNKNOWN_METHOD_DEF";
         }
     }
     else {
         switch (kind) {
-            case ID:    return "CLASS_METHOD_DEF_NO_ARGS";
-            case SEL:   return "CLASS_METHOD_DEF_HAS_ARGS";
-            default:    return "UNKNOWN_METHOD_DEF";
+            case MethodDefKind::ID:     return "CLASS_METHOD_DEF_NO_ARGS";
+            case MethodDefKind::SEL:    return "CLASS_METHOD_DEF_HAS_ARGS";
+            default:                    return "UNKNOWN_METHOD_DEF";
         }
     }
 }
@@ -2467,34 +1741,6 @@ list<MethodDefNode*>* ImplementationDefListNode::getInstanceMethodDefs() const {
     return instanceMethodDefs;
 }
 
-void ImplementationDefListNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    if (classMethodDefs) {
-        for (auto methodDef : *classMethodDefs) {
-            methodDef->fillTables(constantTable, classTableElement);
-        }
-    }
-    
-    if (instanceMethodDefs) {
-        for (auto methodDef : *instanceMethodDefs) {
-            methodDef->fillTables(constantTable, classTableElement);
-        }
-    }
-}
-
-void ImplementationDefListNode::semanticTransform(LocalVariablesTable* localVariables) {
-    if (classMethodDefs) {
-        for (auto methodDef : *classMethodDefs) {
-            methodDef->semanticTransform();
-        }
-    }
-    
-    if (instanceMethodDefs) {
-        for (auto methodDef : *instanceMethodDefs) {
-            methodDef->semanticTransform();
-        }
-    }
-}
-
 string ImplementationDefListNode::getDotLabel() const {
     return "IMPLEMENTATION_DEF_LIST";
 }
@@ -2523,7 +1769,7 @@ string ImplementationDefListNode::toDot() const {
 //--------------------------------------------------------------MethodDeclNode--------------------------------------------------------------
 
 MethodDeclNode::MethodDeclNode() : AstNode() {
-    kind = NONE;
+    kind = MethodDeclKind::NONE;
     type = nullptr;
     identifier = nullptr;
     methodSel = nullptr;
@@ -2531,7 +1777,7 @@ MethodDeclNode::MethodDeclNode() : AstNode() {
 
 MethodDeclNode* MethodDeclNode::createInstanceMethodDecl(TypeNode *type, ValueNode *identifier) {
     MethodDeclNode *node = new MethodDeclNode();
-    node->kind = ID;
+    node->kind = MethodDeclKind::ID;
     node->type = type;
     node->identifier = identifier;
     node->isInstanceMethodFlag = true;
@@ -2540,7 +1786,7 @@ MethodDeclNode* MethodDeclNode::createInstanceMethodDecl(TypeNode *type, ValueNo
 
 MethodDeclNode* MethodDeclNode::createInstanceMethodDecl(TypeNode *type, MethodSelNode *methodSel) {
     MethodDeclNode *node = new MethodDeclNode();
-    node->kind = SEL;
+    node->kind = MethodDeclKind::SEL;
     node->type = type;
     node->methodSel = methodSel;
     node->isInstanceMethodFlag = true;
@@ -2549,7 +1795,7 @@ MethodDeclNode* MethodDeclNode::createInstanceMethodDecl(TypeNode *type, MethodS
 
 MethodDeclNode* MethodDeclNode::createClassMethodDecl(TypeNode *type, ValueNode *identifier) {
     MethodDeclNode *node = new MethodDeclNode();
-    node->kind = ID;
+    node->kind = MethodDeclKind::ID;
     node->type = type;
     node->identifier = identifier;
     node->isInstanceMethodFlag = false;
@@ -2558,14 +1804,14 @@ MethodDeclNode* MethodDeclNode::createClassMethodDecl(TypeNode *type, ValueNode 
 
 MethodDeclNode* MethodDeclNode::createClassMethodDecl(TypeNode *type, MethodSelNode *methodSel) {
     MethodDeclNode *node = new MethodDeclNode();
-    node->kind = SEL;
+    node->kind = MethodDeclKind::SEL;
     node->type = type;
     node->methodSel = methodSel;
     node->isInstanceMethodFlag = false;
     return node;
 }
 
-MethodDeclNode::MethodDeclKind MethodDeclNode::getKind() const {
+MethodDeclKind MethodDeclNode::getKind() const {
     return kind;
 }
 
@@ -2589,62 +1835,19 @@ bool MethodDeclNode::isClassMethod() const {
     return !isInstanceMethodFlag;
 }
 
-void MethodDeclNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    string methodName;
-    string descriptor;
-    vector<Type*>* paramsTypes = new vector<Type*>();
-    vector<Type*>* keywordsTypes = new vector<Type*>();
-    
-    if (kind == ID) {
-        methodName = *identifier->getIdentifier();
-        descriptor = "()" + convertTypeNodeToType(type)->getDescriptor();
-    } else if (kind == SEL && methodSel && methodSel->getMethodParamList()) {
-        for (auto param : *methodSel->getMethodParamList()) {
-            if (methodName.empty()) {
-                methodName = *param->getSelectorIdentifier()->getIdentifier();
-            } else {
-                methodName += ":" + *param->getSelectorIdentifier()->getIdentifier();
-            }
-            
-            Type* paramType = convertTypeNodeToType(param->getType());
-            if (paramType) {
-                keywordsTypes->push_back(paramType);
-                paramsTypes->push_back(paramType);
-            }
-        }
-        
-        descriptor = "(";
-        for (auto paramType : *paramsTypes) {
-            descriptor += paramType->getDescriptor();
-        }
-        descriptor += ")" + convertTypeNodeToType(type)->getDescriptor();
-    }
-    
-    classTableElement->methods->addMethod(
-        constantTable,
-        methodName,
-        descriptor,
-        !isInstanceMethodFlag,
-        nullptr,
-        convertTypeNodeToType(type),
-        paramsTypes,
-        keywordsTypes
-    );
-}
-
 string MethodDeclNode::getDotLabel() const {
     if (isInstanceMethodFlag) {
         switch (kind) {
-            case ID:    return "INST_METHOD_DECL_NO_ARGS";
-            case SEL:   return "INST_METHOD_DECL_HAS_ARGS";
-            default:    return "UNKNOWN_METHOD_DECL";
+            case MethodDeclKind::ID:    return "INST_METHOD_DECL_NO_ARGS";
+            case MethodDeclKind::SEL:   return "INST_METHOD_DECL_HAS_ARGS";
+            default:                    return "UNKNOWN_METHOD_DECL";
         }
     }
     else {
         switch (kind) {
-            case ID:    return "CLASS_METHOD_DECL_NO_ARGS";
-            case SEL:   return "CLASS_METHOD_DECL_HAS_ARGS";
-            default:    return "UNKNOWN_METHOD_DECL";
+            case MethodDeclKind::ID:    return "CLASS_METHOD_DECL_NO_ARGS";
+            case MethodDeclKind::SEL:   return "CLASS_METHOD_DECL_HAS_ARGS";
+            default:                    return "UNKNOWN_METHOD_DECL";
         }
     }
 }
@@ -2661,7 +1864,7 @@ string MethodDeclNode::toDot() const {
 //--------------------------------------------------------------PropertyNode--------------------------------------------------------------
 
 PropertyNode::PropertyNode() : AstNode() {
-    attribute = NONE;
+    attribute = Attribute::NONE;
     type = nullptr;
     name = nullptr;
 }
@@ -2681,7 +1884,7 @@ PropertyNode* PropertyNode::createProperty(TypeNode *type, ValueNode *name) {
     return node;
 }
 
-PropertyNode::Attribute PropertyNode::getAttribute() const {
+Attribute PropertyNode::getAttribute() const {
     return attribute;
 }
 
@@ -2693,26 +1896,11 @@ ValueNode* PropertyNode::getName() const {
     return name;
 }
 
-void PropertyNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    string propName = *name->getIdentifier();
-    Type* propType = convertTypeNodeToType(type);
-    string descriptor = propType->getDescriptor();
-    bool isReadonly = (attribute == READONLY);
-    
-    classTableElement->properties->addProperty(
-        constantTable,
-        propName,
-        descriptor,
-        isReadonly,
-        propType
-    );
-}
-
 string PropertyNode::getDotLabel() const {
     switch (attribute) {
-        case READONLY: return "READONLY_PROPERTY";
-        case READWRITE: return "READWRITE_PROPERTY";
-        default: return "NO_ATTR_PROPERTY";
+        case Attribute::READONLY:   return "READONLY_PROPERTY";
+        case Attribute::READWRITE:  return "READWRITE_PROPERTY";
+        default:                    return "NO_ATTR_PROPERTY";
     }
 }
 
@@ -2774,26 +1962,6 @@ list<MethodDeclNode*>* InterfaceDeclListNode::getClassMethodDecls() const {
 
 list<MethodDeclNode*>* InterfaceDeclListNode::getInstanceMethodDecls() const {
     return instanceMethodDecls;
-}
-
-void InterfaceDeclListNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    if (properties) {
-        for (auto property : *properties) {
-            property->fillTables(constantTable, classTableElement);
-        }
-    }
-    
-    if (classMethodDecls) {
-        for (auto methodDecl : *classMethodDecls) {
-            methodDecl->fillTables(constantTable, classTableElement);
-        }
-    }
-    
-    if (instanceMethodDecls) {
-        for (auto methodDecl : *instanceMethodDecls) {
-            methodDecl->fillTables(constantTable, classTableElement);
-        }
-    }
 }
 
 string InterfaceDeclListNode::getDotLabel() const {
@@ -2858,22 +2026,6 @@ list<InitializerNode*>* InitializerListNode::getInitializerList() const {
     return initializers;
 }
 
-void InitializerListNode::fillTables(ConstantsTable* constantTable) {
-    if (initializers) {
-        for (auto init : *initializers) {
-            init->fillTables(constantTable);
-        }
-    }
-}
-
-void InitializerListNode::semanticTransform(LocalVariablesTable* localVariables) {
-    if (initializers) {
-        for (auto init : *initializers) {
-            init->semanticTransform(localVariables);
-        }
-    }
-}
-
 string InitializerListNode::getDotLabel() const {
     return "INITIALIZER_LIST";
 }
@@ -2895,26 +2047,26 @@ string InitializerListNode::toDot() const {
 //--------------------------------------------------------------InitializerNode--------------------------------------------------------------
 
 InitializerNode::InitializerNode() : AstNode() {
-    kind = NONE;
+    kind = InitializerKind::NONE;
     expr = nullptr;
     initList = nullptr;
 }
 
 InitializerNode* InitializerNode::createExpr(ExprNode *expr) {
     InitializerNode *node = new InitializerNode();
-    node->kind = EXPR;
+    node->kind = InitializerKind::EXPR;
     node->expr = expr;
     return node;
 }
 
 InitializerNode* InitializerNode::createArrayInitializer(InitializerListNode *initList) {
     InitializerNode *node = new InitializerNode();
-    node->kind = ARRAY;
+    node->kind = InitializerKind::ARRAY;
     node->initList = initList;
     return node;
 }
 
-InitializerNode::InitializerKind InitializerNode::getKind() const {
+InitializerKind InitializerNode::getKind() const {
     return kind;
 }
 
@@ -2926,45 +2078,11 @@ InitializerListNode* InitializerNode::getInitializerList() const {
     return initList;
 }
 
-void InitializerNode::fillTables(ConstantsTable* constantTable) {
-    switch (kind) {
-        case EXPR:
-            if (expr) {
-                expr->fillLiterals(constantTable);
-            }
-            break;
-        case ARRAY:
-            if (initList) {
-                initList->fillTables(constantTable);
-            }
-            break;
-        default:
-            break;
-    }
-}
-
-void InitializerNode::semanticTransform(LocalVariablesTable* localVariables) {
-    switch (kind) {
-        case EXPR:
-            if (expr) {
-                expr->semanticTransform(localVariables);
-            }
-            break;
-        case ARRAY:
-            if (initList) {
-                initList->semanticTransform(localVariables);
-            }
-            break;
-        default:
-            break;
-    }
-}
-
 string InitializerNode::getDotLabel() const {
     switch(kind) {
-        case EXPR:  return "EXPR_INITIALIZER";
-        case ARRAY: return "ARRAY_INITIALIZER";
-        default:    return "UNKNOWN_INITIALIZER";
+        case InitializerKind::EXPR:     return "EXPR_INITIALIZER";
+        case InitializerKind::ARRAY:    return "ARRAY_INITIALIZER";
+        default:                        return "UNKNOWN_INITIALIZER";
     }
 }
 
@@ -3005,26 +2123,6 @@ list<ExprNode*>* DeclaratorNode::getArraySizes() const {
     return arraySizes;
 }
 
-void DeclaratorNode::fillTables(ConstantsTable* constantTable) {
-    if (arraySizes) {
-        for (auto size : *arraySizes) {
-            size->fillLiterals(constantTable);
-        }
-    }
-}
-
-void DeclaratorNode::semanticTransform(LocalVariablesTable* localVariables) {
-    if (arraySizes) {
-        for (auto size : *arraySizes) {
-            size->semanticTransform(localVariables);
-            Type* sizeType = size->getExprType();
-            if (sizeType && sizeType->dataType != TypeNode::INT) {
-                throw std::runtime_error("Array size must be integer");
-            }
-        }
-    }
-}
-
 string DeclaratorNode::getDotLabel() const {
     return "DECLARATOR";
 }
@@ -3047,21 +2145,21 @@ string DeclaratorNode::toDot() const {
 //--------------------------------------------------------------InitDeclNode--------------------------------------------------------------
 
 InitDeclNode::InitDeclNode() : AstNode() {
-    kind = NONE;
+    kind = InitDeclKind::NONE;
     declarator = nullptr;
     initializer = nullptr;
 }
 
 InitDeclNode* InitDeclNode::createDeclarator(DeclaratorNode *declarator) {
     InitDeclNode *node = new InitDeclNode();
-    node->kind = DECLARATOR;
+    node->kind = InitDeclKind::DECLARATOR;
     node->declarator = declarator;
     return node;
 }
 
 InitDeclNode* InitDeclNode::createInitialized(DeclaratorNode *declarator, InitializerNode *initializer) {
     InitDeclNode *node = new InitDeclNode();
-    node->kind = INITIALIZED;
+    node->kind = InitDeclKind::INITIALIZED;
     node->declarator = declarator;
     node->initializer = initializer;
     return node;
@@ -3069,13 +2167,13 @@ InitDeclNode* InitDeclNode::createInitialized(DeclaratorNode *declarator, Initia
 
 InitDeclNode* InitDeclNode::createArrayInitialized(DeclaratorNode *declarator, InitializerNode *initializer) {
     InitDeclNode *node = new InitDeclNode();
-    node->kind = ARRAY_INITIALIZED;
+    node->kind = InitDeclKind::ARRAY_INITIALIZED;
     node->declarator = declarator;
     node->initializer = initializer;
     return node;
 }
 
-InitDeclNode::InitDeclKind InitDeclNode::getKind() const {
+InitDeclKind InitDeclNode::getKind() const {
     return kind;
 }
 
@@ -3087,45 +2185,12 @@ InitializerNode* InitDeclNode::getInitializer() const {
     return initializer;
 }
 
-void InitDeclNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    if (declarator && declarator->getIdentifier()) {
-        string fieldName = *declarator->getIdentifier()->getIdentifier();
-        Type* fieldType = convertTypeNodeToType(kind);
-        string descriptor = fieldType->getDescriptor();
-        if (declarator->getArraySizes()) {
-            for (size_t i = 0; i < declarator->getArraySizes()->size(); i++) {
-                descriptor = "[" + descriptor;
-            }
-        }
-        
-        classTableElement->fields->addField(
-            constantTable,
-            fieldName,
-            descriptor,
-            true,
-            fieldType,
-            (initializer && initializer->getKind() == InitializerNode::EXPR) ? 
-                initializer->getExpr() : nullptr
-        );
-    }
-    
-    if (initializer) {
-        initializer->fillTables(constantTable);
-    }
-}
-
-void InitDeclNode::semanticTransform(LocalVariablesTable* localVariables) {
-    if (initializer) {
-        initializer->semanticTransform(localVariables);
-    }
-}
-
 string InitDeclNode::getDotLabel() const {
     switch (kind) {
-        case DECLARATOR: return "DECLARATOR_ONLY";
-        case INITIALIZED: return "INITIALIZED_DECL";
-        case ARRAY_INITIALIZED: return "ARRAY_INITIALIZED_DECL";
-        default: return "UNKNOWN_INIT_DECL";
+        case InitDeclKind::DECLARATOR:          return "DECLARATOR_ONLY";
+        case InitDeclKind::INITIALIZED:         return "INITIALIZED_DECL";
+        case InitDeclKind::ARRAY_INITIALIZED:   return "ARRAY_INITIALIZED_DECL";
+        default:                                return "UNKNOWN_INIT_DECL";
     }
 }
 
@@ -3140,37 +2205,37 @@ string InitDeclNode::toDot() const {
 //--------------------------------------------------------------AccessModifierNode--------------------------------------------------------------
 
 AccessModifierNode::AccessModifierNode() : AstNode() {
-    accessType = NONE;
+    accessType = AccessModifier::NONE;
 }
 
 AccessModifierNode* AccessModifierNode::createPublic() {
     AccessModifierNode *node = new AccessModifierNode();
-    node->accessType = PUBLIC;
+    node->accessType = AccessModifier::PUBLIC;
     return node;
 }
 
 AccessModifierNode* AccessModifierNode::createProtected() {
     AccessModifierNode *node = new AccessModifierNode();
-    node->accessType = PROTECTED;
+    node->accessType = AccessModifier::PROTECTED;
     return node;
 }
 
 AccessModifierNode* AccessModifierNode::createPrivate() {
     AccessModifierNode *node = new AccessModifierNode();
-    node->accessType = PRIVATE;
+    node->accessType = AccessModifier::PRIVATE;
     return node;
 }
 
-AccessModifierNode::AccessModifier AccessModifierNode::getAccessType() const {
+AccessModifier AccessModifierNode::getAccessType() const {
     return accessType;
 }
 
 string AccessModifierNode::getDotLabel() const {
     switch (accessType) {
-        case PUBLIC: return "PUBLIC";
-        case PROTECTED: return "PROTECTED";
-        case PRIVATE: return "PRIVATE";
-        default: return "UNKNOWN_ACCESS_MODIFIER";
+        case AccessModifier::PUBLIC:    return "PUBLIC";
+        case AccessModifier::PROTECTED: return "PROTECTED";
+        case AccessModifier::PRIVATE:   return "PRIVATE";
+        default:                        return "UNKNOWN_ACCESS_MODIFIER";
     }
 }
 
@@ -3206,18 +2271,6 @@ TypeNode* InstanceVarDeclNode::getType() const {
 
 InitDeclNode* InstanceVarDeclNode::getInitDecl() const {
     return initDecl;
-}
-
-void InstanceVarDeclNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    if (initDecl) {
-        initDecl->fillTables(constantTable, classTableElement);
-    }
-}
-
-void InstanceVarDeclNode::semanticTransform(LocalVariablesTable* localVariables) {
-    if (initDecl) {
-        initDecl->semanticTransform(localVariables);
-    }
 }
 
 string InstanceVarDeclNode::getDotLabel() const {
@@ -3257,22 +2310,6 @@ list<InstanceVarDeclNode*>* InstanceVarsDeclListNode::getInstanceVarsDeclList() 
     return instanceVarDecls;
 }
 
-void InstanceVarsDeclListNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    if (instanceVarDecls) {
-        for (auto varDecl : *instanceVarDecls) {
-            varDecl->fillTables(constantTable, classTableElement);
-        }
-    }
-}
-
-void InstanceVarsDeclListNode::semanticTransform(LocalVariablesTable* localVariables) {
-    if (instanceVarDecls) {
-        for (auto varDecl : *instanceVarDecls) {
-            varDecl->semanticTransform(localVariables);
-        }
-    }
-}
-
 string InstanceVarsDeclListNode::getDotLabel() const {
     return "INSTANCE_VARS_DECL_LIST";
 }
@@ -3310,18 +2347,6 @@ InstanceVarsNode* InstanceVarsNode::createInstanceVars(InstanceVarsDeclListNode 
 
 InstanceVarsDeclListNode* InstanceVarsNode::getInstanceVarsDeclList() const {
     return instanceVarsDeclList;
-}
-
-void InstanceVarsNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    if (instanceVarsDeclList) {
-        instanceVarsDeclList->fillTables(constantTable, classTableElement);
-    }
-}
-
-void InstanceVarsNode::semanticTransform(LocalVariablesTable* localVariables) {
-    if (instanceVarsDeclList) {
-        instanceVarsDeclList->semanticTransform(localVariables);
-    }
 }
 
 string InstanceVarsNode::getDotLabel() const {
@@ -3383,40 +2408,6 @@ void ImplementationNode::setClassName(string className) {
 
 void ImplementationNode::setSuperClassName(string superClassName) {
     this->superClassName->setClassName(superClassName);
-}
-
-void ImplementationNode::fillTables() {
-    string className = *this->className->getClassName();
-    ClassesTableElement* classTableElement = ClassesTable::addClass(
-        className,
-        superClassName ? superClassName->getClassName() : nullptr,
-        true,
-        this
-    );
-    
-    if (instanceVars) {
-        instanceVars->fillTables(classTableElement->constantTable, classTableElement);
-    }
-    
-    if (implDefList) {
-        implDefList->fillTables(classTableElement->constantTable, classTableElement);
-    }
-}
-
-void ImplementationNode::semanticTransform() {
-    string className = *this->className->getClassName();
-    string fullClassName = ClassesTable::getFullClassName(className);
-    ClassesTableElement* classTableElement = ClassesTable::items[fullClassName];
-    
-    if (instanceVars) {
-        instanceVars->semanticTransform(nullptr);
-    }
-    
-    if (implDefList) {
-        implDefList->semanticTransform(nullptr);
-    }
-    
-    classTableElement->semanticTransform();
 }
 
 string ImplementationNode::getDotLabel() const {
@@ -3483,24 +2474,6 @@ void InterfaceNode::setSuperClassName(string superClassName) {
     this->superClassName->setClassName(superClassName);
 }
 
-void InterfaceNode::fillTables() {
-    string className = *this->className->getClassName();
-    ClassesTableElement* classTableElement = ClassesTable::addClass(
-        className,
-        superClassName ? superClassName->getClassName() : nullptr,
-        false,
-        this
-    );
-
-    if (instanceVars) {
-        instanceVars->fillTables(classTableElement->constantTable, classTableElement);
-    }
-
-    if (interfaceDeclList) {
-        interfaceDeclList->fillTables(classTableElement->constantTable, classTableElement);
-    }
-}
-
 string InterfaceNode::getDotLabel() const {
     return "INTERFACE";
 }
@@ -3560,7 +2533,7 @@ string ClassNameListNode::toDot() const {
 //--------------------------------------------------------------ExternalDeclNode--------------------------------------------------------------
 
 ExternalDeclNode::ExternalDeclNode() : AstNode() {
-    kind = NONE;
+    kind = ExternalDeclKind::NONE;
     interface = nullptr;
     implementation = nullptr;
     classNames = nullptr;
@@ -3570,40 +2543,40 @@ ExternalDeclNode::ExternalDeclNode() : AstNode() {
 
 ExternalDeclNode* ExternalDeclNode::createInterface(InterfaceNode *interface) {
     ExternalDeclNode *node = new ExternalDeclNode();
-    node->kind = INTERFACE;
+    node->kind = ExternalDeclKind::INTERFACE;
     node->interface = interface;
     return node;
 }
 
 ExternalDeclNode* ExternalDeclNode::createImplementation(ImplementationNode *implementation) {
     ExternalDeclNode *node = new ExternalDeclNode();
-    node->kind = IMPLEMENTATION;
+    node->kind = ExternalDeclKind::IMPLEMENTATION;
     node->implementation = implementation;
     return node;
 }
 
 ExternalDeclNode* ExternalDeclNode::createFwClassDeclList(ClassNameListNode *classNames) {
     ExternalDeclNode *node = new ExternalDeclNode();
-    node->kind = CLASS_FW_DECL_LIST;
+    node->kind = ExternalDeclKind::CLASS_FW_DECL_LIST;
     node->classNames = classNames;
     return node;
 }
 
 ExternalDeclNode* ExternalDeclNode::createFuncDecl(FuncDeclNode *funcDecl) {
     ExternalDeclNode *node = new ExternalDeclNode();
-    node->kind = FUNC_DECL;
+    node->kind = ExternalDeclKind::FUNC_DECL;
     node->funcDecl = funcDecl;
     return node;
 }
 
 ExternalDeclNode* ExternalDeclNode::createFuncDef(FuncDefNode *funcDef) {
     ExternalDeclNode *node = new ExternalDeclNode();
-    node->kind = FUNC_DEF;
+    node->kind = ExternalDeclKind::FUNC_DEF;
     node->funcDef = funcDef;
     return node;
 }
 
-ExternalDeclNode::ExternalDeclKind ExternalDeclNode::getKind() const {
+ExternalDeclKind ExternalDeclNode::getKind() const {
     return kind;
 }
 
@@ -3627,53 +2600,14 @@ FuncDefNode* ExternalDeclNode::getFuncDef() const {
     return funcDef;
 }
 
-void ExternalDeclNode::fillTables() {
-    switch (kind) {
-        case INTERFACE:
-            if (interface) interface->fillTables();
-            break;
-        case IMPLEMENTATION:
-            if (implementation) implementation->fillTables();
-            break;
-        case FUNC_DEF:
-            if (funcDef) funcDef->fillTables();
-            break;
-        case FUNC_DECL:
-            if (funcDecl) funcDecl->fillTables();
-            break;
-        case CLASS_FW_DECL_LIST:
-            // Forward declarations не требуют заполнения таблиц
-            break;
-        default:
-            break;
-    }
-}
-
-void ExternalDeclNode::semanticTransform() {
-    switch (kind) {
-        case INTERFACE:
-            break;
-        case IMPLEMENTATION:
-            if (implementation) implementation->semanticTransform();
-            break;
-        case FUNC_DEF:
-            if (funcDef) funcDef->semanticTransform();
-            break;
-        case FUNC_DECL:
-            break;
-        default:
-            break;
-    }
-}
-
 string ExternalDeclNode::getDotLabel() const {
     switch (kind) {
-        case INTERFACE:             return "INTERFACE";
-        case IMPLEMENTATION:        return "IMPLEMENTATION";
-        case CLASS_FW_DECL_LIST:    return "CLASS_FW_DECL_LIST";
-        case FUNC_DECL:             return "FUNC_DECL";
-        case FUNC_DEF:              return "FUNC_DEF";
-        default:                    return "UNKNOWN_EXTERNAL_DECL";
+        case ExternalDeclKind::INTERFACE:               return "INTERFACE";
+        case ExternalDeclKind::IMPLEMENTATION:          return "IMPLEMENTATION";
+        case ExternalDeclKind::CLASS_FW_DECL_LIST:      return "CLASS_FW_DECL_LIST";
+        case ExternalDeclKind::FUNC_DECL:               return "FUNC_DECL";
+        case ExternalDeclKind::FUNC_DEF:                return "FUNC_DEF";
+        default:                                        return "UNKNOWN_EXTERNAL_DECL";
     }
 }
 
@@ -3718,22 +2652,6 @@ list<ExternalDeclNode*>* ExternalDeclListNode::getExternalDeclList() const {
     return externalDeclList;
 }
 
-void ExternalDeclListNode::fillTables() {
-    if (externalDeclList) {
-        for (auto decl : *externalDeclList) {
-            decl->fillTables();
-        }
-    }
-}
-
-void ExternalDeclListNode::semanticTransform() {
-    if (externalDeclList) {
-        for (auto decl : *externalDeclList) {
-            decl->semanticTransform();
-        }
-    }
-}
-
 string ExternalDeclListNode::getDotLabel() const {
     return "EXTERNAL_DECL_LIST";
 }
@@ -3766,18 +2684,6 @@ ProgramNode* ProgramNode::createProgram(ExternalDeclListNode *externalDeclList) 
 
 ExternalDeclListNode* ProgramNode::getExternalDeclList() const {
     return externalDeclList;
-}
-
-void ProgramNode::fillTables() {
-    if (externalDeclList) {
-        externalDeclList->fillTables();
-    }
-}
-
-void ProgramNode::semanticTransform() {
-    if (externalDeclList) {
-        externalDeclList->semanticTransform();
-    }
 }
 
 string ProgramNode::getDotLabel() const {
