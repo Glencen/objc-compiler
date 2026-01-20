@@ -102,9 +102,9 @@ size_t TokenOutput::getTokenCount() const {
 
 //--------------------------------------------------------------DebugLogger--------------------------------------------------------------
 
-DebugLogger::DebugLogger() 
-    : logQueue(std::make_unique<TimestampedQueue>()), 
-      running(false) {}
+DebugLogger::DebugLogger() : isInitialized(false), isEnabledFlag(true), logCounter(0), bufferLimit(100), autoFlush(true) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+}
 
 DebugLogger::~DebugLogger() {
     close();
@@ -115,119 +115,264 @@ DebugLogger& DebugLogger::getInstance() {
     return instance;
 }
 
-void DebugLogger::initialize(const std::string& filename) {
-    std::lock_guard<std::mutex> lock(fileMutex);
-    
-    if (running) {
-        close();
-    }
-    
-    currentFile = filename;
-    logFile.open(filename, std::ios::app);
-    if (!logFile.is_open()) {
-        std::cerr << "Error: Could not open debug log file: " << filename << std::endl;
-        return;
-    }
-    
-    running = true;
-    writerThread = std::thread(&DebugLogger::writerLoop, this);
-    
-    logFile << "=== Debug session started at " << getTimestamp() << " ===" << std::endl;
-    logFile.flush();
-}
-
-std::string DebugLogger::getTimestamp() const {
+std::string DebugLogger::getCurrentTimestamp() const {
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
         now.time_since_epoch()
     ) % 1000;
     
+    std::tm tm_info;
+    #ifdef _WIN32
+        localtime_s(&tm_info, &time);
+    #else
+        localtime_r(&time, &tm_info);
+    #endif
+    
+    char buffer[24];
+    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm_info);
+    
     std::stringstream ss;
-    ss << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S");
-    ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+    ss << buffer << '.' << std::setfill('0') << std::setw(3) << ms.count();
     return ss.str();
 }
 
-void DebugLogger::log(const std::string& message, const std::string& function, const std::string& filename, int line) {
-    if (!running) return;
-    
-    LogEntry entry(message, function, filename, line);
-    
-    {
-        std::lock_guard<std::mutex> lock(logQueue->mutex);
-        logQueue->queue.push(std::move(entry));
+std::string DebugLogger::getShortFilename(const std::string& fullPath) const {
+    if (fullPath.empty()) {
+        return "unknown";
     }
-
-    logQueue->cv.notify_one();
+    
+    try {
+        size_t pos = fullPath.find_last_of("/\\");
+        if (pos != std::string::npos) {
+            return fullPath.substr(pos + 1);
+        }
+        return fullPath;
+    } catch (...) {
+        return "error";
+    }
 }
 
-void DebugLogger::writerLoop() {
-    while (running) {
-        std::unique_lock<std::mutex> lock(logQueue->mutex);
-        
-        logQueue->cv.wait(lock, [this]() {
-            return !logQueue->queue.empty() || !running;
-        });
-        
-        std::queue<LogEntry> localQueue;
-        while (!logQueue->queue.empty()) {
-            localQueue.push(std::move(const_cast<LogEntry&>(logQueue->queue.top())));
-            logQueue->queue.pop();
-        }
-        
-        lock.unlock();
-        
-        while (!localQueue.empty()) {
-            auto& entry = localQueue.front();
+void DebugLogger::flushBufferToFile() {
+    if (!logFile.is_open() || logBuffer.empty()) {
+        return;
+    }
+    
+    try {
+        for (const auto& entry : logBuffer) {
+            std::string shortFile = getShortFilename(entry.filename);
             
-            std::lock_guard<std::mutex> fileLock(fileMutex);
-            if (logFile.is_open()) {
-                std::string shortFilename = entry.filename;
-                size_t lastSlash = shortFilename.find_last_of("/\\");
-                if (lastSlash != std::string::npos) {
-                    shortFilename = shortFilename.substr(lastSlash + 1);
-                }
-                
-                logFile << "[" << getTimestamp() << "] "
-                        << "[" << shortFilename << ":" << entry.line << "] "
-                        << "[" << entry.function << "] "
-                        << entry.message << std::endl;
+            logFile << "[" << getCurrentTimestamp() << "] "
+                   << "[" << shortFile << ":" << entry.line << "]";
+            
+            if (!entry.function.empty()) {
+                logFile << "[" << entry.function << "]";
             }
             
-            localQueue.pop();
+            logFile << " " << entry.message << std::endl;
         }
         
-        if (logFile.is_open()) {
-            logFile.flush();
-        }
+        logFile.flush();
+        logBuffer.clear();
+        
+    } catch (const std::exception& e) {
+        std::cerr << "DEBUG LOGGER ERROR (flush): " << e.what() << std::endl;
+        logBuffer.clear();
     }
 }
 
-void DebugLogger::flush() {
-    if (!running) return;
+void DebugLogger::initialize(const std::string& filename, 
+                            size_t bufferSize, 
+                            bool autoFlushEnabled) {
+    std::lock_guard<std::mutex> lock(logMutex);
     
-    logQueue->cv.notify_one();
-
-    std::unique_lock<std::mutex> lock(logQueue->mutex);
-    logQueue->cv.wait(lock, [this]() {
-        return logQueue->queue.empty();
-    });
-}
-
-void DebugLogger::close() {
-    if (running) {
-        running = false;
-        logQueue->cv.notify_one();
+    if (isInitialized) {
+        close();
+    }
+    
+    try {
+        logFile.open(filename, std::ios::app);
         
-        if (writerThread.joinable()) {
-            writerThread.join();
+        if (!logFile.is_open()) {
+            std::cerr << "Error: Could not open debug log file: " << filename << std::endl;
+            isInitialized = false;
+            isEnabledFlag = false;
+            return;
         }
         
-        std::lock_guard<std::mutex> lock(fileMutex);
+        bufferLimit = (bufferSize > 0) ? bufferSize : 100;
+        autoFlush = autoFlushEnabled;
+        isInitialized = true;
+        isEnabledFlag = true;
+        logCounter = 0;
+        logBuffer.clear();
+        
+        logFile << "\n";
+        logFile << "=== Debug session started at " << getCurrentTimestamp() << " ===" << std::endl;
+        logFile << "=== Log file: " << filename << " ===" << std::endl;
+        logFile << "=== Buffer size: " << bufferLimit << ", Auto flush: " 
+               << (autoFlush ? "enabled" : "disabled") << " ===" << std::endl;
+        logFile.flush();
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error initializing DebugLogger: " << e.what() << std::endl;
+        isInitialized = false;
+        isEnabledFlag = false;
         if (logFile.is_open()) {
-            logFile << "=== Debug session ended at " << getTimestamp() << " ===" << std::endl;
             logFile.close();
         }
     }
+}
+
+void DebugLogger::log(const std::string& message, const std::string& function, const std::string& filename, int line) {
+    if (!isEnabledFlag || !isInitialized) {
+        return;
+    }
+    
+    std::lock_guard<std::mutex> lock(logMutex);
+    
+    if (!isEnabledFlag || !logFile.is_open()) {
+        return;
+    }
+    
+    try {
+        size_t currentCount = ++logCounter;
+        
+        LogEntry entry(message, function, filename, line);
+        logBuffer.push_back(entry);
+        
+        if (autoFlush && logBuffer.size() >= bufferLimit) {
+            flushBufferToFile();
+        }
+        
+        if (message.find("ERROR") != std::string::npos || 
+            message.find("FATAL") != std::string::npos ||
+            message.find("EXCEPTION") != std::string::npos) {
+            
+            std::string shortFile = getShortFilename(filename);
+            logFile << "[" << getCurrentTimestamp() << "] "
+                   << "[" << shortFile << ":" << line << "]";
+            
+            if (!function.empty()) {
+                logFile << "[" << function << "]";
+            }
+            
+            logFile << " [IMMEDIATE] " << message << std::endl;
+            logFile.flush();
+        }
+        
+    } catch (const std::exception& e) {
+        std::cerr << "DEBUG LOGGER ERROR (log): " << e.what() << std::endl;
+    }
+}
+
+void DebugLogger::logInfo(const std::string& message, 
+                         const std::string& function,
+                         const std::string& filename,
+                         int line) {
+    log("[INFO] " + message, function, filename, line);
+}
+
+void DebugLogger::logError(const std::string& message, 
+                          const std::string& function,
+                          const std::string& filename,
+                          int line) {
+    log("[ERROR] " + message, function, filename, line);
+}
+
+void DebugLogger::logWarning(const std::string& message, 
+                            const std::string& function,
+                            const std::string& filename,
+                            int line) {
+    log("[WARNING] " + message, function, filename, line);
+}
+
+void DebugLogger::flush() {
+    std::lock_guard<std::mutex> lock(logMutex);
+    flushBufferToFile();
+}
+
+void DebugLogger::clear() {
+    std::lock_guard<std::mutex> lock(logMutex);
+    logBuffer.clear();
+}
+
+void DebugLogger::close() {
+    std::lock_guard<std::mutex> lock(logMutex);
+    
+    if (isInitialized && logFile.is_open()) {
+        try {
+            if (!logBuffer.empty()) {
+                flushBufferToFile();
+            }
+            
+            logFile << "=== Debug session ended at " << getCurrentTimestamp() << " ===" << std::endl;
+            logFile << "=== Total logs written: " << logCounter.load() << " ===" << std::endl;
+            logFile << "\n";
+            logFile.flush();
+            logFile.close();
+            
+        } catch (const std::exception& e) {
+            std::cerr << "Error closing DebugLogger: " << e.what() << std::endl;
+        }
+    }
+    
+    isInitialized = false;
+    isEnabledFlag = false;
+    logBuffer.clear();
+}
+
+void DebugLogger::enable(bool state) {
+    std::lock_guard<std::mutex> lock(logMutex);
+    isEnabledFlag = state && isInitialized && logFile.is_open();
+}
+
+void DebugLogger::disable() {
+    enable(false);
+}
+
+void DebugLogger::setBufferLimit(size_t limit) {
+    std::lock_guard<std::mutex> lock(logMutex);
+    bufferLimit = (limit > 0) ? limit : 1;
+    
+    if (autoFlush && logBuffer.size() >= bufferLimit) {
+        flushBufferToFile();
+    }
+}
+
+void DebugLogger::setAutoFlush(bool enabled) {
+    std::lock_guard<std::mutex> lock(logMutex);
+    autoFlush = enabled;
+    
+    if (enabled && !logBuffer.empty()) {
+        flushBufferToFile();
+    }
+}
+
+bool DebugLogger::isEnabled() const {
+    return isEnabledFlag.load();
+}
+
+bool DebugLogger::isInitializedState() const {
+    return isInitialized.load();
+}
+
+bool DebugLogger::isFileOpen() const {
+    return logFile.is_open();
+}
+
+size_t DebugLogger::getBufferSize() const {
+    return logBuffer.size();
+}
+
+size_t DebugLogger::getTotalLogsCount() const {
+    return logCounter.load();
+}
+
+std::string DebugLogger::getLogFilePath() const {
+    return "debug.log";
+}
+
+std::string DebugLogger::safeString(const char* str) {
+    return (str != nullptr) ? std::string(str) : std::string("(null)");
 }

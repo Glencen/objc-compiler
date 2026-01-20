@@ -86,59 +86,69 @@ private:
               line(ln) {}
     };
     
-    struct TimestampedQueue {
-        std::priority_queue<
-            LogEntry, 
-            std::vector<LogEntry>,
-            bool(*)(const LogEntry&, const LogEntry&)
-        > queue;
-        std::mutex mutex;
-        std::condition_variable cv;
-        
-        TimestampedQueue() : queue([](const LogEntry& a, const LogEntry& b) {
-            return a.timestamp > b.timestamp;
-        }) {}
-    };
-    
-    std::unique_ptr<TimestampedQueue> logQueue;
+    std::vector<LogEntry> logBuffer;
     std::ofstream logFile;
-    std::mutex fileMutex;
-    std::atomic<bool> running;
-    std::thread writerThread;
-    std::string currentFile;
+    std::mutex logMutex;
+    std::atomic<bool> isInitialized;
+    std::atomic<bool> isEnabledFlag;
+    std::atomic<size_t> logCounter;
+    size_t bufferLimit;
+    bool autoFlush;
+    
+    std::string getCurrentTimestamp() const;
+    std::string getShortFilename(const std::string& fullPath) const;
+    void flushBufferToFile();
     
     DebugLogger();
-    ~DebugLogger();
-    
-    void writerLoop();
-    std::string getTimestamp() const;
     
 public:
-    static DebugLogger& getInstance();
-    
     DebugLogger(const DebugLogger&) = delete;
     DebugLogger& operator=(const DebugLogger&) = delete;
     
-    void initialize(const std::string& filename = "debug.log");
+    ~DebugLogger();
     
-    void log(const std::string& message, 
-            const std::string& function = "",
-            const std::string& filename = "",
-            int line = 0);
+    static DebugLogger& getInstance();
     
+    void initialize(const std::string& filename = "debug.log", size_t bufferSize = 100, bool autoFlushEnabled = true);
+    void log(const std::string& message, const std::string& function = "", const std::string& filename = "", int line = 0);
+    void logInfo(const std::string& message, const std::string& function = "", const std::string& filename = "", int line = 0);
+    void logError(const std::string& message, const std::string& function = "", const std::string& filename = "", int line = 0);
+    void logWarning(const std::string& message, const std::string& function = "", const std::string& filename = "", int line = 0);
     void flush();
+    void clear();
     void close();
     
+    void enable(bool state = true);
+    void disable();
+    void setBufferLimit(size_t limit);
+    void setAutoFlush(bool enabled);
+    
+    bool isEnabled() const;
+    bool isInitializedState() const;
+    bool isFileOpen() const;
+    size_t getBufferSize() const;
+    size_t getTotalLogsCount() const;
+    std::string getLogFilePath() const;
+    
+    static std::string safeString(const char* str);
+
     #ifdef DEBUG_ENABLED
     #define DEBUG_LOG(msg) DebugLogger::getInstance().log(msg, __FUNCTION__, __FILE__, __LINE__)
-    #define DEBUG_LOG_FMT(...) do { \
+    #define DEBUG_LOG_INFO(msg) DebugLogger::getInstance().logInfo(msg, __FUNCTION__, __FILE__, __LINE__)
+    #define DEBUG_LOG_ERROR(msg) DebugLogger::getInstance().logError(msg, __FUNCTION__, __FILE__, __LINE__)
+    #define DEBUG_LOG_WARNING(msg) DebugLogger::getInstance().logWarning(msg, __FUNCTION__, __FILE__, __LINE__)
+    #define DEBUG_LOG_FMT(fmt, ...) do { \
         char buffer[1024]; \
-        snprintf(buffer, sizeof(buffer), __VA_ARGS__); \
+        snprintf(buffer, sizeof(buffer), fmt, __VA_ARGS__); \
         DebugLogger::getInstance().log(buffer, __FUNCTION__, __FILE__, __LINE__); \
     } while(0)
+    
     #else
     #define DEBUG_LOG(msg) ((void)0)
-    #define DEBUG_LOG_FMT(...) ((void)0)
+    #define DEBUG_LOG_INFO(msg) ((void)0)
+    #define DEBUG_LOG_ERROR(msg) ((void)0)
+    #define DEBUG_LOG_WARNING(msg) ((void)0)
+    #define DEBUG_LOG_FMT(fmt, ...) ((void)0)
     #endif
 };
 
