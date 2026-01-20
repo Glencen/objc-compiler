@@ -918,7 +918,7 @@ ClassesTableElement* ClassesTable::addClass(string name, const string& superclas
             implementation->setSuperClassName(fullSuperclassName);
         }
         else {
-            implementation->setSuperClassName(nullptr);
+            implementation->setSuperClassName("");
         }
     }
     else {
@@ -930,7 +930,7 @@ ClassesTableElement* ClassesTable::addClass(string name, const string& superclas
             interface->setSuperClassName(fullSuperclassName);
         }
         else {
-            interface->setSuperClassName(nullptr);
+            interface->setSuperClassName("");
         }
     }
     return items[fullName];
