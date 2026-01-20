@@ -29,7 +29,13 @@ void safeExit(int code) {
 }
 
 void signalHandler(int signal) {
-    std::cerr << "\nReceived signal: " << signal << std::endl;
+    string signalStr;
+    switch (signal) {
+        case 2:     signalStr = "SIGINT";
+        case 15:    signalStr = "SIGTERM";
+        case 11:    signalStr = "SIGSEGV";
+    }
+    std::cerr << "\nReceived signal: " << signal << " (" << signalStr << ")" << std::endl;
     safeExit(signal);
 }
 
