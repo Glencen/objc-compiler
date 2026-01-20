@@ -1,5 +1,6 @@
 #include "tables.h"
 #include "semantic_exceptions.h"
+#include "output_utils.h"
 
 Type* convertTypeNodeToType(TypeNode* typeNode) {
     if (!typeNode) return nullptr;

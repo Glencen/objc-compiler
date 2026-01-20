@@ -86,6 +86,8 @@ int main(int argc, char* argv[])
     std::cout << "Tokens written to: " << token_file << std::endl;
     std::cout << "AST before semantics written to: " << ast_before_file << std::endl;
 
+    DebugLogger::getInstance().initialize("semantic_debug.log");
+
     try {
         ClassesTable::initRTL();
         root->fillTables();
