@@ -1373,13 +1373,13 @@ void InstanceVarsNode::semanticTransform(LocalVariablesTable* localVariables) {
 
 void ImplementationNode::fillTables() {
     DEBUG_LOG("DEBUG: ImplementationNode::fillTables()");
+    if (!this->className || !this->className->getClassName()) {
+        throw class_exception(
+            "Class name is null in interface declaration", "InterfaceNode::fillTables", -1, -1, "Interface declaration without class name"
+        );
+    }
     string className = *this->className->getClassName();
-    ClassesTableElement* classTableElement = ClassesTable::addClass(
-        className,
-        superClassName ? *(superClassName->getClassName()) : "",
-        true,
-        this
-    );
+    ClassesTableElement* classTableElement = ClassesTable::addClass(className, superClassName ? *(superClassName->getClassName()) : "", true, this);
     
     if (instanceVars) {
         instanceVars->fillTables(classTableElement->constantTable, classTableElement);
@@ -1410,14 +1410,13 @@ void ImplementationNode::semanticTransform() {
 
 void InterfaceNode::fillTables() {
     DEBUG_LOG("DEBUG: InterfaceNode::fillTables()");
-    DEBUG_LOG("DEBUG: getting className '" + *className->getClassName() + "'");
     if (!this->className || !this->className->getClassName()) {
         throw class_exception(
             "Class name is null in interface declaration", "InterfaceNode::fillTables", -1, -1, "Interface declaration without class name"
         );
     }
     string className = *this->className->getClassName();
-    ClassesTableElement* classTableElement = ClassesTable::addClass( className, superClassName ? *(superClassName->getClassName()) : "", false, this );
+    ClassesTableElement* classTableElement = ClassesTable::addClass(className, superClassName ? *(superClassName->getClassName()) : "", false, this);
 
     if (instanceVars) {
         instanceVars->fillTables(classTableElement->constantTable, classTableElement);
