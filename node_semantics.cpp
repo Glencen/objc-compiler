@@ -1,4 +1,5 @@
 #include "tables.h"
+#include "semantic_exceptions.h"
 
 Type* convertTypeNodeToType(TypeNode* typeNode) {
     if (!typeNode) return nullptr;
@@ -58,7 +59,9 @@ void ValueNode::semanticTransform(LocalVariablesTable* localVariables) {
     if (valueType == ValueKind::IDENTIFIER && localVariables) {
         string name = *stringValue;
         if (!localVariables->isContains(name)) {
-            throw std::runtime_error("Undefined identifier: " + name);
+            throw symbol_exception(
+                "Undefined identifier: " + name, "ValueNode::semanticTransform", -1, -1, "Identifier: " + name
+            );
         }
     }
 }
@@ -260,8 +263,7 @@ void ExprNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable
             if (classTableElement && classTableElement->isContainsMethod(methodName)) {
                 string descriptor;
                 string className;
-                MethodsTableElement* method = classTableElement->getMethodForRef(
-                    methodName, &descriptor, &className);
+                MethodsTableElement* method = classTableElement->getMethodForRef(methodName, &descriptor, &className);
                 if (method) {
                     int methodRef = constantTable->findOrAddMethodRefConstant(
                         className, methodName, descriptor);
@@ -287,8 +289,7 @@ void ExprNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable
                 if (classTableElement) {
                     string descriptor;
                     string className;
-                    MethodsTableElement* method = classTableElement->getMethodForRef(
-                        selectorName, &descriptor, &className);
+                    MethodsTableElement* method = classTableElement->getMethodForRef(selectorName, &descriptor, &className);
                     if (method) {
                         int methodRef = constantTable->findOrAddMethodRefConstant(
                             className, selectorName, descriptor);
@@ -368,7 +369,10 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
                           (rightType->dataType == TypeKind::INT || rightType->dataType == TypeKind::FLOAT)) {
                     setType(new Type(TypeKind::FLOAT));
                 } else {
-                    throw std::runtime_error("Incompatible types for arithmetic operation");
+                    throw type_exception(
+                        "Incompatible types for arithmetic operation", "ExprNode::semanticTransform", -1, -1,
+                        "Left type: " + leftType->toString() + ", Right type: " + rightType->toString() + ", Operation: " + getDotLabel()
+                    );
                 }
             }
             break;
@@ -382,7 +386,10 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
             
             if (leftType && rightType) {
                 if (!rightType->isCastableTo(leftType)) {
-                    throw std::runtime_error("Incompatible types in assignment");
+                    throw type_exception(
+                        "Incompatible types in assignment", "ExprNode::semanticTransform", -1, -1,
+                        "Left type: " + leftType->toString() + ", Right type: " + rightType->toString() + ", Assignment is not castable"
+                    );
                 }
                 setType(leftType);
             }
@@ -402,7 +409,10 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
             
             if (leftType && rightType) {
                 if (!leftType->isCastableTo(rightType) && !rightType->isCastableTo(leftType)) {
-                    throw std::runtime_error("Incompatible types for comparison");
+                    throw type_exception(
+                        "Incompatible types for comparison", "ExprNode::semanticTransform", -1, -1,
+                        "Left type: " + leftType->toString() + ", Right type: " + rightType->toString() + ", Operation: " + getDotLabel()
+                    );
                 }
                 setType(new Type(TypeKind::BOOL));
             }
@@ -418,7 +428,10 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
             
             if (leftType && rightType) {
                 if (leftType->dataType != TypeKind::BOOL || rightType->dataType != TypeKind::BOOL) {
-                    throw std::runtime_error("Logical operations require boolean operands");
+                    throw type_exception(
+                        "Logical operations require boolean operands", "ExprNode::semanticTransform", -1, -1,
+                        "Left type: " + leftType->toString() + ", Right type: " + rightType->toString() + ", Operation: " + getDotLabel()
+                    );
                 }
                 setType(new Type(TypeKind::BOOL));
             }
@@ -438,7 +451,10 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
             
             Type* indexType = index ? index->getExprType() : nullptr;
             if (indexType && indexType->dataType != TypeKind::INT) {
-                throw std::runtime_error("Array index must be integer");
+                throw type_exception(
+                    "Array index must be an integer", "ExprNode::semanticTransform", -1, -1,
+                    "Index type: " + indexType->toString()
+                );
             }
             break;
         }
@@ -732,7 +748,9 @@ void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
                 condition->semanticTransform(localVariables);
                 Type* condType = condition->getExprType();
                 if (condType && condType->dataType != TypeKind::BOOL) {
-                    throw std::runtime_error("Condition must be boolean");
+                    throw type_exception(
+                        "Condition must be boolean", "StmtNode::semanticTransform", -1, -1, "Condition type: " + condType->toString()
+                    );
                 }
             }
             if (thenBranch) thenBranch->semanticTransform(localVariables);
@@ -777,8 +795,14 @@ void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
                             }
                             
                             if (varType) {
-                                localVariables->findOrAddLocalVariable(varName, varType);
-                                // Обрабатываем инициализатор, если есть
+                                try {
+                                    localVariables->findOrAddLocalVariable(varName, varType);
+                                } catch (const symbol_exception& e) {
+                                    throw symbol_exception(
+                                        "Variable '" + varName + "' already declared", "StmtNode::semanticTransform", -1, -1,
+                                        "Variable name: " + varName + ", type: " + varType->toString()
+                                    );
+                                }
                                 if (initDecl->getInitializer()) {
                                     // Проверка соответствия типов
                                 }
@@ -810,7 +834,9 @@ void ArraySizeSpecNode::semanticTransform(LocalVariablesTable* localVariables) {
             size->semanticTransform(localVariables);
             Type* sizeType = size->getExprType();
             if (sizeType && sizeType->dataType != TypeKind::INT) {
-                throw std::runtime_error("Array size must be an integer");
+                throw type_exception(
+                    "Array size must be an integer", "ArraySizeSpecNode::semanticTransform", -1, -1, "Size expression type: " + sizeType->toString()
+                );
             }
         }
     }
@@ -849,7 +875,9 @@ void ParamListNode::semanticTransform(LocalVariablesTable* localVariables) {
             if (param->getType()) {
                 Type* paramType = convertTypeNodeToType(param->getType());
                 if (!paramType->isPrimitive() && paramType->dataType != TypeKind::CLASS_NAME) {
-                    throw std::runtime_error("Invalid parameter type");
+                    throw type_exception(
+                        "Invalid parameter type", "ParamListNode::semanticTransform", -1, -1, "Parameter type: " + paramType->toString()
+                    );
                 }
             }
         }
@@ -1252,7 +1280,10 @@ void InitDeclNode::semanticTransform(LocalVariablesTable* localVariables, TypeNo
             Type* initType = initializer->getExpr()->getExprType();
             
             if (declType && initType && !initType->isCastableTo(declType)) {
-                throw std::runtime_error("Type mismatch in initializer for field");
+                throw type_exception(
+                    "Type mismatch in initializer", "InitDeclNode::semanticTransform", -1, -1,
+                    "Declared type: " + declType->toString() + ", Initializer type: " + initType->toString()
+                );
             }
         }
     }
@@ -1262,14 +1293,19 @@ void InitDeclNode::semanticTransform(LocalVariablesTable* localVariables, TypeNo
             size->semanticTransform(localVariables);
             Type* sizeType = size->getExprType();
             if (sizeType && sizeType->dataType != TypeKind::INT) {
-                throw std::runtime_error("Array size must be integer");
+                throw type_exception(
+                    "Array size must be integer", "InitDeclNode::semanticTransform", -1, -1,
+                    "Size expression type: " + sizeType->toString()
+                );
             }
             
             if (size->getKind() == ExprKind::LITERAL) {
                 ValueNode* value = size->getLiteral();
-                if (value->getValueKind() == ValueKind::INT_LIT && 
-                    value->getInt() <= 0) {
-                    throw std::runtime_error("Array size must be positive");
+                if (value->getValueKind() == ValueKind::INT_LIT && value->getInt() <= 0) {
+                    throw array_exception(
+                        "Array size must be positive", "InitDeclNode::semanticTransform", -1, -1,
+                        "Size value: " + to_string(value->getInt())
+                    );
                 }
             }
         }
@@ -1332,7 +1368,7 @@ void ImplementationNode::fillTables() {
     string className = *this->className->getClassName();
     ClassesTableElement* classTableElement = ClassesTable::addClass(
         className,
-        superClassName ? superClassName->getClassName() : nullptr,
+        superClassName ? *(superClassName->getClassName()) : "",
         true,
         this
     );
@@ -1368,7 +1404,7 @@ void InterfaceNode::fillTables() {
     string className = *this->className->getClassName();
     ClassesTableElement* classTableElement = ClassesTable::addClass(
         className,
-        superClassName ? superClassName->getClassName() : nullptr,
+        superClassName ? *(superClassName->getClassName()) : "",
         false,
         this
     );

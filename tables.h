@@ -55,7 +55,7 @@ class ConstantsTableElement {
 public:
     int id = 0;
     ConstantType type;
-    string *utf8String = nullptr;
+    string utf8String = nullptr;
     int number = 0;
     float floatNumber = 0;
     int firstRef = 0;
@@ -86,7 +86,7 @@ public:
     int findOrAddMethodRefConstant(string className, string methodName, string descriptor);
 
 private:
-    int findConstant(ConstantType type, string *utf8string, float floatNumber, int number = 0, int firstRef = 0, int secondRef = 0);
+    int findConstant(ConstantType type, string utf8string, float floatNumber, int number = 0, int firstRef = 0, int secondRef = 0);
 };
 
 class FunctionsTableElement {
@@ -140,7 +140,7 @@ public:
     PropertiesTable *properties;
     ConstantsTable *constantTable;
 
-    ClassesTableElement(string name, string *superclassName, bool isImplementation);
+    ClassesTableElement(string name, const string& superclassName, bool isImplementation);
 
     string toCSVString(char separator = '|');
     void refTablesToCSVFile(string filepath, char separator = '|');
@@ -162,7 +162,7 @@ class ClassesTable {
 public:
     static map<string, ClassesTableElement*> items;
 
-    static ClassesTableElement* addClass(string name, string *superclassName, bool isImplementation, AstNode *classBlock);
+    static ClassesTableElement* addClass(string name, const string& superclassName, bool isImplementation, AstNode *classBlock);
 
 	static void initRTL();
     static void toCSVFile(string filepath, char separator = '|');
