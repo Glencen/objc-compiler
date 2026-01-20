@@ -163,7 +163,12 @@ string* ValueNode::getClassName() const {
 }
 
 void ValueNode::setClassName(string className) {
-    stringValue = &className;
+    if (!stringValue) {
+        stringValue = new string(className);
+    }
+    else {
+        *stringValue = className;
+    }
 }
 
 void ValueNode::setLocalVarId(int id) {
@@ -2403,11 +2408,21 @@ ImplementationDefListNode* ImplementationNode::getImplDefList() const {
 }
 
 void ImplementationNode::setClassName(string className) {
-    this->className->setClassName(className);
+    if (!this->className) {
+        this->className = ValueNode::createClassName(&className);
+    }
+    else {
+        this->className->setClassName(className);
+    }
 }
 
 void ImplementationNode::setSuperClassName(string superClassName) {
-    this->superClassName->setClassName(superClassName);
+    if (!this->superClassName) {
+        this->superClassName = ValueNode::createClassName(&superClassName);
+    }
+    else {
+        this->superClassName->setClassName(superClassName);
+    }
 }
 
 string ImplementationNode::getDotLabel() const {
@@ -2467,11 +2482,21 @@ InterfaceDeclListNode* InterfaceNode::getInterfaceDeclList() const {
 }
 
 void InterfaceNode::setClassName(string className) {
-    this->className->setClassName(className);
+    if (!this->className) {
+        this->className = ValueNode::createClassName(&className);
+    }
+    else {
+        this->className->setClassName(className);
+    }
 }
 
 void InterfaceNode::setSuperClassName(string superClassName) {
-    this->superClassName->setClassName(superClassName);
+    if (!this->superClassName) {
+        this->superClassName = ValueNode::createClassName(&superClassName);
+    }
+    else {
+        this->superClassName->setClassName(superClassName);
+    }
 }
 
 string InterfaceNode::getDotLabel() const {
