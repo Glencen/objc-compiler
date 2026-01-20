@@ -40,7 +40,7 @@ public:
 	Type* getSuperType();
 };
 
-enum ConstantType {
+enum class ConstantType {
     Utf8,
     Integer,
     Float,
@@ -281,5 +281,49 @@ public:
     void toCSVFile(string filename, string fileoath, char separator = '|');
     bool isContains(string name);
 };
+
+static Type* convertTypeNodeToType(TypeNode* typeNode) {
+    if (!typeNode) return nullptr;
+    switch (typeNode->getKind()) {
+        case TypeKind::INT:
+            return new Type(TypeKind::INT);
+        case TypeKind::FLOAT:
+            return new Type(TypeKind::FLOAT);
+        case TypeKind::BOOL:
+            return new Type(TypeKind::BOOL);
+        case TypeKind::CHAR:
+            return new Type(TypeKind::CHAR);
+        case TypeKind::TYPE_ID:
+            return new Type(TypeKind::TYPE_ID);
+        case TypeKind::CLASS_NAME:
+            return new Type(TypeKind::CLASS_NAME, *typeNode->getClassName()->getClassName());
+        case TypeKind::VOID:
+            return new Type(TypeKind::VOID);
+        default:
+            return nullptr;
+    }
+}
+
+static Type* createArrayType(Type* baseType, list<ExprNode*>* arraySizes) {
+    if (!arraySizes || arraySizes->empty()) {
+        return baseType;
+    }
+    ExprNode* firstSize = arraySizes->front();
+    return new Type(baseType->dataType, baseType->className, firstSize);
+}
+
+static string constantTypeToString(ConstantType type) {
+    switch(type) {
+        case ConstantType::Utf8:          return "Utf8";
+        case ConstantType::Integer:       return "Integer";
+        case ConstantType::Float:         return "Float";
+        case ConstantType::String:        return "String";
+        case ConstantType::Class:         return "Class";
+        case ConstantType::Name_And_Type: return "Name_And_Type";
+        case ConstantType::Field_Ref:     return "Field_Ref";
+        case ConstantType::Method_Ref:    return "Method_Ref";
+        default: throw std::invalid_argument("Unknown ConstantType");
+    }
+}
 
 #endif

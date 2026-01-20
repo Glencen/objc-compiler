@@ -2,36 +2,6 @@
 #include "semantic_exceptions.h"
 #include "output_utils.h"
 
-Type* convertTypeNodeToType(TypeNode* typeNode) {
-    if (!typeNode) return nullptr;
-    switch (typeNode->getKind()) {
-        case TypeKind::INT:
-            return new Type(TypeKind::INT);
-        case TypeKind::FLOAT:
-            return new Type(TypeKind::FLOAT);
-        case TypeKind::BOOL:
-            return new Type(TypeKind::BOOL);
-        case TypeKind::CHAR:
-            return new Type(TypeKind::CHAR);
-        case TypeKind::TYPE_ID:
-            return new Type(TypeKind::TYPE_ID);
-        case TypeKind::CLASS_NAME:
-            return new Type(TypeKind::CLASS_NAME, *typeNode->getClassName()->getClassName());
-        case TypeKind::VOID:
-            return new Type(TypeKind::VOID);
-        default:
-            return nullptr;
-    }
-}
-
-Type* createArrayType(Type* baseType, list<ExprNode*>* arraySizes) {
-    if (!arraySizes || arraySizes->empty()) {
-        return baseType;
-    }
-    ExprNode* firstSize = arraySizes->front();
-    return new Type(baseType->dataType, baseType->className, firstSize);
-}
-
 //--------------------------------------------------------------ValueNode--------------------------------------------------------------
 
 void ValueNode::fillLiterals(ConstantsTable* constantTable) {
