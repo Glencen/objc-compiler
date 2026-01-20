@@ -384,6 +384,11 @@ int ConstantsTable::findOrAddConstant(ConstantType type, int number, int firstRe
 }
 
 int ConstantsTable::findConstant(ConstantType type, string utf8string, float floatNumber, int number, int firstRef, int secondRef) {
+	if (utf8string.data() == nullptr) {
+        throw runtime_error(
+            "utf8string is null. Source: ConstantsTable::findConstant"
+        );
+    }
     string compared = utf8string.empty() ? "" : utf8string;
     auto iter = items.cbegin();
     while (iter != items.cend()) {
