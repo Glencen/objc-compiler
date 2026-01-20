@@ -343,7 +343,7 @@ string ConstantsTableElement::toCSVString(char separator) {
 //--------------------------------------------------------------ConstantsTable--------------------------------------------------------------
 
 ConstantsTable::ConstantsTable() {
-    items[maxId] = new ConstantsTableElement(maxId, Utf8, "Code");
+    items[maxId] = new ConstantsTableElement(maxId, ConstantType::Utf8, "Code");
     maxId++;
 }
 

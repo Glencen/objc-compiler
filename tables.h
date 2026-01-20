@@ -55,7 +55,7 @@ class ConstantsTableElement {
 public:
     int id = 0;
     ConstantType type;
-    string utf8String = nullptr;
+    string utf8String;
     int number = 0;
     float floatNumber = 0;
     int firstRef = 0;
@@ -95,7 +95,7 @@ public:
     LocalVariablesTable *localVariables = nullptr;
     string nameStr;
     string descriptorStr;
-    vector<Type*> *parametersTypes = nullptr;
+    vector<Type*> *parametersTypes;
     Type *returnType = nullptr;
 
     FunctionsTableElement(StmtNode *bodyStart, string nameStr, string descriptorStr, vector<Type*> *params, Type *returnType);
@@ -188,7 +188,7 @@ public:
     int descriptor = 0;
     bool isInstance = false;
     int instanceIndex = 0;
-    Type *type;
+    Type *type = nullptr;
     string nameStr;
     string descriptorStr;
 	ExprNode *initialValue = nullptr;
@@ -216,9 +216,9 @@ public:
     bool isClassMethod = false;
     StmtNode *bodyStart = nullptr;
     LocalVariablesTable *localVariables = nullptr;
-    Type *returnType;
-    vector<Type*> *paramsTypes = nullptr;
-    vector<Type*> *keywordsTypes = nullptr;
+    Type *returnType = nullptr;
+    vector<Type*> *paramsTypes;
+    vector<Type*> *keywordsTypes;
     string nameStr;
     string descriptorStr;
 
@@ -246,7 +246,7 @@ public:
     int name = 0;
     int descriptor = 0;
     bool isReadonly = false;
-    Type *type;
+    Type *type = nullptr;
     string nameStr;
     string descriptorStr;
 
@@ -266,7 +266,7 @@ class LocalVariablesTableElement {
 public:
     int id = 0;
     string name;
-    Type *type;
+    Type *type = nullptr;
 
     LocalVariablesTableElement(int id, string name, Type* type);
     string toCSVString(char separator = '|');
