@@ -275,8 +275,10 @@ Type* Type::getSuperType() {
 //--------------------------------------------------------------ConstantsTableElement--------------------------------------------------------------
 
 ConstantsTableElement::ConstantsTableElement(int id, ConstantType type, string utf8String) {
+	DEBUG_LOG("DEBUG: assigning id '" + to_string(id) + "' to ConstantsTableElement");
     this->id = id;
     this->type = type;
+	DEBUG_LOG("DEBUG: assigning utf8string value '" + utf8String + "' to ConstantsTableElement");
     this->utf8String = utf8String;
 }
 
@@ -349,9 +351,12 @@ ConstantsTable::ConstantsTable() {
 }
 
 int ConstantsTable::findOrAddConstant(ConstantType type, string utf8String) {
+	DEBUG_LOG("DEBUG: calling findConstant for '" + utf8String + "'");
     int res = findConstant(type, utf8String, 0);
+	DEBUG_LOG("DEBUG: checking if res is -1");
     if (res == -1) {
         res = maxId++;
+		DEBUG_LOG("DEBUG: creating ConstantsTableElement for res '" + to_string(res) + "' and utf8string '" + utf8String + "'");
         items[res] = new ConstantsTableElement(res, type, utf8String);
     }
     return res;
@@ -381,10 +386,12 @@ int ConstantsTable::findConstant(ConstantType type, string utf8string, float flo
     while (iter != items.cend()) {
         string curStr = iter->second->utf8String.empty() ? "" : iter->second->utf8String;
         if (iter->second->type == type && curStr == compared && iter->second->number == number && iter->second->firstRef == firstRef && iter->second->secondRef == secondRef) {
-            return iter->first;
+            DEBUG_LOG("Constant found. Constant id '" + to_string(iter->first) + "'");
+			return iter->first;
         }
         ++iter;
     }
+	DEBUG_LOG("Constant not found. Returned -1");
     return -1;
 }
 
@@ -580,6 +587,7 @@ void FunctionsTable::toCSVFile(string filename, string filepath, char separator)
 }
 
 void FunctionsTable::fillFieldRefs() {
+	DEBUG_LOG("DEBUG: FunctionsTable::fillFieldRefs()");
     ClassesTableElement *classTableElement = ClassesTable::items["rtl/Program"];
     bool isDontContainsMain = true;
     auto iter = items.cbegin();
@@ -597,6 +605,7 @@ void FunctionsTable::fillFieldRefs() {
 }
 
 void FunctionsTable::fillMethodRefs() {
+	DEBUG_LOG("DEBUG: FunctionsTable::fillMethodRefs()");
     ClassesTableElement *classTableElement = ClassesTable::items["rtl/Program"];
     auto iter = items.cbegin();
     while (iter != items.cend()) {
@@ -606,6 +615,7 @@ void FunctionsTable::fillMethodRefs() {
 }
 
 void FunctionsTable::fillLiterals() {
+	DEBUG_LOG("DEBUG: FunctionsTable::fillLiterals()");
     ClassesTableElement *classTableElement = ClassesTable::items["rtl/Program"];
     auto iter = items.cbegin();
     while (iter != items.cend()) {
@@ -615,6 +625,7 @@ void FunctionsTable::fillLiterals() {
 }
 
 void FunctionsTable::convertToClassProgramMethods() {
+	DEBUG_LOG("DEBUG: FunctionsTable::convertToClassProgramMethods()");
     if (items.count("main") == 0) {
         string msg = "Function 'main' not found";
         throw std::runtime_error(msg.c_str());
@@ -629,6 +640,7 @@ void FunctionsTable::convertToClassProgramMethods() {
 }
 
 void FunctionsTable::semanticTransform() {
+	DEBUG_LOG("DEBUG: FunctionsTable::semanticTransform()");
     auto iter = items.cbegin();
     while (iter != items.cend()) {
         iter->second->semanticTransform();
@@ -639,14 +651,16 @@ void FunctionsTable::semanticTransform() {
 //--------------------------------------------------------------ClassesTableElement--------------------------------------------------------------
 
 ClassesTableElement::ClassesTableElement(string name, const string& superclassName, bool isImplementation) {
-	std::cout << "DEBUG: Creating ClassesTableElement" << std::endl;
+	DEBUG_LOG("DEBUG: creating ConstantsTable");
     constantTable = new ConstantsTable();
+	DEBUG_LOG("DEBUG: creating FieldsTable");
     fields = new FieldsTable();
+	DEBUG_LOG("DEBUG: creating MethodsTable");
     methods = new MethodsTable();
+	DEBUG_LOG("DEBUG: creating PropertiesTable");
     properties = new PropertiesTable();
-	std::cout << "DEBUG: Calling findOrAddConstant for name" << std::endl;
+	DEBUG_LOG("DEBUG: calling findOrAddConstant for name '" + name + "'");
     this->name = constantTable->findOrAddConstant(ConstantType::Utf8, name);
-	std::cout << "DEBUG: Done with name" << std::endl;
 
     if (!superclassName.empty()) {
         this->superclassName = constantTable->findOrAddConstant(ConstantType::Utf8, superclassName);
@@ -833,9 +847,13 @@ void ClassesTableElement::semanticTransform() {
 //--------------------------------------------------------------ClassesTable--------------------------------------------------------------
 
 ClassesTableElement* ClassesTable::addClass(string name, const string& superclassName, bool isImplementation, AstNode *classBlock) {
+	DEBUG_LOG("DEBUG: creating fullName");
     string fullName = "global/" + name;
+	DEBUG_LOG("DEBUG: created fullName '" + fullName + "'");
     string fullSuperclassName = "";
+	DEBUG_LOG("DEBUG: creating fullSuperclassName");
     if (!superclassName.empty()) {
+		DEBUG_LOG("DEBUG: creating fullSuperclassName");
         if (superclassName == "NSObject" || superclassName == "NSString" || superclassName == "NSArray") {
             fullSuperclassName = "rtl/" + superclassName;
         }
@@ -844,6 +862,7 @@ ClassesTableElement* ClassesTable::addClass(string name, const string& superclas
         }
     }
 
+	DEBUG_LOG("DEBUG: creating new ClassesTableElement");
     ClassesTableElement *element = new ClassesTableElement("global/" + name, fullSuperclassName, isImplementation);
 
     if (!isImplementation && items.count(fullName) && items[fullName]->isImplementation) {
@@ -899,12 +918,16 @@ ClassesTableElement* ClassesTable::addClass(string name, const string& superclas
 }
 
 void ClassesTable::initRTL() {
-	std::cout << "DEBUG: initClassProgram" << std::endl;
+	DEBUG_LOG("DEBUG: initRTL");
+	DEBUG_LOG("DEBUG: initClassProgram");	
     initClassProgram();
-	std::cout << "DEBUG: initClassInOutFuncs" << std::endl;
+	DEBUG_LOG("DEBUG: initClassInOutFuncs");
     initClassInOutFuncs();
+	DEBUG_LOG("DEBUG: initClassNSObject");
     initClassNSObject();
+	DEBUG_LOG("DEBUG: initClassNSString");
     initClassNSString();
+	DEBUG_LOG("DEBUG: initClassNSArray");
     initClassNSArray();
 }
 
@@ -922,6 +945,7 @@ void ClassesTable::toCSVFile(string filepath, char separator) {
 }
 
 void ClassesTable::fillFieldRefs() {
+	DEBUG_LOG("DEBUG: ClassesTable::fillFieldRefs()");
     auto iter = items.cbegin();
     while (iter != items.cend()) {
         iter->second->fillFieldRefs();
@@ -930,6 +954,7 @@ void ClassesTable::fillFieldRefs() {
 }
 
 void ClassesTable::fillMethodRefs() {
+	DEBUG_LOG("DEBUG: ClassesTable::fillMethodRefs()");
     auto iter = items.cbegin();
     while (iter != items.cend()) {
         iter->second->fillMethodRefs();
@@ -938,6 +963,7 @@ void ClassesTable::fillMethodRefs() {
 }
 
 void ClassesTable::fillLiterals() {
+	DEBUG_LOG("DEBUG: ClassesTable::fillLiterals()");
     auto iter = items.cbegin();
     while (iter != items.cend()) {
         iter->second->fillLiterals();
@@ -968,6 +994,7 @@ string ClassesTable::getFullClassName(string name) {
 }
 
 void ClassesTable::semanticTransform() {
+	DEBUG_LOG("DEBUG: ClassesTable::semanticTransform()");
     auto iter = items.cbegin();
     while (iter != items.cend()) {
         iter->second->semanticTransform();
