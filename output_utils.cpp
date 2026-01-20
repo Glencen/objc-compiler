@@ -1,4 +1,7 @@
+#include <chrono>
 #include "output_utils.h"
+
+//--------------------------------------------------------------TokenOutput--------------------------------------------------------------
 
 TokenOutput& TokenOutput::getInstance() {
     static TokenOutput instance;
@@ -95,4 +98,136 @@ const char* TokenOutput::token_type_name(token_type_t type) {
 
 size_t TokenOutput::getTokenCount() const {
     return tokens.size();
+}
+
+//--------------------------------------------------------------DebugLogger--------------------------------------------------------------
+
+DebugLogger::DebugLogger() 
+    : logQueue(std::make_unique<TimestampedQueue>()), 
+      running(false) {}
+
+DebugLogger::~DebugLogger() {
+    close();
+}
+
+DebugLogger& DebugLogger::getInstance() {
+    static DebugLogger instance;
+    return instance;
+}
+
+void DebugLogger::initialize(const std::string& filename) {
+    std::lock_guard<std::mutex> lock(fileMutex);
+    
+    if (running) {
+        close();
+    }
+    
+    currentFile = filename;
+    logFile.open(filename, std::ios::app);
+    if (!logFile.is_open()) {
+        std::cerr << "Error: Could not open debug log file: " << filename << std::endl;
+        return;
+    }
+    
+    running = true;
+    writerThread = std::thread(&DebugLogger::writerLoop, this);
+    
+    logFile << "=== Debug session started at " << getTimestamp() << " ===" << std::endl;
+    logFile.flush();
+}
+
+std::string DebugLogger::getTimestamp() const {
+    auto now = std::chrono::system_clock::now();
+    auto time = std::chrono::system_clock::to_time_t(now);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now.time_since_epoch()
+    ) % 1000;
+    
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&time), "%Y-%m-%d %H:%M:%S");
+    ss << '.' << std::setfill('0') << std::setw(3) << ms.count();
+    return ss.str();
+}
+
+void DebugLogger::log(const std::string& message, const std::string& function, const std::string& filename, int line) {
+    if (!running) return;
+    
+    LogEntry entry(message, function, filename, line);
+    
+    {
+        std::lock_guard<std::mutex> lock(logQueue->mutex);
+        logQueue->queue.push(std::move(entry));
+    }
+
+    logQueue->cv.notify_one();
+}
+
+void DebugLogger::writerLoop() {
+    while (running) {
+        std::unique_lock<std::mutex> lock(logQueue->mutex);
+        
+        logQueue->cv.wait(lock, [this]() {
+            return !logQueue->queue.empty() || !running;
+        });
+        
+        std::queue<LogEntry> localQueue;
+        while (!logQueue->queue.empty()) {
+            localQueue.push(std::move(const_cast<LogEntry&>(logQueue->queue.top())));
+            logQueue->queue.pop();
+        }
+        
+        lock.unlock();
+        
+        while (!localQueue.empty()) {
+            auto& entry = localQueue.front();
+            
+            std::lock_guard<std::mutex> fileLock(fileMutex);
+            if (logFile.is_open()) {
+                std::string shortFilename = entry.filename;
+                size_t lastSlash = shortFilename.find_last_of("/\\");
+                if (lastSlash != std::string::npos) {
+                    shortFilename = shortFilename.substr(lastSlash + 1);
+                }
+                
+                logFile << "[" << getTimestamp() << "] "
+                        << "[" << shortFilename << ":" << entry.line << "] "
+                        << "[" << entry.function << "] "
+                        << entry.message << std::endl;
+            }
+            
+            localQueue.pop();
+        }
+        
+        if (logFile.is_open()) {
+            logFile.flush();
+        }
+    }
+}
+
+void DebugLogger::flush() {
+    if (!running) return;
+    
+    logQueue->cv.notify_one();
+
+    std::unique_lock<std::mutex> lock(logQueue->mutex);
+    logQueue->cv.wait(lock, [this]() {
+        return logQueue->queue.empty();
+    });
+}
+
+void DebugLogger::close() {
+    if (running) {
+        running = false;
+        logQueue->cv.notify_one();
+        
+        if (writerThread.joinable()) {
+            writerThread.join();
+        }
+        
+        std::lock_guard<std::mutex> lock(fileMutex);
+        if (logFile.is_open()) {
+            logFile << "=== Debug session ended at " << getTimestamp() << " ===" << std::endl;
+            logFile.close();
+        }
+    }
 }
