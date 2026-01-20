@@ -275,20 +275,23 @@ Type* Type::getSuperType() {
 //--------------------------------------------------------------ConstantsTableElement--------------------------------------------------------------
 
 ConstantsTableElement::ConstantsTableElement(int id, ConstantType type, string utf8String) {
-	DEBUG_LOG("DEBUG: assigning id '" + to_string(id) + "' to ConstantsTableElement");
+	DEBUG_LOG("DEBUG: creating ConstantsTableElement '" + utf8String + "' of type '" + constantTypeToString(type) + "' with id '" + to_string(id) + "'");
     this->id = id;
     this->type = type;
-	DEBUG_LOG("DEBUG: assigning utf8string value '" + utf8String + "' to ConstantsTableElement");
     this->utf8String = utf8String;
 }
 
 ConstantsTableElement::ConstantsTableElement(int id, ConstantType type, float floatNumber) {
+	DEBUG_LOG("DEBUG: creating ConstantsTableElement '" + to_string(floatNumber) + "' of type '" + constantTypeToString(type) + "' with id '" + to_string(id) + "'");
     this->id = id;
     this->type = type;
     this->floatNumber = floatNumber;
 }
 
 ConstantsTableElement::ConstantsTableElement(int id, ConstantType type, int number, int firstRef, int secondRef) {
+	DEBUG_LOG("DEBUG: creating ConstantsTableElement '" + utf8String + "' of type '" + constantTypeToString(type) 
+				+ "' with id '" + to_string(id) + "'" + (firstRef > 0 ? ", first ref '" + to_string(firstRef) + "'" : "")
+				+ (secondRef > 0 ? ", second ref '" + to_string(secondRef) + "'" : ""));
     this->id = id;
     this->type = type;
     this->number = number;
@@ -353,16 +356,15 @@ ConstantsTable::ConstantsTable() {
 int ConstantsTable::findOrAddConstant(ConstantType type, string utf8String) {
 	DEBUG_LOG("DEBUG: calling findConstant for '" + utf8String + "'");
     int res = findConstant(type, utf8String, 0);
-	DEBUG_LOG("DEBUG: checking if res is -1");
     if (res == -1) {
         res = maxId++;
-		DEBUG_LOG("DEBUG: creating ConstantsTableElement for res '" + to_string(res) + "' and utf8string '" + utf8String + "'");
         items[res] = new ConstantsTableElement(res, type, utf8String);
     }
     return res;
 }
 
 int ConstantsTable::findOrAddConstant(ConstantType type, float floatNumber) {
+	DEBUG_LOG("DEBUG: calling findConstant for '" + to_string(floatNumber) + "'");
     int res = findConstant(type, "", floatNumber);
     if (res == -1) {
         res = maxId++;
@@ -372,6 +374,7 @@ int ConstantsTable::findOrAddConstant(ConstantType type, float floatNumber) {
 }
 
 int ConstantsTable::findOrAddConstant(ConstantType type, int number, int firstRef, int secondRef) {
+	DEBUG_LOG("DEBUG: calling findConstant for '" + to_string(number) + "', first ref '" + to_string(firstRef) + "', and second ref '" + to_string(secondRef) + "'");
     int res = findConstant(type, "", 0, number, firstRef, secondRef);
     if (res == -1) {
         res = maxId++;
@@ -386,12 +389,12 @@ int ConstantsTable::findConstant(ConstantType type, string utf8string, float flo
     while (iter != items.cend()) {
         string curStr = iter->second->utf8String.empty() ? "" : iter->second->utf8String;
         if (iter->second->type == type && curStr == compared && iter->second->number == number && iter->second->firstRef == firstRef && iter->second->secondRef == secondRef) {
-            DEBUG_LOG("Constant found. Constant id '" + to_string(iter->first) + "'");
+            DEBUG_LOG("DEBUG: Constant found. Constant id '" + to_string(iter->first) + "'");
 			return iter->first;
         }
         ++iter;
     }
-	DEBUG_LOG("Constant not found. Returned -1");
+	DEBUG_LOG("DEBUG: Constant not found. Returned -1");
     return -1;
 }
 
@@ -428,6 +431,7 @@ void ConstantsTable::toCSVFile(string filename, string filepath, char separator)
 }
 
 int ConstantsTable::findOrAddFieldRefConstant(string className, string fieldName, string descriptor) {
+	DEBUG_LOG("DEBUG: calling findOrAddFieldRefConstant for className '" + className + "' fieldName '" + fieldName + "' and descriptor '" + descriptor + "'");
     int classNameConst = this->findOrAddConstant(ConstantType::Utf8, className);
     int classConst = this->findOrAddConstant(ConstantType::Class, 0, classNameConst);
     int nameConst = this->findOrAddConstant(ConstantType::Utf8, fieldName);
@@ -438,6 +442,7 @@ int ConstantsTable::findOrAddFieldRefConstant(string className, string fieldName
 }
 
 int ConstantsTable::findOrAddMethodRefConstant(string className, string methodName, string descriptor) {
+	DEBUG_LOG("DEBUG: calling findOrAddMethodRefConstant for className '" + className + "' methodName '" + methodName + "' and descriptor '" + descriptor + "'");
     int classNameConst = this->findOrAddConstant(ConstantType::Utf8, className);
     int classConst = this->findOrAddConstant(ConstantType::Class, 0, classNameConst);
     int nameConst = this->findOrAddConstant(ConstantType::Utf8, methodName);
@@ -651,6 +656,8 @@ void FunctionsTable::semanticTransform() {
 //--------------------------------------------------------------ClassesTableElement--------------------------------------------------------------
 
 ClassesTableElement::ClassesTableElement(string name, const string& superclassName, bool isImplementation) {
+	DEBUG_LOG("DEBUG: creating ClassesTableElement for class '" + name + "' with super class '" + superclassName + "' as an "
+				+ (isImplementation ? "implementation" : "interface"));
 	DEBUG_LOG("DEBUG: creating ConstantsTable");
     constantTable = new ConstantsTable();
 	DEBUG_LOG("DEBUG: creating FieldsTable");
@@ -669,13 +676,15 @@ ClassesTableElement::ClassesTableElement(string name, const string& superclassNa
 		this->superclassName = 0;
 	}
 
+	DEBUG_LOG("DEBUG: creating a reference for '" + name + "'");
     thisClass = constantTable->findOrAddConstant(ConstantType::Class, 0, this->name);
 
     if (!superclassName.empty()) {
+		DEBUG_LOG("DEBUG: creating a reference for '" + superclassName + "'");
         this->superclass = constantTable->findOrAddConstant(ConstantType::Class, 0, this->superclassName);
     }
 	else {
-		this->superclassName = 0;
+		this->superclass = 0;
 	}
     this->isImplementation = isImplementation;
 }
@@ -847,13 +856,13 @@ void ClassesTableElement::semanticTransform() {
 //--------------------------------------------------------------ClassesTable--------------------------------------------------------------
 
 ClassesTableElement* ClassesTable::addClass(string name, const string& superclassName, bool isImplementation, AstNode *classBlock) {
-	DEBUG_LOG("DEBUG: creating fullName");
+	DEBUG_LOG("DEBUG: calling ClassesTable::addClass()");
     string fullName = "global/" + name;
 	DEBUG_LOG("DEBUG: created fullName '" + fullName + "'");
     string fullSuperclassName = "";
 	DEBUG_LOG("DEBUG: creating fullSuperclassName");
     if (!superclassName.empty()) {
-		DEBUG_LOG("DEBUG: creating fullSuperclassName");
+		DEBUG_LOG("DEBUG: super class not empty");
         if (superclassName == "NSObject" || superclassName == "NSString" || superclassName == "NSArray") {
             fullSuperclassName = "rtl/" + superclassName;
         }
@@ -862,9 +871,10 @@ ClassesTableElement* ClassesTable::addClass(string name, const string& superclas
         }
     }
 
-	DEBUG_LOG("DEBUG: creating new ClassesTableElement");
-    ClassesTableElement *element = new ClassesTableElement("global/" + name, fullSuperclassName, isImplementation);
+	DEBUG_LOG("DEBUG: created fullSuperclassName '" + fullSuperclassName + "'");
+    ClassesTableElement *element = new ClassesTableElement(fullName, fullSuperclassName, isImplementation);
 
+	DEBUG_LOG("DEBUG: checking for semantic errors");
     if (!isImplementation && items.count(fullName) && items[fullName]->isImplementation) {
         throw class_exception(
             "Class interface '" + name + "' declared after implementation", "ClassesTable::addClass", -1, -1, "Class: " + fullName
@@ -896,8 +906,10 @@ ClassesTableElement* ClassesTable::addClass(string name, const string& superclas
 
     if (isImplementation) {
         ImplementationNode* implementation = (ImplementationNode*)classBlock;
+		DEBUG_LOG("DEBUG: setting class name '" + fullName + "' in the ImplementationNode");
         implementation->setClassName(fullName);
         if (!fullSuperclassName.empty()) {
+			DEBUG_LOG("DEBUG: setting super class name '" + fullSuperclassName + "' in the ImplementationNode");
             implementation->setSuperClassName(fullSuperclassName);
         }
         else {
@@ -906,8 +918,10 @@ ClassesTableElement* ClassesTable::addClass(string name, const string& superclas
     }
     else {
         InterfaceNode* interface = (InterfaceNode*)classBlock;
+		DEBUG_LOG("DEBUG: setting class name '" + fullName + "' in the InterfaceNode");
         interface->setClassName(fullName);
         if (fullSuperclassName.empty()) {
+			DEBUG_LOG("DEBUG: setting super class name '" + fullSuperclassName + "' in the InterfaceNode");
             interface->setSuperClassName(fullSuperclassName);
         }
         else {
@@ -918,16 +932,11 @@ ClassesTableElement* ClassesTable::addClass(string name, const string& superclas
 }
 
 void ClassesTable::initRTL() {
-	DEBUG_LOG("DEBUG: initRTL");
-	DEBUG_LOG("DEBUG: initClassProgram");	
+	DEBUG_LOG("DEBUG: calling initRTL");
     initClassProgram();
-	DEBUG_LOG("DEBUG: initClassInOutFuncs");
     initClassInOutFuncs();
-	DEBUG_LOG("DEBUG: initClassNSObject");
     initClassNSObject();
-	DEBUG_LOG("DEBUG: initClassNSString");
     initClassNSString();
-	DEBUG_LOG("DEBUG: initClassNSArray");
     initClassNSArray();
 }
 
@@ -1003,11 +1012,13 @@ void ClassesTable::semanticTransform() {
 }
 
 void ClassesTable::initClassProgram() {
+	DEBUG_LOG("DEBUG: calling initClassProgram");	
     ClassesTableElement* Program = new ClassesTableElement("rtl/Program", "", true);
     items["rtl/Program"] = Program;
 }
 
 void ClassesTable::initClassInOutFuncs() {
+	DEBUG_LOG("DEBUG: calling initClassInOutFuncs");
     ClassesTableElement* inOutFuncs = new ClassesTableElement("rtl/InOutFuncs", "", true);
 
     ConstantsTable* сonstantTable = inOutFuncs->constantTable;
@@ -1069,6 +1080,7 @@ void ClassesTable::initClassInOutFuncs() {
 }
 
 void ClassesTable::initClassNSObject() {
+	DEBUG_LOG("DEBUG: calling initClassNSObject");
     ClassesTableElement* nsobject = new ClassesTableElement("rtl/NSObject", "", true);
     ConstantsTable* constantTable = nsobject->constantTable;
 
@@ -1146,6 +1158,7 @@ void ClassesTable::initClassNSObject() {
 }
 
 void ClassesTable::initClassNSString() {
+	DEBUG_LOG("DEBUG: calling initClassNSString");
 	ClassesTableElement* nsstring = new ClassesTableElement("rtl/NSString", "rtl/NSObject", true);
 	ConstantsTable* constantTable = nsstring->constantTable;
 
@@ -1251,6 +1264,7 @@ void ClassesTable::initClassNSString() {
 }
 
 void ClassesTable::initClassNSArray() {
+	DEBUG_LOG("DEBUG: calling initClassNSArray");
 	ClassesTableElement* nsarray = new ClassesTableElement("rtl/NSArray", "rtl/NSObject", true);
 	ConstantsTable* constantTable = nsarray->constantTable;
 

@@ -1417,7 +1417,6 @@ void InterfaceNode::fillTables() {
         );
     }
     string className = *this->className->getClassName();
-    DEBUG_LOG("DEBUG: ClassesTable::addClass()");
     ClassesTableElement* classTableElement = ClassesTable::addClass( className, superClassName ? *(superClassName->getClassName()) : "", false, this );
 
     if (instanceVars) {
