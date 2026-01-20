@@ -5,6 +5,7 @@
 #include <vector>
 #include <list>
 #include "classes.h"
+#include "semantic_exceptions.h"
 
 using namespace std;
 

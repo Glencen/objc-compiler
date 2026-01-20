@@ -151,16 +151,13 @@ int main(int argc, char* argv[])
             std::ofstream ast_after_out(ast_after_file);
             if (!ast_after_out.is_open()) {
                 std::cerr << "Could not open AST after file for writing: '" + ast_after_file + "'" << std::endl;
-                DEBUG_LOG("Error: Could not open AST after file");
                 safeExit(1);
             }
 
-            DEBUG_LOG("Writing AST after semantics...");
             ast_after_out << "digraph AST {\n";
             ast_after_out << root->toDot();
             ast_after_out << "}\n";
             ast_after_out.close();
-            DEBUG_LOG("AST after semantics written");
             
             std::cout << "\nAST after semantics written to: " << ast_after_file << std::endl;
             
@@ -186,9 +183,11 @@ int main(int argc, char* argv[])
             
             std::cout << "\nProcessing completed successfully!" << std::endl;
             
-        } catch (const std::exception& e) {
-            std::cerr << "\nError during semantic analysis: " << e.what() << std::endl;
+        } catch (const semantic_exception& e) {
+            std::cerr << "\nError during semantic analysis: " << e.getFullMessage() << std::endl;
             safeExit(1);
+        } catch (const runtime_error& e) {
+            std::cerr << "\nError during semantic analysis: " << e.what() << std::endl;
         } catch (...) {
             std::cerr << "\nUnknown error during semantic analysis!" << std::endl;
             safeExit(1);

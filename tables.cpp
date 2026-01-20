@@ -1,7 +1,6 @@
 #include <fstream>
 #include <algorithm>
 #include "tables.h"
-#include "semantic_exceptions.h"
 #include "output_utils.h"
 
 map<string, FunctionsTableElement*> FunctionsTable::items;
