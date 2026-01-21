@@ -725,13 +725,16 @@ void StmtNode::fillLiterals(ConstantsTable* constantTable) {
 void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
     switch (kind) {
         case StmtKind::RETURN: {
+            DEBUG_LOG("DEBUG: processing RETURN statement");
             if (expr) {
                 expr->semanticTransform(localVariables);
             }
             break;
         }
         case StmtKind::IF:
+            DEBUG_LOG("DEBUG: processing IF statement");
         case StmtKind::IF_ELSE: {
+            DEBUG_LOG("DEBUG: processing IF_ELSE statement");
             if (condition) {
                 condition->semanticTransform(localVariables);
                 Type* condType = condition->getExprType();
@@ -746,6 +749,7 @@ void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
             break;
         }
         case StmtKind::COMPOUND: {
+            DEBUG_LOG("DEBUG: processing COMPOUND statement");
             if (compound && compound->getStmtList()) {
                 for (auto stmt : *compound->getStmtList()) {
                     stmt->semanticTransform(localVariables);
@@ -754,6 +758,7 @@ void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
             break;
         }
         case StmtKind::DECLARATION: {
+            DEBUG_LOG("DEBUG: processing DECLARATION statement");
             if (decl) {
                 TypeNode* typeNode = decl->getType();
                 if (typeNode && decl->getDeclaratorList() && decl->getDeclaratorList()->getInitDeclList()) {
@@ -775,14 +780,14 @@ void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
                                     varType = new Type(TypeKind::CHAR);
                                     break;
                                 case TypeKind::CLASS_NAME:
-                                    varType = new Type(TypeKind::CLASS_NAME, 
-                                                     *typeNode->getClassName()->getClassName());
+                                    varType = new Type(TypeKind::CLASS_NAME, *typeNode->getClassName()->getClassName());
                                     break;
                                 default:
                                     break;
                             }
                             
                             if (varType) {
+                                DEBUG_LOG("DEBUG: checking local variable '" + varName + "'");
                                 try {
                                     localVariables->findOrAddLocalVariable(varName, varType);
                                 } catch (const symbol_exception& e) {
@@ -791,6 +796,7 @@ void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
                                         "Variable name: " + varName + ", type: " + varType->toString()
                                     );
                                 }
+                                DEBUG_LOG("DEBUG: checking type correctness");
                                 if (initDecl->getInitializer()) {
                                     // Проверка соответствия типов
                                 }

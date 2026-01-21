@@ -87,7 +87,7 @@ Type::Type(TypeKind dataType, string className, ExprNode* arrSize) {
                     int intValue = value->getInt();
                     if (intValue > 0) {
                         throw array_exception(
-                                "Negative array size '-" + to_string(intValue) + "'", "Type constructor", -1, -1, "Array size expression"
+                            "Negative array size '-" + to_string(intValue) + "'", "Type constructor", -1, -1, "Array size expression"
                         );
                     }
                 }
@@ -1663,6 +1663,7 @@ void PropertiesTable::toCSVFile(string filename, string filepath, char separator
 //--------------------------------------------------------------LocalVariablesTableElement--------------------------------------------------------------
 
 LocalVariablesTableElement::LocalVariablesTableElement(int id, string name, Type* type) {
+	DEBUG_LOG("DEBUG: creating LocalVariablesTableElement '" + name + "' of type '" + typeKindToString(type->dataType) + "' with id '" + to_string(id) + "'");
     this->id = id;
     this->name = name;
     this->type = type;

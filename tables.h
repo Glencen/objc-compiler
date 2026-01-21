@@ -314,7 +314,7 @@ static Type* createArrayType(Type* baseType, list<ExprNode*>* arraySizes) {
 }
 
 static string constantTypeToString(ConstantType type) {
-    switch(type) {
+    switch (type) {
         case ConstantType::Utf8:          return "Utf8";
         case ConstantType::Integer:       return "Integer";
         case ConstantType::Float:         return "Float";
@@ -324,6 +324,19 @@ static string constantTypeToString(ConstantType type) {
         case ConstantType::Field_Ref:     return "Field_Ref";
         case ConstantType::Method_Ref:    return "Method_Ref";
         default: throw std::invalid_argument("Unknown ConstantType");
+    }
+}
+
+static string typeKindToString(TypeKind kind) {
+    switch (kind) {
+        case TypeKind::INT:         return "INT";
+        case TypeKind::FLOAT:       return "FLOAT";
+        case TypeKind::BOOL:        return "BOOL";
+        case TypeKind::CHAR:        return "CHAR";
+        case TypeKind::TYPE_ID:     return "TYPE_ID";
+        case TypeKind::CLASS_NAME:  return "CLASS_NAME";
+        case TypeKind::VOID:        return "VOID";
+        default:                    return "NONE";
     }
 }
 
