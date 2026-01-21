@@ -148,13 +148,16 @@ int main(int argc, char* argv[])
                 safeExit(1);
             }
 
+            DEBUG_LOG("DEBUG: Starting new AST file generation");
             ast_after_out << "digraph AST {\n";
             ast_after_out << root->toDot();
             ast_after_out << "}\n";
             ast_after_out.close();
+            DEBUG_LOG("DEBUG: Finished new AST file generation");
             
             std::cout << "\nAST after semantics written to: " << ast_after_file << std::endl;
             
+            DEBUG_LOG("DEBUG: Starting CSV file generation");
             if (!tables_dir.empty() && tables_dir.back() != '/') {
                 tables_dir += '/';
             }
@@ -174,7 +177,8 @@ int main(int argc, char* argv[])
                     std::cout << "- " << tables_dir << className << "_PropertiesTable.csv" << std::endl;
                 }
             }
-            
+            DEBUG_LOG("DEBUG: Finished CSV file generation");
+
             std::cout << "\nProcessing completed successfully!" << std::endl;
             
         } catch (const semantic_exception& e) {
