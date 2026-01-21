@@ -104,69 +104,122 @@ void ExprListNode::fillLiterals(ConstantsTable* constantTable) {
 //--------------------------------------------------------------ExprNode--------------------------------------------------------------
 
 void ExprNode::fillLiterals(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: ExprNode::fillLiterals()");
+    DEBUG_LOG("DEBUG: calling ExprNode::fillLiterals()");
     switch (kind) {
-        case ExprKind::LITERAL:
+        case ExprKind::LITERAL: {
+            DEBUG_LOG("DEBUG: processing LITERAL expression");
             if (literalValue) {
                 literalValue->fillLiterals(constantTable);
             }
             break;
-        case ExprKind::OBJC_ARRAY_LITERAL:
+        }
+        case ExprKind::OBJC_ARRAY_LITERAL: {
+            DEBUG_LOG("DEBUG: processing OBJC_ARRAY_LITERAL expression");
             if (objcArrayExprList && objcArrayExprList->getExprList()) {
                 for (auto expr : *objcArrayExprList->getExprList()) {
                     expr->fillLiterals(constantTable);
                 }
             }
             break;
-        case ExprKind::OBJC_BOXED_EXPR:
-        case ExprKind::BOXED_EXPR:
+        }
+        case ExprKind::OBJC_BOXED_EXPR: {
+            DEBUG_LOG("DEBUG: processing OBJC_BOXED_EXPR expression");
+        }
+        case ExprKind::BOXED_EXPR: {
+            DEBUG_LOG("DEBUG: processing BOXED_EXPR expression");
             if (boxedExpr) {
                 boxedExpr->fillLiterals(constantTable);
             }
             break;
-        case ExprKind::IDENTIFIER:
+        }
+        case ExprKind::IDENTIFIER: {
+            DEBUG_LOG("DEBUG: processing IDENTIFIER expression");
             break;
-        case ExprKind::UNARY_MINUS:
-        case ExprKind::NOT:
-        case ExprKind::POST_INC:
-        case ExprKind::POST_DEC:
+        }
+        case ExprKind::UNARY_MINUS: {
+            DEBUG_LOG("DEBUG: processing UNARY_MINUS expression");
+        }
+        case ExprKind::NOT: {
+            DEBUG_LOG("DEBUG: processing NOT expression");
+        }
+        case ExprKind::POST_INC: {
+            DEBUG_LOG("DEBUG: processing POST_INC expression");
+        }
+        case ExprKind::POST_DEC: {
+            DEBUG_LOG("DEBUG: processing POST_DEC expression");
             if (operand) {
                 operand->fillLiterals(constantTable);
             }
             break;
-        case ExprKind::ADDITION:
-        case ExprKind::SUBTRACTION:
-        case ExprKind::MULTIPLICATION:
-        case ExprKind::DIVISION:
-        case ExprKind::EQUAL:
-        case ExprKind::NOT_EQUAL:
-        case ExprKind::GREATER:
-        case ExprKind::LESS:
-        case ExprKind::LESS_OR_EQUAL:
-        case ExprKind::GREATER_OR_EQUAL:
-        case ExprKind::AND:
-        case ExprKind::OR:
-        case ExprKind::ASSIGN:
+        }
+        case ExprKind::ADDITION: {
+            DEBUG_LOG("DEBUG: processing ADDITION expression");
+        }
+        case ExprKind::SUBTRACTION: {
+            DEBUG_LOG("DEBUG: processing SUBTRACTION expression");
+        }
+        case ExprKind::MULTIPLICATION: {
+            DEBUG_LOG("DEBUG: processing MULTIPLICATION expression");
+        }
+        case ExprKind::DIVISION: {
+            DEBUG_LOG("DEBUG: processing DIVISION expression");
+        }
+        case ExprKind::EQUAL: {
+            DEBUG_LOG("DEBUG: processing EQUAL expression");
+        }
+        case ExprKind::NOT_EQUAL: {
+            DEBUG_LOG("DEBUG: processing NOT_EQUAL expression");
+        }
+        case ExprKind::GREATER: {
+            DEBUG_LOG("DEBUG: processing GREATER expression");
+        }
+        case ExprKind::LESS: {
+            DEBUG_LOG("DEBUG: processing LESS expression");
+        }
+        case ExprKind::LESS_OR_EQUAL: {
+            DEBUG_LOG("DEBUG: processing LESS_OR_EQUAL expression");
+        }
+        case ExprKind::GREATER_OR_EQUAL: {
+            DEBUG_LOG("DEBUG: processing GREATER_OR_EQUAL expression");
+        }
+        case ExprKind::AND: {
+            DEBUG_LOG("DEBUG: processing AND expression");
+        }
+        case ExprKind::OR: {
+            DEBUG_LOG("DEBUG: processing OR expression");
+        }
+        case ExprKind::ASSIGN: {
+            DEBUG_LOG("DEBUG: processing ASSIGN expression");
             if (left) left->fillLiterals(constantTable);
             if (right) right->fillLiterals(constantTable);
             break;
-        case ExprKind::ARRAY_ACCESS:
+        }
+        case ExprKind::ARRAY_ACCESS: {
+            DEBUG_LOG("DEBUG: processing ARRAY_ACCESS expression");
             if (operand) operand->fillLiterals(constantTable);
             if (index) index->fillLiterals(constantTable);
             break;
-        case ExprKind::FUNCTION_CALL:
+        }
+        case ExprKind::FUNCTION_CALL: {
+            DEBUG_LOG("DEBUG: processing FUNCTION_CALL expression");
             if (args && args->getExprList()) {
                 for (auto expr : *args->getExprList()) {
                     expr->fillLiterals(constantTable);
                 }
             }
             break;
-        case ExprKind::DOT:
-        case ExprKind::ARROW:
+        }
+        case ExprKind::DOT: {
+            DEBUG_LOG("DEBUG: processing DOT expression");
+        }
+        case ExprKind::ARROW: {
+            DEBUG_LOG("DEBUG: processing ARROW expression");
             if (left) left->fillLiterals(constantTable);
             if (right) right->fillLiterals(constantTable);
             break;
-        case ExprKind::MESSAGE:
+        }
+        case ExprKind::MESSAGE: {
+            DEBUG_LOG("DEBUG: processing MESSAGE expression");
             if (receiver) {
                 if (receiver->getExpr()) {
                     receiver->getExpr()->fillLiterals(constantTable);
@@ -184,15 +237,17 @@ void ExprNode::fillLiterals(ConstantsTable* constantTable) {
                 }
             }
             break;
+        }
         default:
             break;
     }
 }
 
 void ExprNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: ExprNode::fillFieldRefs()");
+    DEBUG_LOG("DEBUG: calling ExprNode::fillFieldRefs()");
     switch (kind) {
         case ExprKind::IDENTIFIER: {
+            DEBUG_LOG("DEBUG: processing IDENTIFIER expression");
             string name = *identifier->getIdentifier();
             if (classTableElement && classTableElement->isContainsField(name)) {
                 string descriptor;
@@ -208,15 +263,21 @@ void ExprNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable*
             }
             break;
         }
-        case ExprKind::DOT:
-        case ExprKind::ARROW:
+        case ExprKind::DOT: {
+            DEBUG_LOG("DEBUG: processing DOT expression");
+        }
+        case ExprKind::ARROW: {
+            DEBUG_LOG("DEBUG: processing ARROW expression");
             if (left) left->fillFieldRefs(constantTable, localVariables, classTableElement);
             if (right) right->fillFieldRefs(constantTable, localVariables, classTableElement);
             break;
-        case ExprKind::ASSIGN:
+        }
+        case ExprKind::ASSIGN: {
+            DEBUG_LOG("DEBUG: processing ASSIGN expression");
             if (left) left->fillFieldRefs(constantTable, localVariables, classTableElement);
             if (right) right->fillFieldRefs(constantTable, localVariables, classTableElement);
             break;
+        }
         default:
             if (left) left->fillFieldRefs(constantTable, localVariables, classTableElement);
             if (right) right->fillFieldRefs(constantTable, localVariables, classTableElement);
@@ -234,9 +295,10 @@ void ExprNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable*
 }
 
 void ExprNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance) {
-    DEBUG_LOG("DEBUG: ExprNode::fillMethodRefs()");
+    DEBUG_LOG("DEBUG: calling ExprNode::fillMethodRefs()");
     switch (kind) {
         case ExprKind::FUNCTION_CALL: {
+            DEBUG_LOG("DEBUG: processing FUNCTION_CALL expression");
             string methodName = *funcId->getIdentifier();
             if (classTableElement && classTableElement->isContainsMethod(methodName)) {
                 string descriptor;
@@ -258,6 +320,7 @@ void ExprNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable
             break;
         }
         case ExprKind::MESSAGE: {
+            DEBUG_LOG("DEBUG: processing MESSAGE expression");
             if (selector) {
                 string selectorName;
                 if (selector->getKind() == MsgSelectorKind::SIMPLE_SEL) {
@@ -293,9 +356,12 @@ void ExprNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable
 }
 
 void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling ExprNode::semanticTransform");
     switch (kind) {
         case ExprKind::LITERAL: {
+            DEBUG_LOG("DEBUG: processing LITERAL expression");
             if (literalValue) {
+                DEBUG_LOG("DEBUG: literal is not null. Setting literal type");
                 switch (literalValue->getValueKind()) {
                     case ValueKind::INT_LIT:
                         setType(new Type(TypeKind::INT));
@@ -319,21 +385,32 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
             break;
         }
         case ExprKind::IDENTIFIER: {
+            DEBUG_LOG("DEBUG: processing IDENTIFIER expression");
             string name = *identifier->getIdentifier();
+            DEBUG_LOG("DEBUG: checking if identifier is a local variable");
             if (localVariables->isContains(name)) {
+                DEBUG_LOG("DEBUG: identifier is a local variable. Setting attributes in the node");
                 identifier->setIsLocalVar(true);
                 identifier->setLocalVarId(localVariables->items[name]->id);
                 setType(localVariables->items[name]->type);
             } else {
+                DEBUG_LOG("DEBUG: identifier is not a local variable");
                 // Это может быть поле или что-то еще
                 // Тип будет установлен в fillFieldRefs
             }
             break;
         }
-        case ExprKind::ADDITION:
-        case ExprKind::SUBTRACTION:
-        case ExprKind::MULTIPLICATION:
+        case ExprKind::ADDITION: {
+            DEBUG_LOG("DEBUG: processing ADDITION expression");
+        }
+        case ExprKind::SUBTRACTION: {
+            DEBUG_LOG("DEBUG: processing SUBTRACTION expression");
+        }
+        case ExprKind::MULTIPLICATION: {
+            DEBUG_LOG("DEBUG: processing MULTIPLICATION expression");
+        }
         case ExprKind::DIVISION: {
+            DEBUG_LOG("DEBUG: processing DIVISION expression");
             if (left) left->semanticTransform(localVariables);
             if (right) right->semanticTransform(localVariables);
             
@@ -356,6 +433,7 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
             break;
         }
         case ExprKind::ASSIGN: {
+            DEBUG_LOG("DEBUG: processing ASSIGN expression");
             if (left) left->semanticTransform(localVariables);
             if (right) right->semanticTransform(localVariables);
             
@@ -373,12 +451,23 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
             }
             break;
         }
-        case ExprKind::EQUAL:
-        case ExprKind::NOT_EQUAL:
-        case ExprKind::GREATER:
-        case ExprKind::LESS:
-        case ExprKind::LESS_OR_EQUAL:
+        case ExprKind::EQUAL: {
+            DEBUG_LOG("DEBUG: processing EQUAL expression");
+        }
+        case ExprKind::NOT_EQUAL: {
+            DEBUG_LOG("DEBUG: processing NOT_EQUAL expression");
+        }
+        case ExprKind::GREATER: {
+            DEBUG_LOG("DEBUG: processing GREATER expression");
+        }
+        case ExprKind::LESS: {
+            DEBUG_LOG("DEBUG: processing LESS expression");
+        }
+        case ExprKind::LESS_OR_EQUAL: {
+            DEBUG_LOG("DEBUG: processing LESS_OR_EQUAL expression");
+        }
         case ExprKind::GREATER_OR_EQUAL: {
+            DEBUG_LOG("DEBUG: processing GREATER_OR_EQUAL expression");
             if (left) left->semanticTransform(localVariables);
             if (right) right->semanticTransform(localVariables);
             
@@ -396,8 +485,11 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
             }
             break;
         }
-        case ExprKind::AND:
+        case ExprKind::AND: {
+            DEBUG_LOG("DEBUG: processing AND expression");
+        }
         case ExprKind::OR: {
+            DEBUG_LOG("DEBUG: processing OR expression");
             if (left) left->semanticTransform(localVariables);
             if (right) right->semanticTransform(localVariables);
             
@@ -416,6 +508,7 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
             break;
         }
         case ExprKind::FUNCTION_CALL: {
+            DEBUG_LOG("DEBUG: processing FUNCTION_CALL expression");
             if (args && args->getExprList()) {
                 for (auto expr : *args->getExprList()) {
                     expr->semanticTransform(localVariables);
@@ -424,6 +517,7 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
             break;
         }
         case ExprKind::ARRAY_ACCESS: {
+            DEBUG_LOG("DEBUG: processing ARRAY_ACCESS expression");
             if (operand) operand->semanticTransform(localVariables);
             if (index) index->semanticTransform(localVariables);
             
@@ -623,39 +717,56 @@ void StmtListNode::semanticTransform(LocalVariablesTable* localVariables) {
 //--------------------------------------------------------------StmtNode--------------------------------------------------------------
 
 void StmtNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: StmtNode::fillFieldRefs()");
+    DEBUG_LOG("DEBUG: calling StmtNode::fillFieldRefs()");
     switch (kind) {
-        case StmtKind::EXPR:
+        case StmtKind::EXPR: {
+            DEBUG_LOG("DEBUG: processing EXPR statement");
             if (expr) expr->fillFieldRefs(constantTable, localVariables, classTableElement);
             break;
-        case StmtKind::RETURN:
+        }
+        case StmtKind::RETURN: {
+            DEBUG_LOG("DEBUG: processing RETURN statement");
             if (expr) expr->fillFieldRefs(constantTable, localVariables, classTableElement);
             break;
-        case StmtKind::IF:
-        case StmtKind::IF_ELSE:
+        }
+        case StmtKind::IF: {
+            DEBUG_LOG("DEBUG: processing IF statement");
+        }
+        case StmtKind::IF_ELSE: {
+            DEBUG_LOG("DEBUG: processing IF_ELSE statement");
             if (condition) condition->fillFieldRefs(constantTable, localVariables, classTableElement);
             if (thenBranch) thenBranch->fillFieldRefs(constantTable, localVariables, classTableElement);
             if (elseBranch) elseBranch->fillFieldRefs(constantTable, localVariables, classTableElement);
             break;
-        case StmtKind::FOR_WITH_EXPR:
+        }
+        case StmtKind::FOR_WITH_EXPR: {
+            DEBUG_LOG("DEBUG: processing FOR_WITH_EXPR statement");
             if (expr) expr->fillFieldRefs(constantTable, localVariables, classTableElement);
             if (condition) condition->fillFieldRefs(constantTable, localVariables, classTableElement);
             if (post) post->fillFieldRefs(constantTable, localVariables, classTableElement);
             if (body) body->fillFieldRefs(constantTable, localVariables, classTableElement);
             break;
-        case StmtKind::WHILE:
-        case StmtKind::DO_WHILE:
+        }
+        case StmtKind::WHILE: {
+            DEBUG_LOG("DEBUG: processing WHILE statement");
+        }
+        case StmtKind::DO_WHILE: {
+            DEBUG_LOG("DEBUG: processing DO_WHILE statement");
             if (condition) condition->fillFieldRefs(constantTable, localVariables, classTableElement);
             if (body) body->fillFieldRefs(constantTable, localVariables, classTableElement);
             break;
-        case StmtKind::COMPOUND:
+        }
+        case StmtKind::COMPOUND: {
+            DEBUG_LOG("DEBUG: processing COMPOUND statement");
             if (compound && compound->getStmtList()) {
                 for (auto stmt : *compound->getStmtList()) {
                     stmt->fillFieldRefs(constantTable, localVariables, classTableElement);
                 }
             }
             break;
-        case StmtKind::DECLARATION:
+        }
+        case StmtKind::DECLARATION: {
+            DEBUG_LOG("DEBUG: processing DECLARATION statement");
             if (decl && decl->getDeclaratorList() && decl->getDeclaratorList()->getInitDeclList()) {
                 for (auto initDecl : *decl->getDeclaratorList()->getInitDeclList()) {
                     if (initDecl->getInitializer()) {
@@ -664,65 +775,88 @@ void StmtNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable*
                 }
             }
             break;
+        }
         default:
             break;
     }
 }
 
 void StmtNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance) {
-    DEBUG_LOG("DEBUG: StmtNode::fillMethodRefs()");
+    DEBUG_LOG("DEBUG: calling StmtNode::fillMethodRefs()");
     switch (kind) {
-        case StmtKind::EXPR:
+        case StmtKind::EXPR: {
+            DEBUG_LOG("DEBUG: processing EXPR statement");
             if (expr) expr->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
             break;
-        case StmtKind::RETURN:
+        }
+        case StmtKind::RETURN: {
+            DEBUG_LOG("DEBUG: processing RETURN statement");
             if (expr) expr->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
             break;
-        case StmtKind::IF:
-        case StmtKind::IF_ELSE:
+        }
+        case StmtKind::IF: {
+            DEBUG_LOG("DEBUG: processing IF statement");
+        }
+        case StmtKind::IF_ELSE: {
+            DEBUG_LOG("DEBUG: processing IF_ELSE statement");
             if (condition) condition->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
             if (thenBranch) thenBranch->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
             if (elseBranch) elseBranch->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
             break;
-        case StmtKind::COMPOUND:
+        }
+        case StmtKind::COMPOUND: {
+            DEBUG_LOG("DEBUG: processing COMPOUND statement");
             if (compound && compound->getStmtList()) {
                 for (auto stmt : *compound->getStmtList()) {
                     stmt->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
                 }
             }
             break;
+        }
         default:
             break;
     }
 }
 
 void StmtNode::fillLiterals(ConstantsTable* constantTable) {
+    DEBUG_LOG("DEBUG: calling StmtNode::fillLiterals()");
     switch (kind) {
-        case StmtKind::EXPR:
+        case StmtKind::EXPR: {
+            DEBUG_LOG("DEBUG: processing EXPR statement");
             if (expr) expr->fillLiterals(constantTable);
             break;
-        case StmtKind::RETURN:
+        }
+        case StmtKind::RETURN: {
+            DEBUG_LOG("DEBUG: processing RETURN statement");
             if (expr) expr->fillLiterals(constantTable);
             break;
-        case StmtKind::IF:
-        case StmtKind::IF_ELSE:
+        }
+        case StmtKind::IF: {
+            DEBUG_LOG("DEBUG: processing IF statement");
+        }
+        case StmtKind::IF_ELSE: {
+            DEBUG_LOG("DEBUG: processing IF_ELSE statement");
             if (condition) condition->fillLiterals(constantTable);
             if (thenBranch) thenBranch->fillLiterals(constantTable);
             if (elseBranch) elseBranch->fillLiterals(constantTable);
             break;
-        case StmtKind::COMPOUND:
+        }
+        case StmtKind::COMPOUND: {
+            DEBUG_LOG("DEBUG: processing COMPOUND statement");
             if (compound && compound->getStmtList()) {
                 for (auto stmt : *compound->getStmtList()) {
                     stmt->fillLiterals(constantTable);
                 }
             }
             break;
+        }
         default:
             break;
     }
 }
 
 void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling StmtNode::semanticTransform");
     switch (kind) {
         case StmtKind::RETURN: {
             DEBUG_LOG("DEBUG: processing RETURN statement");
@@ -731,8 +865,9 @@ void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
             }
             break;
         }
-        case StmtKind::IF:
+        case StmtKind::IF: {
             DEBUG_LOG("DEBUG: processing IF statement");
+        }
         case StmtKind::IF_ELSE: {
             DEBUG_LOG("DEBUG: processing IF_ELSE statement");
             if (condition) {

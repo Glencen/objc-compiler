@@ -9,6 +9,7 @@ map<string, ClassesTableElement*> ClassesTable::items;
 //--------------------------------------------------------------Type--------------------------------------------------------------
 
 Type::Type(TypeKind dataType, string className, list<ExprNode*>* arraySizes) {
+	DEBUG_LOG("DEBUG: creating Type object '" + className + "' of type '" + typeKindToString(dataType) + "' with 'list<ExprNode*>* arraySizes'");
     this->dataType = dataType;
     this->className = className;
     this->arraySizes = arraySizes;
@@ -35,6 +36,7 @@ Type::Type(TypeKind dataType, string className, list<ExprNode*>* arraySizes) {
 }
 
 Type::Type(TypeKind dataType, string className) {
+	DEBUG_LOG("DEBUG: creating Type object '" + className + "' of type '" + typeKindToString(dataType) + "'");
     this->dataType = dataType;
     this->className = className;
     this->arraySizes = nullptr;
@@ -42,6 +44,7 @@ Type::Type(TypeKind dataType, string className) {
 }
 
 Type::Type(TypeKind dataType) {
+	DEBUG_LOG("DEBUG: creating Type object of type '" + typeKindToString(dataType) + "'");
     this->dataType = dataType;
     this->className = "";
     this->arraySizes = nullptr;
@@ -49,6 +52,7 @@ Type::Type(TypeKind dataType) {
 }
 
 Type::Type(TypeKind dataType, list<ExprNode*>* arraySizes) {
+	DEBUG_LOG("DEBUG: creating Type object of type '" + typeKindToString(dataType) + "' with 'list<ExprNode*>* arraySizes'");
     this->dataType = dataType;
     this->className = "";
     this->arraySizes = arraySizes;
@@ -74,6 +78,7 @@ Type::Type(TypeKind dataType, list<ExprNode*>* arraySizes) {
 }
 
 Type::Type(TypeKind dataType, string className, ExprNode* arrSize) {
+	DEBUG_LOG("DEBUG: creating Type object '" + className + "' of type '" + typeKindToString(dataType) + "' with 'ExprNode* arraySize'");
     this->dataType = dataType;
     this->className = className;
     if (arrSize) {
@@ -100,6 +105,7 @@ Type::Type(TypeKind dataType, string className, ExprNode* arrSize) {
 }
 
 Type::Type(TypeKind dataType, string className, int arrSize) {
+	DEBUG_LOG("DEBUG: creating Type object '" + className + "' of type '" + typeKindToString(dataType) + "' with 'int arraySize'");
     this->dataType = dataType;
     this->className = className;
     if (arrSize > 0) {
@@ -117,6 +123,7 @@ Type::Type(TypeKind dataType, string className, int arrSize) {
 }
 
 Type::Type(TypeKind dataType, int arrSize) {
+	DEBUG_LOG("DEBUG: creating Type object of type '" + typeKindToString(dataType) + "' with 'int arraySizes'");
     this->dataType = dataType;
     this->className = "";
     if (arrSize > 0) {
@@ -459,6 +466,7 @@ int ConstantsTable::findOrAddMethodRefConstant(string className, string methodNa
 //--------------------------------------------------------------FunctionsTableElement--------------------------------------------------------------
 
 FunctionsTableElement::FunctionsTableElement(StmtNode *bodyStart, string nameStr, string descriptorStr, vector<Type*> *params, Type *returnType) {
+	DEBUG_LOG("DEBUG: creating FunctionsTableElement '" + nameStr + "' with descriptor '" + descriptorStr + "'");
     this->bodyStart = bodyStart;
     localVariables = new LocalVariablesTable();
     this->nameStr = nameStr;
@@ -486,30 +494,35 @@ void FunctionsTableElement::refTablesToCSVFile(string filename, string filepath,
 }
 
 void FunctionsTableElement::fillFieldRefs(ConstantsTable *constantTable, ClassesTableElement *classTableElement) {
+	DEBUG_LOG("DEBUG: calling FunctionsTableElement::fillFieldRefs");
     if (bodyStart) {
         bodyStart->fillFieldRefs(constantTable, localVariables, classTableElement);
     }
 }
 
 void FunctionsTableElement::fillMethodRefs(ConstantsTable *constantTable, ClassesTableElement *classTableElement) {
+	DEBUG_LOG("DEBUG: calling FunctionsTableElement::fillMethodRefs");
     if (bodyStart) {
         bodyStart->fillMethodRefs(constantTable, localVariables, classTableElement, false);
     }
 }
 
 void FunctionsTableElement::fillLiterals(ConstantsTable *constantTable) {
+	DEBUG_LOG("DEBUG: calling FunctionsTableElement::fillLiterals");
     if (bodyStart) {
         bodyStart->fillLiterals(constantTable);
     }
 }
 
 void FunctionsTableElement::convertToClassProgramMethods(ClassesTableElement *classTableElement) {
+	DEBUG_LOG("DEBUG: calling FunctionsTableElement::convertToClassProgramMethods");
     MethodsTableElement* method = classTableElement->methods->addMethod(
         classTableElement->constantTable, nameStr, descriptorStr, true, bodyStart, returnType, new vector<Type*>, parametersTypes);
     method->localVariables = localVariables;
 }
 
 void FunctionsTableElement::semanticTransform() {
+	DEBUG_LOG("DEBUG: calling FunctionsTableElement::semanticTransform");
     if (bodyStart != nullptr) {
         bodyStart->semanticTransform(localVariables);
         if (returnType->dataType != TypeKind::VOID) {
@@ -519,6 +532,7 @@ void FunctionsTableElement::semanticTransform() {
 }
 
 void FunctionsTableElement::addDefaultReturn(StmtNode *lastStatement) {
+	DEBUG_LOG("DEBUG: adding default return to statement");
     if (lastStatement == nullptr) return;
 
     StmtListNode* stmtList = nullptr;
@@ -571,6 +585,7 @@ void FunctionsTableElement::addDefaultReturn(StmtNode *lastStatement) {
 //--------------------------------------------------------------FunctionsTable--------------------------------------------------------------
 
 FunctionsTableElement* FunctionsTable::addFunction(string name, string descriptor, StmtNode *bodyStart, vector<Type*> *params, Type *returnType) {
+	DEBUG_LOG("DEBUG: adding function '" + name + "' with descriptor '" + descriptor + "' to the functions table");
     if (items.count(name) != 0) {
         throw function_exception(
             "Function '" + name + "' already exists", "FunctionsTable::addFunction", -1, -1, "Function name: " + name + ", descriptor: " + descriptor
