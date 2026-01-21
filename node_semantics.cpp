@@ -1434,7 +1434,8 @@ void InterfaceNode::fillTables() {
 
 //--------------------------------------------------------------ClassNameListNode--------------------------------------------------------------
 
-
+void ClassNameListNode::fillTables() {
+}
 
 //--------------------------------------------------------------ExternalDeclNode--------------------------------------------------------------
 
@@ -1454,7 +1455,7 @@ void ExternalDeclNode::fillTables() {
             if (funcDecl) funcDecl->fillTables();
             break;
         case ExternalDeclKind::CLASS_FW_DECL_LIST:
-            // Forward declarations не требуют заполнения таблиц
+            if (classNames) classNames->fillTables();
             break;
         default:
             break;

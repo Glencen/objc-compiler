@@ -931,6 +931,8 @@ public:
 
     list<ValueNode*>* getClassFwDeclList() const;
 
+    void fillTables();
+
     string getDotLabel() const override;
     string toDot() const override;
 
