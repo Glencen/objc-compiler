@@ -136,17 +136,11 @@ int main(int argc, char* argv[])
 
         try {
             ClassesTable::initRTL();
+            DEBUG_LOG("DEBUG: RTL initialized");
             root->fillTables();
+            DEBUG_LOG("DEBUG: root->fillTables() completed");
             root->semanticTransform();
-            ClassesTable::fillFieldRefs();
-            ClassesTable::fillMethodRefs();
-            ClassesTable::fillLiterals();
-            FunctionsTable::fillFieldRefs();
-            FunctionsTable::fillMethodRefs();
-            FunctionsTable::fillLiterals();
-            FunctionsTable::convertToClassProgramMethods();
-            FunctionsTable::semanticTransform();
-            ClassesTable::semanticTransform();
+            DEBUG_LOG("DEBUG: root->semanticTransform() completed");
             
             std::ofstream ast_after_out(ast_after_file);
             if (!ast_after_out.is_open()) {
@@ -188,6 +182,10 @@ int main(int argc, char* argv[])
             safeExit(1);
         } catch (const runtime_error& e) {
             std::cerr << "\nError during semantic analysis: " << e.what() << std::endl;
+            safeExit(1);
+        } catch (const exception& e) {
+            std::cerr << "\nError during semantic analysis: " << e.what() << std::endl;
+            safeExit(1);
         } catch (...) {
             std::cerr << "\nUnknown error during semantic analysis!" << std::endl;
             safeExit(1);

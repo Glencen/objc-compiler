@@ -4,7 +4,7 @@
 //--------------------------------------------------------------ValueNode--------------------------------------------------------------
 
 void ValueNode::fillLiterals(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: ValueNode::fillLiterals()");
+    DEBUG_LOG("DEBUG: calling ValueNode::fillLiterals()");
     switch (valueType) {
         case ValueKind::INT_LIT:
             constantTable->findOrAddConstant(ConstantType::Integer, intValue);
@@ -27,6 +27,7 @@ void ValueNode::fillLiterals(ConstantsTable* constantTable) {
 }
 
 void ValueNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling ValueNode::semanticTransform()");
     if (valueType == ValueKind::IDENTIFIER && localVariables) {
         string name = *stringValue;
         if (!localVariables->isContains(name)) {
@@ -40,7 +41,7 @@ void ValueNode::semanticTransform(LocalVariablesTable* localVariables) {
 //--------------------------------------------------------------ReceiverNode--------------------------------------------------------------
 
 void ReceiverNode::fillLiterals(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: ReceiverNode::fillLiterals()");
+    DEBUG_LOG("DEBUG: calling ReceiverNode::fillLiterals()");
     switch (kind) {
         case ReceiverKind::EXPR:
             if (expr) {
@@ -63,7 +64,7 @@ void ReceiverNode::fillLiterals(ConstantsTable* constantTable) {
 //--------------------------------------------------------------MsgArgListNode--------------------------------------------------------------
 
 void MsgArgListNode::fillLiterals(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: MsgArgListNode::fillLiterals()");
+    DEBUG_LOG("DEBUG: calling MsgArgListNode::fillLiterals()");
     if (msgArgs) {
         for (auto arg : *msgArgs) {
             if (arg->getArg()) {
@@ -76,7 +77,7 @@ void MsgArgListNode::fillLiterals(ConstantsTable* constantTable) {
 //--------------------------------------------------------------MsgSelectorNode--------------------------------------------------------------
 
 void MsgSelectorNode::fillLiterals(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: MsgSelectorNode::fillLiterals()");
+    DEBUG_LOG("DEBUG: calling MsgSelectorNode::fillLiterals()");
     switch (kind) {
         case MsgSelectorKind::SIMPLE_SEL:
             break;
@@ -93,7 +94,7 @@ void MsgSelectorNode::fillLiterals(ConstantsTable* constantTable) {
 //--------------------------------------------------------------ExprListNode--------------------------------------------------------------
 
 void ExprListNode::fillLiterals(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: ExprListNode::fillLiterals()");
+    DEBUG_LOG("DEBUG: calling ExprListNode::fillLiterals()");
     if (exprList) {
         for (auto expr : *exprList) {
             expr->fillLiterals(constantTable);
@@ -545,7 +546,7 @@ void ExprNode::semanticTransform(LocalVariablesTable* localVariables) {
 }
 
 void ExprNode::processObjcMessage(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance) {
-    DEBUG_LOG("DEBUG: ExprNode::processObjcMessage()");
+    DEBUG_LOG("DEBUG: calling ExprNode::processObjcMessage()");
     if (kind != ExprKind::MESSAGE || !receiver || !selector) return;
 
     if (receiver->getKind() == ReceiverKind::EXPR && receiver->getExpr()) {
@@ -570,7 +571,7 @@ void ExprNode::processObjcMessage(ConstantsTable* constantTable, LocalVariablesT
 }
 
 void ExprNode::checkTypeCompatibility(Type* leftType, Type* rightType, const string& operation) {
-    DEBUG_LOG("DEBUG: ExprNode::checkTypeCompatibility()");
+    DEBUG_LOG("DEBUG: calling ExprNode::checkTypeCompatibility()");
     if (!leftType || !rightType) {
         throw std::runtime_error("Type error in " + operation + ": missing type");
     }
@@ -604,7 +605,7 @@ void ExprNode::checkTypeCompatibility(Type* leftType, Type* rightType, const str
 //--------------------------------------------------------------TypeNode--------------------------------------------------------------
 
 void TypeNode::fillLiterals(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: TypeNode::fillLiterals()");
+    DEBUG_LOG("DEBUG: calling TypeNode::fillLiterals()");
     if (kind == TypeKind::CLASS_NAME && classNameValue) {
         string className = *classNameValue->getClassName();
         constantTable->findOrAddConstant(ConstantType::Utf8, className);
@@ -616,7 +617,7 @@ void TypeNode::fillLiterals(ConstantsTable* constantTable) {
 //--------------------------------------------------------------DeclaratorListNode--------------------------------------------------------------
 
 void DeclaratorListNode::fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, TypeNode* typeNode) {
-    DEBUG_LOG("DEBUG: DeclaratorListNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling DeclaratorListNode::fillTables()");
     if (initDeclList && typeNode) {
         for (auto initDecl : *initDeclList) {
             if (classTableElement) {
@@ -631,6 +632,7 @@ void DeclaratorListNode::fillTables(ConstantsTable* constantTable, LocalVariable
 }
 
 void DeclaratorListNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling DeclaratorListNode::semanticTransform()");
     if (initDeclList) {
         for (auto initDecl : *initDeclList) {
             if (initDecl->getInitializer()) {
@@ -643,7 +645,7 @@ void DeclaratorListNode::semanticTransform(LocalVariablesTable* localVariables) 
 //--------------------------------------------------------------DeclNode--------------------------------------------------------------
 
 void DeclNode::fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: DeclNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling DeclNode::fillTables()");
     if (declaratorList && type) {
         if (localVariables) {
             if (declaratorList->getInitDeclList()) {
@@ -672,6 +674,7 @@ void DeclNode::fillTables(ConstantsTable* constantTable, LocalVariablesTable* lo
 }
 
 void DeclNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling DeclNode::semanticTransform()");
     if (declaratorList) {
         declaratorList->semanticTransform(localVariables);
     }
@@ -680,7 +683,7 @@ void DeclNode::semanticTransform(LocalVariablesTable* localVariables) {
 //--------------------------------------------------------------StmtListNode--------------------------------------------------------------
 
 void StmtListNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: StmtListNode::fillFieldRefs()");
+    DEBUG_LOG("DEBUG: calling StmtListNode::fillFieldRefs()");
     if (stmts) {
         for (auto stmt : *stmts) {
             stmt->fillFieldRefs(constantTable, localVariables, classTableElement);
@@ -689,7 +692,7 @@ void StmtListNode::fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTa
 }
 
 void StmtListNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance) {
-    DEBUG_LOG("DEBUG: StmtListNode::fillMethodRefs()");
+    DEBUG_LOG("DEBUG: calling StmtListNode::fillMethodRefs()");
     if (stmts) {
         for (auto stmt : *stmts) {
             stmt->fillMethodRefs(constantTable, localVariables, classTableElement, isInstance);
@@ -698,7 +701,7 @@ void StmtListNode::fillMethodRefs(ConstantsTable* constantTable, LocalVariablesT
 }
 
 void StmtListNode::fillLiterals(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: StmtListNode::fillLiterals()");
+    DEBUG_LOG("DEBUG: calling StmtListNode::fillLiterals()");
     if (stmts) {
         for (auto stmt : *stmts) {
             stmt->fillLiterals(constantTable);
@@ -707,6 +710,7 @@ void StmtListNode::fillLiterals(ConstantsTable* constantTable) {
 }
 
 void StmtListNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling StmtListNode::semanticTransform()");
     if (stmts) {
         for (auto stmt : *stmts) {
             stmt->semanticTransform(localVariables);
@@ -950,7 +954,7 @@ void StmtNode::semanticTransform(LocalVariablesTable* localVariables) {
 //--------------------------------------------------------------ArraySizeSpecNode--------------------------------------------------------------
 
 void ArraySizeSpecNode::fillLiterals(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: ArraySizeSpecNode::fillLiterals()");
+    DEBUG_LOG("DEBUG: calling ArraySizeSpecNode::fillLiterals()");
     if (sizes) {
         for (auto size : *sizes) {
             size->fillLiterals(constantTable);
@@ -959,6 +963,7 @@ void ArraySizeSpecNode::fillLiterals(ConstantsTable* constantTable) {
 }
 
 void ArraySizeSpecNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling ArraySizeSpecNode::semanticTransform()");
     if (sizes) {
         for (auto size : *sizes) {
             size->semanticTransform(localVariables);
@@ -975,7 +980,7 @@ void ArraySizeSpecNode::semanticTransform(LocalVariablesTable* localVariables) {
 //--------------------------------------------------------------ParamDeclNode--------------------------------------------------------------
 
 void ParamDeclNode::fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables) {
-    DEBUG_LOG("DEBUG: ParamDeclNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling ParamDeclNode::fillTables()");
     if (identifier) {
         string paramName = *identifier->getIdentifier();
         Type* paramType = convertTypeNodeToType(type);
@@ -987,13 +992,13 @@ void ParamDeclNode::fillTables(ConstantsTable* constantTable, LocalVariablesTabl
 }
 
 void ParamDeclNode::semanticTransform(LocalVariablesTable* localVariables) {
-    // Параметры не требуют семантических преобразований
+    DEBUG_LOG("DEBUG: calling ParamDeclNode::semanticTransform()");
 }
 
 //--------------------------------------------------------------ParamListNode--------------------------------------------------------------
 
 void ParamListNode::fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables) {
-    DEBUG_LOG("DEBUG: ParamListNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling ParamListNode::fillTables()");
     if (paramList) {
         for (auto param : *paramList) {
             param->fillTables(constantTable, localVariables);
@@ -1002,6 +1007,7 @@ void ParamListNode::fillTables(ConstantsTable* constantTable, LocalVariablesTabl
 }
 
 void ParamListNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling ParamListNode::semanticTransform()");
     if (paramList) {
         for (auto param : *paramList) {
             if (param->getType()) {
@@ -1019,7 +1025,7 @@ void ParamListNode::semanticTransform(LocalVariablesTable* localVariables) {
 //--------------------------------------------------------------FuncDefNode--------------------------------------------------------------
 
 void FuncDefNode::fillTables() {
-    DEBUG_LOG("DEBUG: FuncDefNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling FuncDefNode::fillTables()");
     string funcName = *identifier->getIdentifier();
     Type* returnType = convertTypeNodeToType(type);
     
@@ -1071,25 +1077,26 @@ void FuncDefNode::fillTables() {
 }
 
 void FuncDefNode::semanticTransform() {
-    // Семантические преобразования выполняются на уровне FunctionsTable
+    DEBUG_LOG("DEBUG: calling FuncDefNode::semanticTransform()");
 }
 
 //--------------------------------------------------------------FuncDeclNode--------------------------------------------------------------
 
 void FuncDeclNode::fillTables() {
-    // Функциональные объявления не требуют заполнения таблиц в текущей архитектуре
+    DEBUG_LOG("DEBUG: calling FuncDeclNode::fillTables()");
 }
 
 //--------------------------------------------------------------MethodParamNode--------------------------------------------------------------
 
 void MethodParamNode::fillLiterals(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: MethodParamNode::fillLiterals()");
+    DEBUG_LOG("DEBUG: calling MethodParamNode::fillLiterals()");
     if (arraySizeSpec) {
         arraySizeSpec->fillLiterals(constantTable);
     }
 }
 
 void MethodParamNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling MethodParamNode::semanticTransform()");
     if (arraySizeSpec) {
         arraySizeSpec->semanticTransform(localVariables);
     }
@@ -1098,7 +1105,7 @@ void MethodParamNode::semanticTransform(LocalVariablesTable* localVariables) {
 //--------------------------------------------------------------MethodSelNode--------------------------------------------------------------
 
 void MethodSelNode::fillLiterals(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: MethodDefNode::fillLiterals()");
+    DEBUG_LOG("DEBUG: calling MethodDefNode::fillLiterals()");
     if (methodParams) {
         for (auto param : *methodParams) {
             param->fillLiterals(constantTable);
@@ -1109,7 +1116,7 @@ void MethodSelNode::fillLiterals(ConstantsTable* constantTable) {
 //--------------------------------------------------------------MethodDefNode--------------------------------------------------------------
 
 void MethodDefNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: MethodDefNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling MethodDefNode::fillTables()");
     LocalVariablesTable* localVariables = new LocalVariablesTable();
     
     if (kind == MethodDefKind::SEL && methodSel && methodSel->getMethodParamList()) {
@@ -1133,7 +1140,7 @@ void MethodDefNode::semanticTransform() {
 //--------------------------------------------------------------ImplementationDefListNode--------------------------------------------------------------
 
 void ImplementationDefListNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: ImplementationDefListNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling ImplementationDefListNode::fillTables()");
     if (classMethodDefs) {
         for (auto methodDef : *classMethodDefs) {
             methodDef->fillTables(constantTable, classTableElement);
@@ -1148,6 +1155,7 @@ void ImplementationDefListNode::fillTables(ConstantsTable* constantTable, Classe
 }
 
 void ImplementationDefListNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling ImplementationDefListNode::semanticTransform()");
     if (classMethodDefs) {
         for (auto methodDef : *classMethodDefs) {
             methodDef->semanticTransform();
@@ -1164,7 +1172,7 @@ void ImplementationDefListNode::semanticTransform(LocalVariablesTable* localVari
 //--------------------------------------------------------------MethodDeclNode--------------------------------------------------------------
 
 void MethodDeclNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: MethodDeclNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling MethodDeclNode::fillTables()");
     string methodName;
     string descriptor;
     vector<Type*>* paramsTypes = new vector<Type*>();
@@ -1210,7 +1218,7 @@ void MethodDeclNode::fillTables(ConstantsTable* constantTable, ClassesTableEleme
 //--------------------------------------------------------------PropertyNode--------------------------------------------------------------
 
 void PropertyNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: PropertyNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling PropertyNode::fillTables()");
     if (name && type) {
         string propName = *name->getIdentifier();
         Type* propType = convertTypeNodeToType(type);
@@ -1267,7 +1275,7 @@ void PropertyNode::fillTables(ConstantsTable* constantTable, ClassesTableElement
 //--------------------------------------------------------------InterfaceDeclListNode--------------------------------------------------------------
 
 void InterfaceDeclListNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: InterfaceDeclListNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling InterfaceDeclListNode::fillTables()");
     if (properties) {
         for (auto property : *properties) {
             property->fillTables(constantTable, classTableElement);
@@ -1290,7 +1298,7 @@ void InterfaceDeclListNode::fillTables(ConstantsTable* constantTable, ClassesTab
 //--------------------------------------------------------------InitializerListNode--------------------------------------------------------------
 
 void InitializerListNode::fillTables(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: InitializerListNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling InitializerListNode::fillTables()");
     if (initializers) {
         for (auto init : *initializers) {
             init->fillTables(constantTable);
@@ -1299,6 +1307,7 @@ void InitializerListNode::fillTables(ConstantsTable* constantTable) {
 }
 
 void InitializerListNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling InitializerListNode::semanticTransform()");
     if (initializers) {
         for (auto init : *initializers) {
             init->semanticTransform(localVariables);
@@ -1309,7 +1318,7 @@ void InitializerListNode::semanticTransform(LocalVariablesTable* localVariables)
 //--------------------------------------------------------------InitializerNode--------------------------------------------------------------
 
 void InitializerNode::fillTables(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: InitializerNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling InitializerNode::fillTables()");
     switch (kind) {
         case InitializerKind::EXPR:
             if (expr) {
@@ -1327,6 +1336,7 @@ void InitializerNode::fillTables(ConstantsTable* constantTable) {
 }
 
 void InitializerNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling InitializerNode::semanticTransform()");
     switch (kind) {
         case InitializerKind::EXPR:
             if (expr) {
@@ -1346,7 +1356,7 @@ void InitializerNode::semanticTransform(LocalVariablesTable* localVariables) {
 //--------------------------------------------------------------DeclaratorNode--------------------------------------------------------------
 
 void DeclaratorNode::fillTables(ConstantsTable* constantTable) {
-    DEBUG_LOG("DEBUG: DeclaratorNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling DeclaratorNode::fillTables()");
     if (arraySizes) {
         for (auto size : *arraySizes) {
             size->fillLiterals(constantTable);
@@ -1355,6 +1365,7 @@ void DeclaratorNode::fillTables(ConstantsTable* constantTable) {
 }
 
 void DeclaratorNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling DeclaratorNode::semanticTransform()");
     if (arraySizes) {
         for (auto size : *arraySizes) {
             size->semanticTransform(localVariables);
@@ -1369,7 +1380,7 @@ void DeclaratorNode::semanticTransform(LocalVariablesTable* localVariables) {
 //--------------------------------------------------------------InitDeclNode--------------------------------------------------------------
 
 void InitDeclNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement, TypeNode* typeNode) {
-    DEBUG_LOG("DEBUG: InitDeclNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling InitDeclNode::fillTables()");
     if (!declarator || !declarator->getIdentifier()) return;
     
     string fieldName = *declarator->getIdentifier()->getIdentifier();
@@ -1416,6 +1427,7 @@ void InitDeclNode::fillTables(ConstantsTable* constantTable, ClassesTableElement
 }
 
 void InitDeclNode::semanticTransform(LocalVariablesTable* localVariables, TypeNode* typeNode) {
+    DEBUG_LOG("DEBUG: calling InitDeclNode::semanticTransform()");
     if (initializer) {
         initializer->semanticTransform(localVariables);
         
@@ -1463,13 +1475,14 @@ void InitDeclNode::semanticTransform(LocalVariablesTable* localVariables, TypeNo
 //--------------------------------------------------------------InstanceVarDeclNode--------------------------------------------------------------
 
 void InstanceVarDeclNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: InstanceVarDeclNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling InstanceVarDeclNode::fillTables()");
     if (initDecl) {
         initDecl->fillTables(constantTable, classTableElement, type);
     }
 }
 
 void InstanceVarDeclNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling InstanceVarDeclNode::semanticTransform()");
     if (initDecl) {
         initDecl->semanticTransform(localVariables, type);
     }
@@ -1478,7 +1491,7 @@ void InstanceVarDeclNode::semanticTransform(LocalVariablesTable* localVariables)
 //--------------------------------------------------------------InstanceVarsDeclListNode--------------------------------------------------------------
 
 void InstanceVarsDeclListNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: InstanceVarsDeclListNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling InstanceVarsDeclListNode::fillTables()");
     if (instanceVarDecls) {
         for (auto varDecl : *instanceVarDecls) {
             varDecl->fillTables(constantTable, classTableElement);
@@ -1487,6 +1500,7 @@ void InstanceVarsDeclListNode::fillTables(ConstantsTable* constantTable, Classes
 }
 
 void InstanceVarsDeclListNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling InstanceVarsDeclListNode::semanticTransform()");
     if (instanceVarDecls) {
         for (auto varDecl : *instanceVarDecls) {
             varDecl->semanticTransform(localVariables);
@@ -1497,13 +1511,14 @@ void InstanceVarsDeclListNode::semanticTransform(LocalVariablesTable* localVaria
 //--------------------------------------------------------------InstanceVarsNode--------------------------------------------------------------
 
 void InstanceVarsNode::fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement) {
-    DEBUG_LOG("DEBUG: InstanceVarsNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling InstanceVarsNode::fillTables()");
     if (instanceVarsDeclList) {
         instanceVarsDeclList->fillTables(constantTable, classTableElement);
     }
 }
 
 void InstanceVarsNode::semanticTransform(LocalVariablesTable* localVariables) {
+    DEBUG_LOG("DEBUG: calling InstanceVarsNode::semanticTransform()");
     if (instanceVarsDeclList) {
         instanceVarsDeclList->semanticTransform(localVariables);
     }
@@ -1512,7 +1527,7 @@ void InstanceVarsNode::semanticTransform(LocalVariablesTable* localVariables) {
 //--------------------------------------------------------------ImplementationNode--------------------------------------------------------------
 
 void ImplementationNode::fillTables() {
-    DEBUG_LOG("DEBUG: ImplementationNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling ImplementationNode::fillTables()");
     if (!this->className || !this->className->getClassName()) {
         throw class_exception(
             "Class name is null in interface declaration", "InterfaceNode::fillTables", -1, -1, "Interface declaration without class name"
@@ -1531,6 +1546,7 @@ void ImplementationNode::fillTables() {
 }
 
 void ImplementationNode::semanticTransform() {
+    DEBUG_LOG("DEBUG: calling ImplementationNode::semanticTransform()");
     string className = *this->className->getClassName();
     string fullClassName = ClassesTable::getFullClassName(className);
     ClassesTableElement* classTableElement = ClassesTable::items[fullClassName];
@@ -1549,7 +1565,7 @@ void ImplementationNode::semanticTransform() {
 //--------------------------------------------------------------InterfaceNode--------------------------------------------------------------
 
 void InterfaceNode::fillTables() {
-    DEBUG_LOG("DEBUG: InterfaceNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling InterfaceNode::fillTables()");
     if (!this->className || !this->className->getClassName()) {
         throw class_exception(
             "Class name is null in interface declaration", "InterfaceNode::fillTables", -1, -1, "Interface declaration without class name"
@@ -1570,12 +1586,13 @@ void InterfaceNode::fillTables() {
 //--------------------------------------------------------------ClassNameListNode--------------------------------------------------------------
 
 void ClassNameListNode::fillTables() {
+    DEBUG_LOG("DEBUG: calling ClassNameListNode::fillTables()");
 }
 
 //--------------------------------------------------------------ExternalDeclNode--------------------------------------------------------------
 
 void ExternalDeclNode::fillTables() {
-    DEBUG_LOG("DEBUG: ExternalDeclNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling ExternalDeclNode::fillTables()");
     switch (kind) {
         case ExternalDeclKind::INTERFACE:
             if (interface) interface->fillTables();
@@ -1598,6 +1615,7 @@ void ExternalDeclNode::fillTables() {
 }
 
 void ExternalDeclNode::semanticTransform() {
+    DEBUG_LOG("DEBUG: calling ExternalDeclNode->semanticTransform()");
     switch (kind) {
         case ExternalDeclKind::INTERFACE:
             break;
@@ -1617,7 +1635,7 @@ void ExternalDeclNode::semanticTransform() {
 //--------------------------------------------------------------ExternalDeclListNode--------------------------------------------------------------
 
 void ExternalDeclListNode::fillTables() {
-    DEBUG_LOG("DEBUG: ExternalDeclListNode::fillTables()");
+    DEBUG_LOG("DEBUG: calling ExternalDeclListNode::fillTables()");
     if (externalDeclList) {
         for (auto decl : *externalDeclList) {
             decl->fillTables();
@@ -1626,6 +1644,7 @@ void ExternalDeclListNode::fillTables() {
 }
 
 void ExternalDeclListNode::semanticTransform() {
+    DEBUG_LOG("DEBUG: calling ExternalDeclListNode->semanticTransform()");
     if (externalDeclList) {
         for (auto decl : *externalDeclList) {
             decl->semanticTransform();
@@ -1636,14 +1655,14 @@ void ExternalDeclListNode::semanticTransform() {
 //--------------------------------------------------------------ProgramNode--------------------------------------------------------------
 
 void ProgramNode::fillTables() {
-    DEBUG_LOG("DEBUG: root->fillTables()");
+    DEBUG_LOG("DEBUG: calling root->fillTables()");
     if (externalDeclList) {
         externalDeclList->fillTables();
     }
 }
 
 void ProgramNode::semanticTransform() {
-    DEBUG_LOG("DEBUG: root->semanticTransform()");
+    DEBUG_LOG("DEBUG: calling root->semanticTransform()");
     if (externalDeclList) {
         externalDeclList->semanticTransform();
     }
