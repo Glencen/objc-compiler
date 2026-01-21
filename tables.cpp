@@ -1680,14 +1680,10 @@ string LocalVariablesTableElement::toCSVString(char separator) {
 //--------------------------------------------------------------LocalVariablesTable--------------------------------------------------------------
 
 int LocalVariablesTable::findOrAddLocalVariable(string name, Type* type) {
+	DEBUG_LOG("DEBUG: calling findOrAddLocalVariable for '" + name + "' of type '" + typeKindToString(type->dataType) + "'");
     if (items.count(name) == 0) {
+		DEBUG_LOG("DEBUG: '" + name + "' not found. Adding to table");
         items[name] = new LocalVariablesTableElement(maxId++, name, type);
-    }
-    else {
-        throw symbol_exception(
-            "Variable '" + name + "' already declared in this scope", "LocalVariablesTable::findOrAddLocalVariable", -1, -1,
-            "Variable name: " + name + ", type: " + type->toString()
-        );
     }
     return items[name]->id;
 }
