@@ -442,10 +442,13 @@ public:
     static ParamDeclNode* createSizedArrayParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec);
     static ParamDeclNode* createFlexibleArrayParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec);
 
+    bool isArray() const;
+
     ParamDeclKind getKind() const;
     TypeNode* getType() const;
     ValueNode* getIdentifier() const;
     ArraySizeSpecNode* getSizeSpec() const;
+    list<int> getArraySizes() const;
 
     void fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables);
     void semanticTransform(LocalVariablesTable* localVariables);
@@ -534,11 +537,14 @@ public:
     static MethodParamNode* createSizedArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier);
     static MethodParamNode* createFlexibleArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier);
 
+    bool isArray() const;
+
     MethodParamKind getKind() const;
     ValueNode* getSelectorIdentifier() const;
     TypeNode* getType() const;
     ValueNode* getParamIdentifier() const;
     ArraySizeSpecNode* getArraySizeSpec() const;
+    list<int> getArraySizes() const;
 
     void fillLiterals(ConstantsTable* constantTable);
     void semanticTransform(LocalVariablesTable* localVariables);

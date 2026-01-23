@@ -739,6 +739,7 @@ ExprNode* ExprNode::getBoxedExpr() const {
 void ExprNode::setType(Type* type) {
     exprType = type;
 }
+
 Type* ExprNode::getExprType() const {
     return exprType;
 }
@@ -1294,6 +1295,13 @@ ParamDeclNode* ParamDeclNode::createFlexibleArrayParamDecl(TypeNode *type, Value
     return node;
 }
 
+bool ParamDeclNode::isArray() const {
+    return arraySizeSpec != nullptr &&
+    (kind == ParamDeclKind::ARRAY ||
+    kind == ParamDeclKind::SIZED_ARRAY ||
+    kind == ParamDeclKind::FLEXIBLE_ARRAY);
+}
+
 ParamDeclKind ParamDeclNode::getKind() const {
     return kind;
 }
@@ -1308,6 +1316,34 @@ ValueNode* ParamDeclNode::getIdentifier() const {
 
 ArraySizeSpecNode* ParamDeclNode::getSizeSpec() const {
     return arraySizeSpec;
+}
+
+list<int> ParamDeclNode::getArraySizes() const {
+    list<int> sizeList;
+
+    if (kind == ParamDeclKind::ARRAY || kind == ParamDeclKind::FLEXIBLE_ARRAY) {
+        sizeList.push_back(0);
+    }
+
+    if (kind == ParamDeclKind::SIZED_ARRAY && arraySizeSpec) {
+        list<ExprNode*> sizes = *arraySizeSpec->getSizes();
+        for (auto size : sizes) {
+            if (!size || !size->getLiteral() || size->getKind() != ExprKind::LITERAL) {
+                throw runtime_error("Invalid size expression: null pointer. Source: ParamDeclNode::getArraySizes()");
+            }
+            if (!(size->getLiteral()->getValueKind() == ValueKind::INT_LIT)) {
+                throw runtime_error("Invalid array size: size must be integer. Source: ParamDeclNode::getArraySizes()");
+            }
+
+            int val = size->getLiteral()->getInt();
+
+            if (val <= 0) {
+                throw runtime_error("Array size must be positive, got: " + std::to_string(val) + ". Source: ParamDeclNode::getArraySizes()");
+            }
+            sizeList.push_back(val);
+        }
+    }
+    return sizeList;
 }
 
 string ParamDeclNode::getDotLabel() const {
@@ -1514,6 +1550,13 @@ MethodParamNode* MethodParamNode::createFlexibleArrayMethodParam(ValueNode *sele
     return node;
 }
 
+bool MethodParamNode::isArray() const {
+    return arraySizeSpec != nullptr &&
+    (kind == MethodParamKind::ARRAY ||
+    kind == MethodParamKind::SIZED_ARRAY ||
+    kind == MethodParamKind::FLEXIBLE_ARRAY);
+}
+
 MethodParamKind MethodParamNode::getKind() const {
     return kind;
 }
@@ -1532,6 +1575,34 @@ ValueNode* MethodParamNode::getParamIdentifier() const {
 
 ArraySizeSpecNode* MethodParamNode::getArraySizeSpec() const {
     return arraySizeSpec;
+}
+
+list<int> MethodParamNode::getArraySizes() const {
+    list<int> sizeList;
+
+    if (kind == MethodParamKind::ARRAY || kind == MethodParamKind::FLEXIBLE_ARRAY) {
+        sizeList.push_back(0);
+    }
+
+    if (kind == MethodParamKind::SIZED_ARRAY && arraySizeSpec) {
+        list<ExprNode*> sizes = *arraySizeSpec->getSizes();
+        for (auto size : sizes) {
+            if (!size || !size->getLiteral() || size->getKind() != ExprKind::LITERAL) {
+                throw runtime_error("Invalid size expression: null pointer. Source: ParamDeclNode::getArraySizes()");
+            }
+            if (!(size->getLiteral()->getValueKind() == ValueKind::INT_LIT)) {
+                throw runtime_error("Invalid array size: size must be integer. Source: ParamDeclNode::getArraySizes()");
+            }
+
+            int val = size->getLiteral()->getInt();
+
+            if (val <= 0) {
+                throw runtime_error("Array size must be positive, got: " + std::to_string(val));
+            }
+            sizeList.push_back(val);
+        }
+    }
+    return sizeList;
 }
 
 string MethodParamNode::getDotLabel() const {
