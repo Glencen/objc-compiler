@@ -1,3 +1,6 @@
+#ifndef CONTEXT_H
+#define CONTEXT_H
+
 #include <map>
 #include <memory>
 #include <stack>
@@ -306,3 +309,5 @@ private:
     void initReservedNames();
     void initNSObjectClass();
 };
+
+#endif
