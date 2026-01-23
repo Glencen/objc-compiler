@@ -1,4 +1,5 @@
 #include <map>
+#include <memory>
 #include <stack>
 #include <unordered_set>
 #include "classes.h"
@@ -50,8 +51,6 @@ public:
     SymbolInfo(SymbolKind kind, const string& name, const Type& type);
     virtual ~SymbolInfo() = default;
     
-    virtual unique_ptr<SymbolInfo> clone() const;
-    
     SymbolInfo(const SymbolInfo&) = default;
     SymbolInfo& operator=(const SymbolInfo&) = default;
     SymbolInfo(SymbolInfo&&) = default;
@@ -73,7 +72,6 @@ public:
 
     ClassInfo(const string& name, ClassInfo* superclass = nullptr);
 
-    unique_ptr<SymbolInfo> clone() const override;
     string toString() const override;
 
     void markAsInterface();
@@ -117,9 +115,8 @@ public:
     vector<string> keywords; // ["setName", "withAge"]
     vector<const Type*> parameterTypes;
 
-    MethodInfo::MethodInfo(const string& name, const Type& returnType, bool isClassMethod, ClassInfo* declaringClass);
+    MethodInfo(const string& name, const Type& returnType, bool isClassMethod, ClassInfo* declaringClass);
 
-    unique_ptr<SymbolInfo> clone() const override;
     string toString() const override;
 
     bool matchesSignature(const vector<const Type*>& argTypes, const vector<string>& keywords) const;
@@ -148,7 +145,6 @@ public:
 
     FieldInfo(const string& name, const Type& type, bool isInstance = true, ClassInfo* declaringClass = nullptr);
 
-    unique_ptr<SymbolInfo> clone() const override;
     string toString() const override;
     
     bool hasGetter() const;
@@ -164,7 +160,6 @@ public:
 
     LocalVarInfo(const string& name, const Type& type, bool isParameter = false, MethodInfo* enclosingMethod = nullptr);
 
-    unique_ptr<SymbolInfo> clone() const override;
     string toString() const override;
 
     bool isLocal() const;
@@ -179,7 +174,6 @@ public:
 
     FunctionInfo(const string& name, const Type& returnType);
 
-    unique_ptr<SymbolInfo> clone() const override;
     string toString() const override;
     
     LocalVarInfo* lookupLocalVar(const string& name);

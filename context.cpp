@@ -106,10 +106,6 @@ bool Type::isArray() const {
 SymbolInfo::SymbolInfo(SymbolKind kind, const string& name, const Type& type)
     : kind(kind), name(name), type(type) {}
 
-unique_ptr<SymbolInfo> SymbolInfo::clone() const {
-    return make_unique<SymbolInfo>(*this);
-}
-
 string SymbolInfo::toString() const {
     const char* kindStr = "";
     switch(kind) {
@@ -133,10 +129,6 @@ LocalVarInfo::LocalVarInfo(const string& name, const Type& type, bool isParamete
       enclosingMethod(enclosingMethod),
       isParameter(isParameter) {}
 
-unique_ptr<SymbolInfo> LocalVarInfo::clone() const {
-    return make_unique<LocalVarInfo>(*this);
-}
-
 string LocalVarInfo::toString() const {
     string base = SymbolInfo::toString();
     base += " (" + string(isParameter ? "parameter" : "local") + ")";
@@ -157,10 +149,6 @@ FieldInfo::FieldInfo(const string& name, const Type& type, bool isInstance, Clas
     : SymbolInfo(SymbolKind::FIELD, name, type),
       declaringClass(declaringClass),
       isInstance(isInstance) {}
-
-unique_ptr<SymbolInfo> FieldInfo::clone() const {
-    return make_unique<FieldInfo>(*this);
-}
 
 string FieldInfo::toString() const {
     string base = SymbolInfo::toString();
@@ -196,23 +184,6 @@ MethodInfo::MethodInfo(const string& name, const Type& returnType, bool isClassM
     : SymbolInfo(SymbolKind::METHOD, name, returnType),
       declaringClass(declaringClass),
       isClassMethod(isClassMethod) {}
-
-unique_ptr<SymbolInfo> MethodInfo::clone() const {
-    auto copy = make_unique<MethodInfo>(*this);
-    copy->declaringClass = this->declaringClass;
-    
-    deepCopyParameters(copy->parameters, this->parameters);
-    
-    for (const auto& [name, var] : localVars) {
-        copy->localVars[name] = make_unique<LocalVarInfo>(*var);
-    }
-    
-    copy->parameterTypes = this->parameterTypes;
-    copy->selector = this->selector;
-    copy->keywords = this->keywords;
-    
-    return copy;
-}
 
 string MethodInfo::toString() const {
     string base = SymbolInfo::toString();
@@ -298,32 +269,11 @@ const LocalVarInfo* MethodInfo::getParameter(size_t index) const {
     return nullptr;
 }
 
-void MethodInfo::deepCopyParameters(
-    vector<unique_ptr<LocalVarInfo>>& dest,
-    const vector<unique_ptr<LocalVarInfo>>& src) const {
-    
-    dest.reserve(src.size());
-    for (const auto& param : src) {
-        dest.push_back(make_unique<LocalVarInfo>(*param));
-        dest.back()->enclosingMethod = nullptr;
-    }
-}
-
 //--------------------------------------------------------------ClassInfo--------------------------------------------------------------
 
 ClassInfo::ClassInfo(const string& name, ClassInfo* superclass)
     : SymbolInfo(SymbolKind::CLASS, name, Type(TypeKind::CLASS_NAME, name)),
       superclass(superclass) {}
-
-unique_ptr<SymbolInfo> ClassInfo::clone() const {
-    auto copy = make_unique<ClassInfo>(*this);
-    copy->superclass = this->superclass;
-    
-    deepCopyFields(copy->fields, this->fields);
-    deepCopyMethods(copy->methods, this->methods);
-    
-    return copy;
-}
 
 string ClassInfo::toString() const {
     string base = SymbolInfo::toString();
@@ -469,42 +419,10 @@ bool ClassInfo::hasSuperclass() const {
     return superclass != nullptr;
 }
 
-void ClassInfo::deepCopyFields(map<string, unique_ptr<FieldInfo>>& dest, const map<string, unique_ptr<FieldInfo>>& src) const {
-    for (const auto& [name, field] : src) {
-        dest[name] = make_unique<FieldInfo>(*field);
-        dest[name]->declaringClass = nullptr;  // Исправится при присоединении
-    }
-}
-
-void ClassInfo::deepCopyMethods(map<string, vector<unique_ptr<MethodInfo>>>& dest, const map<string, vector<unique_ptr<MethodInfo>>>& src) const {
-    for (const auto& [name, methodList] : src) {
-        auto& destList = dest[name];
-        for (const auto& method : methodList) {
-            auto cloned = method->clone();
-            if (auto methodPtr = dynamic_cast<MethodInfo*>(cloned.get())) {
-                cloned.release();
-                destList.push_back(unique_ptr<MethodInfo>(methodPtr));
-                destList.back()->declaringClass = nullptr;  // Исправится
-            }
-        }
-    }
-}
-
 //--------------------------------------------------------------FunctionInfo--------------------------------------------------------------
 
 FunctionInfo::FunctionInfo(const string& name, const Type& returnType)
     : SymbolInfo(SymbolKind::FUNCTION, name, returnType) {}
-
-unique_ptr<SymbolInfo> FunctionInfo::clone() const {
-    auto copy = make_unique<FunctionInfo>(*this);
-    
-    deepCopyParameters(copy->parameters, this->parameters);
-    
-    for (const auto& [name, var] : localVars) {
-        copy->localVars[name] = make_unique<LocalVarInfo>(*var);
-    }
-    return copy;
-}
 
 string FunctionInfo::toString() const {
     string base = SymbolInfo::toString();
@@ -571,13 +489,6 @@ const LocalVarInfo* FunctionInfo::getParameter(size_t index) const {
     return nullptr;
 }
 
-void FunctionInfo::deepCopyParameters(vector<unique_ptr<LocalVarInfo>>& dest, const vector<unique_ptr<LocalVarInfo>>& src) const {
-    dest.reserve(src.size());
-    for (const auto& param : src) {
-        dest.push_back(make_unique<LocalVarInfo>(*param));
-    }
-}
-
 //--------------------------------------------------------------SemanticContext--------------------------------------------------------------
 
 SemanticContext::Scope::Scope(const string& name, Scope* parent, ScopeKind kind)
@@ -599,13 +510,6 @@ SemanticContext& SemanticContext::getInstance() {
     static SemanticContext instance;
     return instance;
 }
-
-SemanticContext::SemanticContext() {
-    initReservedNames();
-    enterScope();
-}
-
-SemanticContext::~SemanticContext() = default;
 
 bool SemanticContext::addClass(unique_ptr<ClassInfo> cls) {
     if (!cls || cls->name.empty()) return false;
