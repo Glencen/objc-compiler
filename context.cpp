@@ -1190,6 +1190,13 @@ void SemanticContext::dumpCurrentScope() const {
     }
 }
 
+void SemanticContext::initSemanticContext() {
+    initReservedNames();
+    initNSObjectClass();
+
+    enterScope();
+}
+
 void SemanticContext::resolveInheritance() {
     for (auto& [name, cls] : classes) {
         if (cls->superclass && !cls->superclass->name.empty()) {

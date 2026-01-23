@@ -292,6 +292,8 @@ public:
     void dumpSymbolTable() const;
     void dumpClassHierarchy() const;
     void dumpCurrentScope() const;
+
+    void initSemanticContext();
     
 private:
     Scope* createScope(const string& name, Scope::ScopeKind kind, Scope* parent = nullptr);
