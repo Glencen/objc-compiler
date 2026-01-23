@@ -21,6 +21,138 @@ Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) {
     return Type(TypeKind::NONE);
 }
 
+//--------------------------------------------------------------ValueNode--------------------------------------------------------------
+
+void ValueNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------ReceiverNode--------------------------------------------------------------
+
+void ReceiverNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------MsgArgNode--------------------------------------------------------------
+
+void MsgArgNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------MsgArgListNode--------------------------------------------------------------
+
+void MsgArgListNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------MsgSelectorNode--------------------------------------------------------------
+
+void MsgSelectorNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------ExprListNode--------------------------------------------------------------
+
+void ExprListNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------ExprNode--------------------------------------------------------------
+
+void ExprNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------TypeNode--------------------------------------------------------------
+
+void TypeNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------DeclaratorListNode--------------------------------------------------------------
+
+void DeclaratorListNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------DeclNode--------------------------------------------------------------
+
+void DeclNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------StmtListNode--------------------------------------------------------------
+
+void StmtListNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------StmtNode--------------------------------------------------------------
+
+void StmtNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------ArraySizeSpecNode--------------------------------------------------------------
+
+void ArraySizeSpecNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------ParamDeclNode--------------------------------------------------------------
+
+void ParamDeclNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------ParamListNode--------------------------------------------------------------
+
+void ParamListNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------FuncDefNode--------------------------------------------------------------
+
+void FuncDefNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------FuncDeclNode--------------------------------------------------------------
+
+void FuncDeclNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------MethodParamNode--------------------------------------------------------------
+
+void MethodParamNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------MethodSelNode--------------------------------------------------------------
+
+void MethodSelNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------MethodDefNode--------------------------------------------------------------
+
+void MethodDefNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------ImplementationDefListNode--------------------------------------------------------------
+
+void ImplementationDefListNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------MethodDeclNode--------------------------------------------------------------
+
+void MethodDeclNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------PropertyNode--------------------------------------------------------------
+
+void PropertyNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------InterfaceDeclListNode--------------------------------------------------------------
+
+void InterfaceDeclListNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------InitializerListNode--------------------------------------------------------------
+
+void InitializerListNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------InitializerNode--------------------------------------------------------------
+
+void InitializerNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------DeclaratorNode--------------------------------------------------------------
+
+void DeclaratorNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------InitDeclNode--------------------------------------------------------------
+
+void InitDeclNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------AccessModifierNode--------------------------------------------------------------
+
+void AccessModifierNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------InstanceVarDeclNode--------------------------------------------------------------
+
+void InstanceVarDeclNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------InstanceVarsDeclListNode--------------------------------------------------------------
+
+void InstanceVarsDeclListNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------InstanceVarsNode--------------------------------------------------------------
+
+void InstanceVarsNode::analyzeSemantics(SemanticContext& context) {}
+
+//--------------------------------------------------------------ImplementationNode--------------------------------------------------------------
+
+void ImplementationNode::analyzeSemantics(SemanticContext& context) {}
+
 //--------------------------------------------------------------InterfaceNode--------------------------------------------------------------
 
 void InterfaceNode::processProperties(SemanticContext& context) {

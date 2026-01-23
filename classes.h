@@ -80,8 +80,7 @@ public:
     void setIsLocalVar(bool val);
     bool getIsLocalVar() const;
 
-    void fillLiterals(ConstantsTable* constantTable);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -109,7 +108,7 @@ public:
     ReceiverKind getKind() const;
     ExprNode* getExpr() const;
 
-    void fillLiterals(ConstantsTable* constantTable);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -129,6 +128,8 @@ public:
     ValueNode* getIdentifier() const;
     ExprNode* getArg() const;
 
+    void analyzeSemantics(SemanticContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -146,7 +147,7 @@ public:
 
     list<MsgArgNode*>* getMsgArgList() const;
 
-    void fillLiterals(ConstantsTable* constantTable);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -166,7 +167,7 @@ public:
     ValueNode* getIdentifier() const;
     MsgArgListNode* getMsgArgList() const;
 
-    void fillLiterals(ConstantsTable* constantTable);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -186,7 +187,7 @@ public:
 
     list<ExprNode*>* getExprList() const;
 
-    void fillLiterals(ConstantsTable* constantTable);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -228,10 +229,7 @@ public:
     static ExprNode* createDot(ExprNode *left, ExprNode *right);
     static ExprNode* createArrow(ExprNode *left, ExprNode *right);
 
-    void fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement);
-    void fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance);
-    void fillLiterals(ConstantsTable* constantTable);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
     void processObjcMessage(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance);
     void checkTypeCompatibility(Type* leftType, Type* rightType, const string& operation);
 
@@ -306,7 +304,7 @@ public:
     TypeKind getKind() const;
     ValueNode* getClassName() const;
 
-    void fillLiterals(ConstantsTable* constantTable);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -325,8 +323,7 @@ public:
 
     list<InitDeclNode*>* getInitDeclList() const;
 
-    void fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, TypeNode* typeNode);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -344,8 +341,7 @@ public:
     TypeNode* getType() const;
     DeclaratorListNode* getDeclaratorList() const;
 
-    void fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -365,10 +361,7 @@ public:
 
     list<StmtNode*>* getStmtList() const;
 
-    void fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement);
-    void fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance);
-    void fillLiterals(ConstantsTable* constantTable);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -398,10 +391,7 @@ public:
     StmtKind getKind() const;
     StmtListNode* getCompound() const;
 
-    void fillFieldRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement);
-    void fillMethodRefs(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance);
-    void fillLiterals(ConstantsTable* constantTable);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -430,8 +420,7 @@ public:
 
     list<ExprNode*>* getSizes() const;
 
-    void fillLiterals(ConstantsTable* constantTable);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -457,8 +446,7 @@ public:
     ArraySizeSpecNode* getSizeSpec() const;
     vector<int> getArraySizes() const;
 
-    void fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -480,8 +468,7 @@ public:
 
     list<ParamDeclNode*>* getParamList() const;
 
-    void fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -501,8 +488,7 @@ public:
     ParamListNode* getParamList() const;
     StmtNode* getCompoundStmt() const;
 
-    void fillTables();
-    void semanticTransform();
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -524,7 +510,7 @@ public:
     ValueNode* getIdentifier() const;
     ParamListNode* getParamList() const;
 
-    void fillTables();
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -553,8 +539,7 @@ public:
     ArraySizeSpecNode* getArraySizeSpec() const;
     vector<int> getArraySizes() const;
 
-    void fillLiterals(ConstantsTable* constantTable);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -576,7 +561,7 @@ public:
 
     list<MethodParamNode*>* getMethodParamList() const;
 
-    void fillLiterals(ConstantsTable* constantTable);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -602,8 +587,7 @@ public:
     bool isInstanceMethod() const;
     bool isClassMethod() const;
 
-    void fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement);
-    void semanticTransform();
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -629,8 +613,7 @@ public:
     list<MethodDefNode*>* getClassMethodDefs() const;
     list<MethodDefNode*>* getInstanceMethodDefs() const;
 
-    void fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -656,7 +639,7 @@ public:
     bool isInstanceMethod() const;
     bool isClassMethod() const;
     
-    void fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -680,7 +663,7 @@ public:
     TypeNode* getType() const;
     ValueNode* getName() const;
 
-    void fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -704,7 +687,7 @@ public:
     list<MethodDeclNode*>* getClassMethodDecls() const;
     list<MethodDeclNode*>* getInstanceMethodDecls() const;
 
-    void fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -725,8 +708,7 @@ public:
 
     list<InitializerNode*>* getInitializerList() const;
 
-    void fillTables(ConstantsTable* constantTable);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -746,8 +728,7 @@ public:
     ExprNode* getExpr() const;
     InitializerListNode* getInitializerList() const;
 
-    void fillTables(ConstantsTable* constantTable);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -768,8 +749,7 @@ public:
     ValueNode* getIdentifier() const;
     list<ExprNode*>* getArraySizes() const;
 
-    void fillTables(ConstantsTable* constantTable);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -791,8 +771,7 @@ public:
     DeclaratorNode* getDeclarator() const;
     InitializerNode* getInitializer() const;
 
-    void fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement, TypeNode* typeNode);
-    void semanticTransform(LocalVariablesTable* localVariables, TypeNode* typeNode);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -813,6 +792,8 @@ public:
 
     AccessModifier getAccessType() const;
 
+    void analyzeSemantics(SemanticContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -830,8 +811,7 @@ public:
     TypeNode* getType() const;
     InitDeclNode* getInitDecl() const;
 
-    void fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -851,8 +831,7 @@ public:
 
     list<InstanceVarDeclNode*>* getInstanceVarsDeclList() const;
 
-    void fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -870,8 +849,7 @@ public:
 
     InstanceVarsDeclListNode* getInstanceVarsDeclList() const;
 
-    void fillTables(ConstantsTable* constantTable, ClassesTableElement* classTableElement);
-    void semanticTransform(LocalVariablesTable* localVariables);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -895,8 +873,7 @@ public:
     void setClassName(string className);
     void setSuperClassName(string superClassName);
 
-    void fillTables();
-    void semanticTransform();
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -944,6 +921,8 @@ public:
     static ClassNameListNode* addClassFwDecl(ClassNameListNode *classFwDeclList, ValueNode *className);
 
     list<ValueNode*>* getClassFwDeclList() const;
+
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
