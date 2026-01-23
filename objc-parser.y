@@ -261,7 +261,7 @@ method_sel  :   method_param                {$$=MethodSelNode::createMethodSel($
 method_param:   ID ':' '(' type ')' ID                              {$$=MethodParamNode::createMethodParam(ValueNode::createIdentifier($1), $4, ValueNode::createIdentifier($6));}
             |   ID ':' '(' type '[' ']' ')' ID                      {$$=MethodParamNode::createArrayMethodParam(ValueNode::createIdentifier($1), $4, ValueNode::createIdentifier($8));}
             |   ID ':' '(' type array_size_spec ')' ID              {$$=MethodParamNode::createSizedArrayMethodParam(ValueNode::createIdentifier($1), $4, $5, ValueNode::createIdentifier($7));}
-            |   ID ':' '(' type array_size_spec '[' ']' ')' ID      {$$=MethodParamNode::createSizedArrayOfArraysMethodParam(ValueNode::createIdentifier($1), $4, $5, ValueNode::createIdentifier($9));}
+            |   ID ':' '(' type '[' ']' array_size_spec ')' ID      {$$=MethodParamNode::createFlexibleArrayMethodParam(ValueNode::createIdentifier($1), $4, $7, ValueNode::createIdentifier($9));}
             ;
 
 type        :   INT                 {$$=TypeNode::createIntType();}
@@ -464,7 +464,7 @@ param_list  :   param_decl                      {$$=ParamListNode::createParamLi
 param_decl  :   type ID                             {$$=ParamDeclNode::createParamDecl($1, ValueNode::createIdentifier($2));}
             |   type ID '[' ']'                     {$$=ParamDeclNode::createArrayParamDecl($1, ValueNode::createIdentifier($2));}
             |   type ID array_size_spec             {$$=ParamDeclNode::createSizedArrayParamDecl($1, ValueNode::createIdentifier($2), $3);}
-            |   type ID array_size_spec '[' ']'     {$$=ParamDeclNode::createSizedArrayOfArraysParamDecl($1, ValueNode::createIdentifier($2), $3);}
+            |   type ID '[' ']' array_size_spec     {$$=ParamDeclNode::createFlexibleArrayParamDecl($1, ValueNode::createIdentifier($2), $5);}
             ;
 
 array_size_spec

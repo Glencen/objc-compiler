@@ -96,7 +96,7 @@ enum class ParamDeclKind {
     IDENTIFIER,
     ARRAY,
     SIZED_ARRAY,
-    ARRAY_OF_ARRAYS
+    FLEXIBLE_ARRAY
 };
 
 enum class MethodParamKind {
@@ -104,7 +104,7 @@ enum class MethodParamKind {
     IDENTIFIER,
     ARRAY,
     SIZED_ARRAY,
-    ARRAY_OF_ARRAYS
+    FLEXIBLE_ARRAY
 };
 
 enum class MethodDefKind {

@@ -440,7 +440,7 @@ public:
     static ParamDeclNode* createParamDecl(TypeNode *type, ValueNode *identifier);
     static ParamDeclNode* createArrayParamDecl(TypeNode *type, ValueNode *identifier);
     static ParamDeclNode* createSizedArrayParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec);
-    static ParamDeclNode* createSizedArrayOfArraysParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec);
+    static ParamDeclNode* createFlexibleArrayParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec);
 
     ParamDeclKind getKind() const;
     TypeNode* getType() const;
@@ -532,7 +532,7 @@ public:
     static MethodParamNode* createMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ValueNode *paramIdentifier);
     static MethodParamNode* createArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ValueNode *paramIdentifier);
     static MethodParamNode* createSizedArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier);
-    static MethodParamNode* createSizedArrayOfArraysMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier);
+    static MethodParamNode* createFlexibleArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier);
 
     MethodParamKind getKind() const;
     ValueNode* getSelectorIdentifier() const;

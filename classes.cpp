@@ -1285,9 +1285,9 @@ ParamDeclNode* ParamDeclNode::createSizedArrayParamDecl(TypeNode *type, ValueNod
     return node;
 }
 
-ParamDeclNode* ParamDeclNode::createSizedArrayOfArraysParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec) {
+ParamDeclNode* ParamDeclNode::createFlexibleArrayParamDecl(TypeNode *type, ValueNode *identifier, ArraySizeSpecNode *arraySizeSpec) {
     ParamDeclNode *node = new ParamDeclNode();
-    node->kind = ParamDeclKind::ARRAY_OF_ARRAYS;
+    node->kind = ParamDeclKind::FLEXIBLE_ARRAY;
     node->type = type;
     node->identifier = identifier;
     node->arraySizeSpec = arraySizeSpec;
@@ -1315,7 +1315,7 @@ string ParamDeclNode::getDotLabel() const {
         case ParamDeclKind::IDENTIFIER:         return "PARAM_DECL";
         case ParamDeclKind::ARRAY:              return "ARRAY_PARAM_DECL";
         case ParamDeclKind::SIZED_ARRAY:        return "SIZED_ARRAY_PARAM_DECL";
-        case ParamDeclKind::ARRAY_OF_ARRAYS:    return "ARRAY_OF_ARRAYS_PARAM_DECL";
+        case ParamDeclKind::FLEXIBLE_ARRAY:     return "FLEXIBLE_ARRAY_PARAM_DECL";
         default:                                return "UNKNOWN_PARAM_DECL";
     }
 }
@@ -1504,9 +1504,9 @@ MethodParamNode* MethodParamNode::createSizedArrayMethodParam(ValueNode *selecto
     return node;
 }
 
-MethodParamNode* MethodParamNode::createSizedArrayOfArraysMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier) {
+MethodParamNode* MethodParamNode::createFlexibleArrayMethodParam(ValueNode *selectorIdentifier, TypeNode *type, ArraySizeSpecNode *sizeSpec, ValueNode *paramIdentifier) {
     MethodParamNode *node = new MethodParamNode();
-    node->kind = MethodParamKind::ARRAY_OF_ARRAYS;
+    node->kind = MethodParamKind::FLEXIBLE_ARRAY;
     node->selectorIdentifier = selectorIdentifier;
     node->type = type;
     node->arraySizeSpec = sizeSpec;
@@ -1539,7 +1539,7 @@ string MethodParamNode::getDotLabel() const {
         case MethodParamKind::IDENTIFIER:           return "METHOD_PARAM";
         case MethodParamKind::ARRAY:                return "ARRAY_METHOD_PARAM";
         case MethodParamKind::SIZED_ARRAY:          return "SIZED_ARRAY_METHOD_PARAM";
-        case MethodParamKind::ARRAY_OF_ARRAYS:      return "ARRAY_OF_ARRAYS_METHOD_PARAM";
+        case MethodParamKind::FLEXIBLE_ARRAY:       return "FLEXIBLE_ARRAY_METHOD_PARAM";
         default:                                    return "UNKNOWN_METHOD_PARAM";
     }
 }
