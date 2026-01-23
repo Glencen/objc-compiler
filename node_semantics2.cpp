@@ -171,7 +171,7 @@ void InterfaceNode::processProperties(SemanticContext& context) {
         if (!cls->lookupField(ivarName, false)) {
             auto ivar = make_unique<FieldInfo>(ivarName, propertyType, true, cls);
             cls->addField(move(ivar));
-        }
+        } // нужно ли добавлять исключение при уже объявленном ivar ???
         
         cls->addPropertyMapping(propertyName, ivarName);
         
@@ -204,8 +204,8 @@ void InterfaceNode::analyzeSemantics(SemanticContext& context) {
         if (!superclassNameStr.empty()) {
             superclass = context.lookupClass(superclassNameStr);
             if (!superclass) {
-                throw class_exception("Undefined super class '" + superclassNameStr + "'", "InterfaceNode::analyzeSemantics",
-                    -1, -1, "Class: " + classNameStr + "'");
+                throw class_exception("Undefined super class '" + superclassNameStr + "'",
+                    "InterfaceNode::analyzeSemantics", -1, -1, "Class: " + classNameStr + "'");
             }
         }
         auto newClass = make_unique<ClassInfo>(classNameStr, superclass);
@@ -214,6 +214,7 @@ void InterfaceNode::analyzeSemantics(SemanticContext& context) {
     }
     cls->markAsInterface();
     
+    ClassInfo* prevClass = context.getCurrentClass();
     context.enterClassScope(cls);
     
     try {
@@ -225,13 +226,20 @@ void InterfaceNode::analyzeSemantics(SemanticContext& context) {
         }
 
         processProperties(context);
+        
+        context.leaveScope();
+        context.setCurrentClass(prevClass);
+        
     } catch (...) {
         context.leaveScope();
+        context.setCurrentClass(prevClass);
         throw;
     }
-    
-    context.leaveScope();
 }
+
+//--------------------------------------------------------------ClassNameListNode--------------------------------------------------------------
+
+void ClassNameListNode::analyzeSemantics(SemanticContext& context) {}
 
 //--------------------------------------------------------------ExternalDeclNode--------------------------------------------------------------
 
@@ -244,19 +252,33 @@ void ExternalDeclNode::analyzeSemantics(SemanticContext& context) {
             if (implementation) implementation->analyzeSemantics(context);
             break;
         case ExternalDeclKind::FUNC_DEF:
-            if (funcDef) funcDef->analyzeSemantics(context);
+            if (funcDef) {
+                if (!context.isInGlobalScope()) {
+                    throw function_exception("Function can only be declared at global scope",
+                        "ExternalDeclNode::analyzeSemantics", -1, -1, "Function name: '" + *funcDef->getIdentifier()->getIdentifier() + "'");
+                }
+                funcDef->analyzeSemantics(context);
+            }
             break;
         case ExternalDeclKind::FUNC_DECL:
-            if (funcDecl) funcDecl->analyzeSemantics(context);
+            if (funcDecl) {
+                if (!context.isInGlobalScope()) {
+                    throw function_exception("Function can only be declared at global scope",
+                        "ExternalDeclNode::analyzeSemantics", -1, -1, "Function name: '" + *funcDef->getIdentifier()->getIdentifier() + "'");
+                }
+                funcDecl->analyzeSemantics(context);
+            }
             break;
         case ExternalDeclKind::CLASS_FW_DECL_LIST:
             if (classNames) {
                 auto* list = classNames->getClassFwDeclList();
                 if (list) {
                     for (auto* classNameNode : *list) {
-                        auto className = classNameNode->getClassName();
-                        auto cls = make_unique<ClassInfo>(className);
-                        context.addClass(move(cls));
+                        auto className = *classNameNode->getClassName();
+                        if (!context.lookupClass(className)) {
+                            auto cls = make_unique<ClassInfo>(className);
+                            context.addClass(move(cls));
+                        }
                     }
                 }
             }
@@ -271,8 +293,29 @@ void ExternalDeclNode::analyzeSemantics(SemanticContext& context) {
 void ExternalDeclListNode::analyzeSemantics(SemanticContext& context) {
     if (!externalDeclList) return;
     
-    for (auto* decl : *externalDeclList) {
-        decl->analyzeSemantics(context);
+    ClassInfo* savedClass = context.getCurrentClass();
+    MethodInfo* savedMethod = context.getCurrentMethod();
+    FunctionInfo* savedFunction = context.getCurrentFunction();
+    
+    try {
+        for (auto* decl : *externalDeclList) {
+            decl->analyzeSemantics(context);
+            if (!context.isInGlobalScope()) {
+                while (!context.isInGlobalScope()) {
+                    context.leaveScope();
+                }
+            }
+        }
+        
+        context.setCurrentClass(savedClass);
+        context.setCurrentMethod(savedMethod);
+        context.setCurrentFunction(savedFunction);
+        
+    } catch (...) {
+        context.setCurrentClass(savedClass);
+        context.setCurrentMethod(savedMethod);
+        context.setCurrentFunction(savedFunction);
+        throw;
     }
 }
 
@@ -280,7 +323,25 @@ void ExternalDeclListNode::analyzeSemantics(SemanticContext& context) {
 //--------------------------------------------------------------ProgramNode--------------------------------------------------------------
 
 void ProgramNode::analyzeSemantics(SemanticContext& context) {
-    if (externalDeclList) {
-        externalDeclList->analyzeSemantics(context);
+    if (!context.isInGlobalScope()) {
+        while (!context.isInGlobalScope()) {
+            context.leaveScope();
+        }
+    }
+    
+    try {
+        if (externalDeclList) {
+            externalDeclList->analyzeSemantics(context);
+        }
+        
+        if (!context.isInGlobalScope()) {
+            context.leaveScope();
+        }
+        
+    } catch (...) {
+        while (!context.isInGlobalScope()) {
+            context.leaveScope();
+        }
+        throw;
     }
 }
