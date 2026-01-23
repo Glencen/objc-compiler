@@ -302,4 +302,5 @@ private:
     void resolveInheritance();
     
     void initReservedNames();
+    void initNSObjectClass();
 };

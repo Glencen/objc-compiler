@@ -1226,3 +1226,202 @@ void SemanticContext::initReservedNames() {
         "retain", "release", "autorelease", "copy"
     });
 }
+
+void SemanticContext::initNSObjectClass() { // TODO: пересмотреть набор методов и полей
+    if (lookupClass("rtl/NSObject")) {
+        return;
+    }
+    
+    auto nsObjectClass = make_unique<ClassInfo>("rtl/NSObject", nullptr);
+    nsObjectClass->markAsImplementation();
+    
+    // Конструктор <init> ()V
+    {
+        auto constructor = make_unique<MethodInfo>(
+            "<init>",
+            Type(TypeKind::VOID),
+            false,
+            nsObjectClass.get()
+        );
+        constructor->selector = "<init>";
+        constructor->keywords = {};
+        constructor->parameterTypes = {};
+        nsObjectClass->addMethod(move(constructor));
+    }
+    
+    // allocStatic ()Lrtl/NSObject;
+    {
+        auto allocStatic = make_unique<MethodInfo>(
+            "allocStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSObject"),
+            true,
+            nsObjectClass.get()
+        );
+        allocStatic->selector = "allocStatic";
+        allocStatic->keywords = {};
+        allocStatic->parameterTypes = {};
+        nsObjectClass->addMethod(move(allocStatic));
+    }
+    
+    // initDynamic ()Lrtl/NSObject;
+    {
+        auto initDynamic = make_unique<MethodInfo>(
+            "initDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSObject"),
+            false,
+            nsObjectClass.get()
+        );
+        initDynamic->selector = "initDynamic";
+        initDynamic->keywords = {};
+        initDynamic->parameterTypes = {};
+        nsObjectClass->addMethod(move(initDynamic));
+    }
+    
+    // newStatic ()Lrtl/NSObject;
+    {
+        auto newStatic = make_unique<MethodInfo>(
+            "newStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSObject"),
+            true,
+            nsObjectClass.get()
+        );
+        newStatic->selector = "newStatic";
+        newStatic->keywords = {};
+        newStatic->parameterTypes = {};
+        nsObjectClass->addMethod(move(newStatic));
+    }
+    
+    // getClassDynamic ()Ljava/lang/Class;
+    {
+        auto getClassDynamic = make_unique<MethodInfo>(
+            "getClassDynamic",
+            Type(TypeKind::CLASS_NAME, "java/lang/Class"),
+            false,
+            nsObjectClass.get()
+        );
+        getClassDynamic->selector = "getClassDynamic";
+        getClassDynamic->keywords = {};
+        getClassDynamic->parameterTypes = {};
+        nsObjectClass->addMethod(move(getClassDynamic));
+    }
+    
+    // getClassStatic ()Ljava/lang/Class;
+    {
+        auto getClassStatic = make_unique<MethodInfo>(
+            "getClassStatic",
+            Type(TypeKind::CLASS_NAME, "java/lang/Class"),
+            true,
+            nsObjectClass.get()
+        );
+        getClassStatic->selector = "getClassStatic";
+        getClassStatic->keywords = {};
+        getClassStatic->parameterTypes = {};
+        nsObjectClass->addMethod(move(getClassStatic));
+    }
+    
+    // isSubclassOfClassStatic (Ljava/lang/Class;)I
+    {
+        auto isSubclassOfClassStatic = make_unique<MethodInfo>(
+            "isSubclassOfClassStatic",
+            Type(TypeKind::INT),
+            true,
+            nsObjectClass.get()
+        );
+        isSubclassOfClassStatic->selector = "isSubclassOfClassStatic";
+        isSubclassOfClassStatic->keywords = {""};
+        isSubclassOfClassStatic->parameterTypes = {
+            new Type(TypeKind::CLASS_NAME, "java/lang/Class")
+        };
+        
+        auto param = make_unique<LocalVarInfo>(
+            "arg0",
+            Type(TypeKind::CLASS_NAME, "java/lang/Class"),
+            true,
+            isSubclassOfClassStatic.get()
+        );
+        isSubclassOfClassStatic->addParameter(move(param));
+        
+        nsObjectClass->addMethod(move(isSubclassOfClassStatic));
+    }
+    
+    // classNameDynamic ()Lrtl/NSString;
+    {
+        auto classNameDynamic = make_unique<MethodInfo>(
+            "classNameDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsObjectClass.get()
+        );
+        classNameDynamic->selector = "classNameDynamic";
+        classNameDynamic->keywords = {};
+        classNameDynamic->parameterTypes = {};
+        nsObjectClass->addMethod(move(classNameDynamic));
+    }
+    
+    // superclassDynamic ()Ljava/lang/Class;
+    {
+        auto superclassDynamic = make_unique<MethodInfo>(
+            "superclassDynamic",
+            Type(TypeKind::CLASS_NAME, "java/lang/Class"),
+            false,
+            nsObjectClass.get()
+        );
+        superclassDynamic->selector = "superclassDynamic";
+        superclassDynamic->keywords = {};
+        superclassDynamic->parameterTypes = {};
+        nsObjectClass->addMethod(move(superclassDynamic));
+    }
+    
+    // descriptionDynamic ()Lrtl/NSString;
+    {
+        auto descriptionDynamic = make_unique<MethodInfo>(
+            "descriptionDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsObjectClass.get()
+        );
+        descriptionDynamic->selector = "descriptionDynamic";
+        descriptionDynamic->keywords = {};
+        descriptionDynamic->parameterTypes = {};
+        nsObjectClass->addMethod(move(descriptionDynamic));
+    }
+    
+    // isEqualDynamic (Lrtl/NSObject;)I
+    {
+        auto isEqualDynamic = make_unique<MethodInfo>(
+            "isEqualDynamic",
+            Type(TypeKind::INT),
+            false,
+            nsObjectClass.get()
+        );
+        isEqualDynamic->selector = "isEqualDynamic";
+        isEqualDynamic->keywords = {""};
+        isEqualDynamic->parameterTypes = {
+            new Type(TypeKind::CLASS_NAME, "rtl/NSObject")
+        };
+        
+        auto param = make_unique<LocalVarInfo>(
+            "arg0",
+            Type(TypeKind::CLASS_NAME, "rtl/NSObject"),
+            true,
+            isEqualDynamic.get()
+        );
+        isEqualDynamic->addParameter(move(param));
+        
+        nsObjectClass->addMethod(move(isEqualDynamic));
+    }
+    
+    addClass(move(nsObjectClass));
+    
+    if (!lookupClass("java/lang/Object")) {
+        auto javaObjectClass = make_unique<ClassInfo>("java/lang/Object", nullptr);
+        javaObjectClass->markAsImplementation();
+        addClass(move(javaObjectClass));
+    }
+    
+    auto nsObject = lookupClass("rtl/NSObject");
+    auto javaObject = lookupClass("java/lang/Object");
+    if (nsObject && javaObject) {
+        nsObject->setSuperclass(javaObject);
+    }
+}
