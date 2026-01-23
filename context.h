@@ -113,7 +113,7 @@ public:
     unique_ptr<SymbolInfo> clone() const override;
     string toString() const override;
 
-    bool matchesSignature(const vector<const Type*>& argTypes) const;
+    bool matchesSignature(const vector<const Type*>& argTypes, const vector<string>& keywords) const;
     LocalVarInfo* lookupLocalVar(const string& name);
     const LocalVarInfo* lookupLocalVar(const string& name) const;
 

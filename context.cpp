@@ -221,13 +221,16 @@ string MethodInfo::toString() const {
     return base;
 }
 
-bool MethodInfo::matchesSignature(const vector<const Type*>& argTypes) const {
-    if (argTypes.size() != parameterTypes.size()) {
+bool MethodInfo::matchesSignature(const vector<const Type*>& argTypes, const vector<string>& keywords) const {
+    if (argTypes.size() != parameterTypes.size() || keywords.size() != this->keywords.size()) {
         return false;
     }
     
     for (size_t i = 0; i < argTypes.size(); ++i) {
         if (!parameterTypes[i]->equal(argTypes[i])) {
+            return false;
+        }
+        if (keywords[i] != this->keywords[i]) {
             return false;
         }
     }
