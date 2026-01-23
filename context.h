@@ -78,8 +78,8 @@ public:
 
     FieldInfo* lookupField(const string& name, bool includeSuper = true);
     const FieldInfo* lookupField(const string& name, bool includeSuper = true) const;
-    MethodInfo* lookupMethod(const string& name, const vector<const Type*>& argTypes = {}, bool includeSuper = true);
-    const MethodInfo* lookupMethod(const string& name, const vector<const Type*>& argTypes = {}, bool includeSuper = true) const;
+    MethodInfo* lookupMethod(const string& name, const vector<const Type*>& argTypes = {}, const vector<string>& keywords = {}, bool includeSuper = true);
+    const MethodInfo* lookupMethod(const string& name, const vector<const Type*>& argTypes = {}, const vector<string>& keywords = {}, bool includeSuper = true) const;
 
     void addField(unique_ptr<FieldInfo> field);
     void addMethod(unique_ptr<MethodInfo> method);
@@ -247,7 +247,7 @@ public:
     
     SymbolInfo* lookup(const string& name) const;
     ClassInfo* lookupClass(const string& name) const;
-    MethodInfo* lookupMethod(const string& className, const string& methodName, const vector<const Type*>& argTypes = {}) const;
+    MethodInfo* lookupMethod(const string& className, const string& methodName, const vector<const Type*>& argTypes = {}, const vector<string>& keywords = {}) const;
     FieldInfo* lookupField(const string& className, const string& fieldName) const;
     LocalVarInfo* lookupLocalVar(const string& name) const;
     FunctionInfo* lookupFunction(const string& name) const;

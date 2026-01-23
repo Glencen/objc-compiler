@@ -370,35 +370,35 @@ const FieldInfo* ClassInfo::lookupField(const string& name, bool includeSuper) c
     return nullptr;
 }
 
-MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*>& argTypes, bool includeSuper) {
+MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*>& argTypes, const vector<string>& keywords, bool includeSuper) {
     auto it = methods.find(name);
     if (it != methods.end()) {
         for (const auto& method : it->second) {
-            if (method->matchesSignature(argTypes)) {
+            if (method->matchesSignature(argTypes, keywords)) {
                 return method.get();
             }
         }
     }
     
     if (includeSuper && superclass) {
-        return superclass->lookupMethod(name, argTypes, true);
+        return superclass->lookupMethod(name, argTypes, keywords, true);
     }
     
     return nullptr;
 }
 
-const MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*>& argTypes, bool includeSuper) const {
+const MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*>& argTypes, const vector<string>& keywords, bool includeSuper) const {
     auto it = methods.find(name);
     if (it != methods.end()) {
         for (const auto& method : it->second) {
-            if (method->matchesSignature(argTypes)) {
+            if (method->matchesSignature(argTypes, keywords)) {
                 return method.get();
             }
         }
     }
     
     if (includeSuper && superclass) {
-        return superclass->lookupMethod(name, argTypes, true);
+        return superclass->lookupMethod(name, argTypes, keywords, true);
     }
     
     return nullptr;
@@ -721,11 +721,11 @@ ClassInfo* SemanticContext::lookupClass(const string& name) const {
     return it != classes.end() ? it->second.get() : nullptr;
 }
 
-MethodInfo* SemanticContext::lookupMethod(const string& className, const string& methodName, const vector<const Type*>& argTypes) const {
+MethodInfo* SemanticContext::lookupMethod(const string& className, const string& methodName, const vector<const Type*>& argTypes, const vector<string>& keywords) const {
     auto cls = lookupClass(className);
     if (!cls) return nullptr;
 
-    return cls->lookupMethod(methodName, argTypes, true);
+    return cls->lookupMethod(methodName, argTypes, keywords, true);
 }
 
 FieldInfo* SemanticContext::lookupField(const string& className, const string& fieldName) const {
