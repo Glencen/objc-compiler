@@ -5,7 +5,7 @@
 #include <signal.h>
 #include "objc-parser.hpp"
 #include "classes.h"
-#include "tables.h"
+#include "context.h"
 #include "output_utils.h"
 
 namespace fs = std::filesystem;
@@ -135,12 +135,13 @@ int main(int argc, char* argv[])
         std::cout << "AST before semantics written to: " << ast_before_file << std::endl;
 
         try {
-            ClassesTable::initRTL();
-            DEBUG_LOG("DEBUG: RTL initialized");
-            root->fillTables();
-            DEBUG_LOG("DEBUG: root->fillTables() completed");
-            root->semanticTransform();
-            DEBUG_LOG("DEBUG: root->semanticTransform() completed");
+            SemanticContext& inst = SemanticContext::getInstance();
+            inst.initSemanticContext();
+            inst.dumpClassHierarchy();
+            cout << "\n\n\n\n\n" << endl;
+            inst.dumpCurrentScope();
+            cout << "\n\n\n\n\n" << endl;
+            inst.dumpSymbolTable();
             
             std::ofstream ast_after_out(ast_after_file);
             if (!ast_after_out.is_open()) {
@@ -156,28 +157,6 @@ int main(int argc, char* argv[])
             DEBUG_LOG("DEBUG: Finished new AST file generation");
             
             std::cout << "\nAST after semantics written to: " << ast_after_file << std::endl;
-            
-            DEBUG_LOG("DEBUG: Starting CSV file generation");
-            if (!tables_dir.empty() && tables_dir.back() != '/') {
-                tables_dir += '/';
-            }
-            
-            ClassesTable::toCSVFile(tables_dir, '|');
-            
-            std::cout << "CSV tables generated in directory: " << tables_dir << std::endl;
-            
-            std::cout << "\nGenerated tables:" << std::endl;
-            std::cout << "- " << tables_dir << "ClassesTable.csv" << std::endl;
-            
-            if (!ClassesTable::items.empty()) {
-                for (const auto& [className, classElement] : ClassesTable::items) {
-                    std::cout << "- " << tables_dir << className << "_ConstantsTable.csv" << std::endl;
-                    std::cout << "- " << tables_dir << className << "_FieldsTable.csv" << std::endl;
-                    std::cout << "- " << tables_dir << className << "_MethodsTable.csv" << std::endl;
-                    std::cout << "- " << tables_dir << className << "_PropertiesTable.csv" << std::endl;
-                }
-            }
-            DEBUG_LOG("DEBUG: Finished CSV file generation");
 
             std::cout << "\nProcessing completed successfully!" << std::endl;
             
