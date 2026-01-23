@@ -862,34 +862,6 @@ unique_ptr<Type> SemanticContext::commonType(const Type& t1, const Type& t2) con
     return nullptr;
 }
 
-bool SemanticContext::checkMethodOverride(const MethodInfo* base, const MethodInfo* derived) const {
-    if (!base || !derived) return false;
-    
-    // 1. Имена должны совпадать
-    if (base->name != derived->name) return false;
-    
-    // 2. Типы параметров должны совпадать
-    if (base->parameterTypes.size() != derived->parameterTypes.size()) {
-        return false;
-    }
-    
-    for (size_t i = 0; i < base->parameterTypes.size(); ++i) {
-        if (!base->parameterTypes[i]->equal(derived->parameterTypes[i])) {
-            return false;
-        }
-    }
-    
-    // 3. Возвращаемый тип должен быть ковариантным
-    if (!isAssignable(derived->getReturnType(), base->getReturnType())) {
-        return false;
-    }
-    
-    // 4. Модификаторы доступа (если есть)
-    // derived должен быть не более строгим, чем base
-    
-    return true;
-}
-
 bool SemanticContext::validateInheritance() const {
     for (const auto& [name, cls] : classes) {
         if (cls->superclass) {
@@ -898,28 +870,6 @@ bool SemanticContext::validateInheritance() const {
                 cerr << "Class " << name << " inherits from undefined class " 
                          << cls->superclass->name << endl;
                 return false;
-            }
-        }
-    }
-    return true;
-}
-
-bool SemanticContext::validateMethodOverrides() const {
-    for (const auto& [name, cls] : classes) {
-        if (!cls->superclass) continue;
-        
-        // Для каждого метода в классе
-        for (const auto& [methodName, methodList] : cls->methods) {
-            for (const auto& method : methodList) {
-                // Ищем метод с такой же сигнатурой в суперклассе
-                auto baseMethod = cls->superclass->lookupMethod(
-                    methodName, method->parameterTypes, true);
-                
-                if (baseMethod && !checkMethodOverride(baseMethod, method.get())) {
-                    cerr << "Incorrect override of method " << methodName 
-                             << " in class " << name << endl;
-                    return false;
-                }
             }
         }
     }

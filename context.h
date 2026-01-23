@@ -255,10 +255,8 @@ public:
     bool isAssignable(const Type& from, const Type& to) const;
     bool isConvertible(const Type& from, const Type& to) const;
     unique_ptr<Type> commonType(const Type& t1, const Type& t2) const;
-    bool checkMethodOverride(const MethodInfo* base, const MethodInfo* derived) const;
     
     bool validateInheritance() const;
-    bool validateMethodOverrides() const;
     bool checkCyclicInheritance() const;
     bool checkDuplicateSymbols() const;
     
