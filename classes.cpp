@@ -889,6 +889,18 @@ TypeNode* TypeNode::createVoid() {
     return node;
 }
 
+bool TypeNode::isPrimitive() const {
+    return  kind == TypeKind::INT ||
+            kind == TypeKind::FLOAT ||
+            kind == TypeKind::CHAR ||
+            kind == TypeKind::BOOL ||
+            kind == TypeKind::VOID;
+}
+
+bool TypeNode::isNumeric() const {
+    return kind == TypeKind::INT || kind == TypeKind::FLOAT || kind == TypeKind::BOOL;
+}
+
 TypeKind TypeNode::getKind() const {
     return kind;
 }

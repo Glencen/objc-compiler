@@ -296,6 +296,9 @@ public:
     static TypeNode* createClassNameType(ValueNode *classNameValue);
     static TypeNode* createVoid();
 
+    bool isPrimitive() const;
+    bool isNumeric() const;
+
     TypeKind getKind() const;
     ValueNode* getClassName() const;
 
