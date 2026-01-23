@@ -11,6 +11,7 @@ class Type;
 class ConstantsTable;
 class LocalVariablesTable;
 class ClassesTableElement;
+class SemanticContext;
 
 using namespace std;
 
@@ -38,6 +39,8 @@ public:
     virtual ~AstNode() = default;
 
     unsigned int getId() const {return id;};
+
+    virtual void analyzeSemantics(SemanticContext& context) = 0;
 
     virtual string getDotLabel() const = 0;
     virtual string toDot() const = 0;
@@ -920,7 +923,8 @@ public:
     void setClassName(string className);
     void setSuperClassName(string superClassName);
 
-    void fillTables();
+    void processProperties(SemanticContext& context);
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -940,8 +944,6 @@ public:
     static ClassNameListNode* addClassFwDecl(ClassNameListNode *classFwDeclList, ValueNode *className);
 
     list<ValueNode*>* getClassFwDeclList() const;
-
-    void fillTables();
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -967,8 +969,7 @@ public:
     FuncDeclNode* getFuncDecl() const;
     FuncDefNode* getFuncDef() const;
 
-    void fillTables();
-    void semanticTransform();
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -992,8 +993,7 @@ public:
 
     list<ExternalDeclNode*>* getExternalDeclList() const;
 
-    void fillTables();
-    void semanticTransform();
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -1010,8 +1010,7 @@ public:
 
     ExternalDeclListNode* getExternalDeclList() const;
 
-    void fillTables();
-    void semanticTransform();
+    void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
