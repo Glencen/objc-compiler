@@ -5,17 +5,17 @@ YACC = bison
 YFLAGS = -d
 
 TARGET = objc_compiler
-SOURCES = main.cpp classes.cpp utils.cpp output_utils.cpp tables.cpp node_semantics.cpp
+SOURCES = main.cpp classes.cpp utils.cpp output_utils.cpp context.cpp node_semantics.cpp
 OBJ = $(SOURCES:.cpp=.o) objc-lexer.o objc-parser.o
 
 all: $(TARGET)
 
-main.o: main.cpp objc-parser.hpp utils.h output_utils.h classes.h tables.h
+main.o: main.cpp objc-parser.hpp utils.h output_utils.h classes.h context.h
 classes.o: classes.cpp classes.h types.h
 utils.o: utils.cpp utils.h
 output_utils.o: output_utils.cpp output_utils.h
-tables.o: tables.cpp tables.h classes.h types.h semantic_exceptions.h output_utils.h
-node_semantics.o: node_semantics.cpp tables.h classes.h types.h output_utils.h
+context.o: context.cpp context.h classes.h types.h semantic_exceptions.h output_utils.h
+node_semantics.o: node_semantics.cpp context.h classes.h types.h output_utils.h
 
 objc-parser.o: objc-parser.cpp objc-parser.hpp
 objc-lexer.o: objc-lexer.cpp objc-parser.hpp
