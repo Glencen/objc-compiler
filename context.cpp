@@ -36,7 +36,7 @@ string Type::getDescriptor() const {
         case TypeKind::INT:         res += "I"; break;
         case TypeKind::FLOAT:       res += "F"; break;
         case TypeKind::BOOL:        res += "Z"; break;
-        case TypeKind::CHAR:        res += "C"; break;
+        case TypeKind::CHAR:        res += "C"; break; //TODO: change to "B" to support implicit int to char casting ???
         case TypeKind::TYPE_ID:     res += "Ljava/lang/Object;"; break;
         case TypeKind::CLASS_NAME:  res += "L" + className + ";"; break;
         case TypeKind::VOID:        res += "V"; break;
@@ -334,6 +334,18 @@ string ClassInfo::toString() const {
     return base;
 }
 
+void ClassInfo::markAsInterface() {
+    hasInterface = true;
+}
+
+void ClassInfo::markAsImplementation() {
+    hasImplementation = true;
+}
+
+bool ClassInfo::isComplete() const {
+    return hasInterface && hasImplementation;
+}
+
 bool ClassInfo::isSubclassOf(const ClassInfo* other) const {
     if (!other) return false;
     for (const ClassInfo* current = superclass; current; current = current->superclass) {
@@ -416,6 +428,15 @@ void ClassInfo::addMethod(unique_ptr<MethodInfo> method) {
         method->declaringClass = this;
         methods[method->name].push_back(move(method));
     }
+}
+
+void ClassInfo::addPropertyMapping(const string& property, const string& ivar) {
+    propertyIvarMapping[property] = ivar;
+}
+
+string ClassInfo::getIvarForProperty(const string& property) const {
+    auto it = propertyIvarMapping.find(property);
+    return it != propertyIvarMapping.end() ? it->second : "_" + property;
 }
 
 size_t ClassInfo::getFieldCount(bool instanceOnly) const {
@@ -559,8 +580,8 @@ void FunctionInfo::deepCopyParameters(vector<unique_ptr<LocalVarInfo>>& dest, co
 
 //--------------------------------------------------------------SemanticContext--------------------------------------------------------------
 
-SemanticContext::Scope::Scope(Scope* parent, ScopeKind kind)
-    : parent(parent), kind(kind) {}
+SemanticContext::Scope::Scope(const string& name, Scope* parent, ScopeKind kind)
+    : name(name), parent(parent), kind(kind) {}
 
 LocalVarInfo* SemanticContext::Scope::lookup(const string& name) {
     auto it = locals.find(name);
@@ -625,16 +646,15 @@ bool SemanticContext::addFunction(unique_ptr<FunctionInfo> func) {
 }
 
 bool SemanticContext::addLocalVar(unique_ptr<LocalVarInfo> var) {
-    if (!var || var->name.empty()) return false;
-    
-    if (scopes.empty()) return false;
-    
-    auto& scope = scopes.top();
-    if (scope->locals.find(var->name) != scope->locals.end()) {
-        return false;  // Переменная уже существует в этом scope
+    if (!var || var->name.empty() || !currentScope) {
+        return false;
     }
     
-    scope->locals[var->name] = move(var);
+    if (currentScope->locals.find(var->name) != currentScope->locals.end()) {
+        return false;
+    }
+    
+    currentScope->locals[var->name] = move(var);
     return true;
 }
 
@@ -652,57 +672,65 @@ bool SemanticContext::addParameter(FunctionInfo* func, unique_ptr<LocalVarInfo> 
     return true;
 }
 
-void SemanticContext::enterScope(Scope::ScopeKind kind) {
-    Scope* parent = scopes.empty() ? nullptr : scopes.top().get();
-    scopes.push(make_unique<Scope>(parent, kind));
+void SemanticContext::enterScope(Scope::ScopeKind kind, const string& name) {
+    Scope* parent = currentScope;
+    Scope* newScope = createScope(name, kind, parent);
+    activateScope(newScope);
 }
 
 void SemanticContext::leaveScope() {
-    if (!scopes.empty()) {
-        scopes.pop();
+    if (!activeScopes.empty()) {
+        deactivateCurrentScope();
     }
 }
 
 void SemanticContext::enterClassScope(ClassInfo* cls) {
     setCurrentClass(cls);
-    enterScope(Scope::CLASS_SCOPE);
+    enterScope(Scope::CLASS_SCOPE, cls ? cls->name : "anonymous_class");
 }
 
 void SemanticContext::enterMethodScope(MethodInfo* method) {
     setCurrentMethod(method);
-    enterScope(Scope::METHOD_SCOPE);
+    string scopeName = method ? method->name : "anonymous_method";
+    if (currentClass) {
+        scopeName = currentClass->name + "::" + scopeName;
+    }
+    enterScope(Scope::METHOD_SCOPE, scopeName);
 }
 
 void SemanticContext::enterFunctionScope(FunctionInfo* func) {
     setCurrentFunction(func);
-    enterScope(Scope::FUNCTION_SCOPE);
+    string scopeName = func ? func->name : "anonymous_function";
+    enterScope(Scope::FUNCTION_SCOPE, scopeName);
 }
 
 void SemanticContext::enterLoopScope() {
-    enterScope(Scope::LOOP_SCOPE);
+    static int loopCounter = 0;
+    string name = "loop_" + to_string(loopCounter++);
+    enterScope(Scope::LOOP_SCOPE, name);
 }
 
 void SemanticContext::enterConditionalScope() {
-    enterScope(Scope::CONDITIONAL_SCOPE);
+    static int conditionalCounter = 0;
+    string name = "conditional_" + to_string(conditionalCounter++);
+    enterScope(Scope::CONDITIONAL_SCOPE, name);
 }
 
 void SemanticContext::enterBlockStmtScope() {
-    enterScope(Scope::BLOCK_STMT_SCOPE);
+    static int blockStmtCounter = 0;
+    string name = "block_stmt_" + to_string(blockStmtCounter++);
+    enterScope(Scope::BLOCK_STMT_SCOPE, name);
 }
 
 SymbolInfo* SemanticContext::lookup(const string& name) const {
-    if (!scopes.empty()) {
-        const auto& scope = scopes.top();
-        if (auto var = scope->lookup(name)) {
-            return var;
-        }
+    if (auto var = lookupLocalVar(name)) {
+        return var;
     }
     
-    if (currentClass) {
+    if (currentClass && currentScope && currentScope->kind == Scope::CLASS_SCOPE) {
         if (auto field = currentClass->lookupField(name, false)) {
             return field;
         }
-        // Для методов нужна сигнатура, так что не ищем здесь
     }
     
     if (auto cls = lookupClass(name)) {
@@ -711,6 +739,12 @@ SymbolInfo* SemanticContext::lookup(const string& name) const {
     
     if (auto func = lookupFunction(name)) {
         return func;
+    }
+    
+    if (currentClass && currentScope && currentScope->kind == Scope::CLASS_SCOPE) {
+        if (auto field = currentClass->lookupField(name, true)) {
+            return field;
+        }
     }
     
     return nullptr;
@@ -736,10 +770,36 @@ FieldInfo* SemanticContext::lookupField(const string& className, const string& f
 }
 
 LocalVarInfo* SemanticContext::lookupLocalVar(const string& name) const {
-    if (scopes.empty()) return nullptr;
+    for (Scope* scope = currentScope; scope != nullptr; scope = scope->parent) {
+        if (!scope->isActive) continue;
+        
+        auto it = scope->locals.find(name);
+        if (it != scope->locals.end()) {
+            return it->second.get();
+        }
+        
+        if (scope->kind == Scope::FUNCTION_SCOPE && currentFunction) {
+            for (const auto& param : currentFunction->parameters) {
+                if (param->name == name) {
+                    return param.get();
+                }
+            }
+        } else if (scope->kind == Scope::METHOD_SCOPE && currentMethod) {
+            for (const auto& param : currentMethod->parameters) {
+                if (param->name == name) {
+                    return param.get();
+                }
+            }
+        }
+        
+        if (scope->kind == Scope::FUNCTION_SCOPE ||
+            scope->kind == Scope::METHOD_SCOPE ||
+            scope->kind == Scope::CLASS_SCOPE) {
+            break;
+        }
+    }
     
-    const auto& scope = scopes.top();
-    return scope->lookup(name);
+    return nullptr;
 }
 
 FunctionInfo* SemanticContext::lookupFunction(const string& name) const {
@@ -751,6 +811,76 @@ FunctionInfo* SemanticContext::lookupFunction(const string& name) const {
     // Возвращаем первую функцию с таким именем
     // В реальности нужно учитывать перегрузку
     return it->second.front().get();
+}
+
+bool SemanticContext::existsInCurrentScope(const string& name) const {
+    if (!currentScope) return false;
+    return currentScope->locals.find(name) != currentScope->locals.end();
+}
+
+// Проверка, существует ли переменная в ЛЮБОМ родительском scope
+bool SemanticContext::existsInParentScopes(const string& name) const {
+    if (!currentScope) return false;
+    
+    for (Scope* parent = currentScope->parent; parent != nullptr; parent = parent->parent) {
+        if (!parent->isActive) continue;
+        
+        if (parent->locals.find(name) != parent->locals.end()) {
+            return true;
+        }
+        
+        if (parent->kind == Scope::FUNCTION_SCOPE && currentFunction) {
+            for (const auto& param : currentFunction->parameters) {
+                if (param->name == name) {
+                    return true;
+                }
+            }
+        } else if (parent->kind == Scope::METHOD_SCOPE && currentMethod) {
+            for (const auto& param : currentMethod->parameters) {
+                if (param->name == name) {
+                    return true;
+                }
+            }
+        }
+    }
+    
+    return false;
+}
+
+vector<LocalVarInfo*> SemanticContext::getVisibleLocalVars() const {
+    vector<LocalVarInfo*> result;
+    unordered_set<string> seenNames;
+    
+    if (currentMethod) {
+        for (const auto& param : currentMethod->parameters) {
+            result.push_back(param.get());
+            seenNames.insert(param->name);
+        }
+    } else if (currentFunction) {
+        for (const auto& param : currentFunction->parameters) {
+            result.push_back(param.get());
+            seenNames.insert(param->name);
+        }
+    }
+    
+    for (Scope* scope = currentScope; scope != nullptr; scope = scope->parent) {
+        if (!scope->isActive) continue;
+        
+        for (const auto& [name, var] : scope->locals) {
+            if (seenNames.find(name) == seenNames.end()) {
+                result.push_back(var.get());
+                seenNames.insert(name);
+            }
+        }
+        
+        if (scope->kind == Scope::FUNCTION_SCOPE ||
+            scope->kind == Scope::METHOD_SCOPE ||
+            scope->kind == Scope::CLASS_SCOPE) {
+            break;
+        }
+    }
+    
+    return result;
 }
 
 bool SemanticContext::isAssignable(const Type& from, const Type& to) const {
@@ -780,7 +910,7 @@ bool SemanticContext::isAssignable(const Type& from, const Type& to) const {
         Type toElem(to.dataType, to.className);
         return isAssignable(fromElem, toElem);
     }
-    
+    // TODO: проверить каст по иерархии наследования
     return false;
 }
 
@@ -893,6 +1023,35 @@ bool SemanticContext::checkCyclicInheritance() const {
     return true;
 }
 
+SemanticContext::Scope* SemanticContext::createScope(
+    const string& name, 
+    Scope::ScopeKind kind, 
+    Scope* parent) {
+    
+    auto scope = make_unique<Scope>(name, kind, parent);
+    Scope* scopePtr = scope.get();
+    usedScopes.push_back(move(scope));
+    return scopePtr;
+}
+
+void SemanticContext::activateScope(Scope* scope) {
+    if (!scope) return;
+    
+    scope->isActive = true;
+    activeScopes.push(scope);
+    currentScope = scope;
+}
+
+void SemanticContext::deactivateCurrentScope() {
+    if (activeScopes.empty()) return;
+    
+    Scope* top = activeScopes.top();
+    top->isActive = false;
+    activeScopes.pop();
+    
+    currentScope = activeScopes.empty() ? nullptr : activeScopes.top();
+}
+
 bool SemanticContext::checkCyclicInheritance(const string& className, unordered_set<string>& visited) const {
     if (visited.find(className) != visited.end()) {
         return true;  // Цикл обнаружен
@@ -972,20 +1131,8 @@ FunctionInfo* SemanticContext::getCurrentFunction() const {
     return currentFunction;
 }
 
-bool SemanticContext::isInClassScope() const {
-    return currentClass != nullptr;
-}
-
-bool SemanticContext::isInMethodScope() const {
-    return currentMethod != nullptr;
-}
-
-bool SemanticContext::isInFunctionScope() const {
-    return currentFunction != nullptr;
-}
-
-bool SemanticContext::isGlobalScope() const {
-    return !isInClassScope() && !isInMethodScope() && !isInFunctionScope();
+SemanticContext::Scope* SemanticContext::getCurrentScope() const {
+    return currentScope;
 }
 
 string SemanticContext::generateGetterName(const string& fieldName) const {
@@ -1101,16 +1248,15 @@ void SemanticContext::dumpClassHierarchy() const {
 }
 
 void SemanticContext::dumpCurrentScope() const {
-    if (scopes.empty()) {
+    if (!currentScope) {
         cout << "No active scope" << endl;
         return;
     }
     
-    const auto& scope = scopes.top();
-    
     cout << "\n=== Current Scope ===" << endl;
+    cout << "Scope name: " << (currentScope->name.empty() ? "unnamed" : currentScope->name) << endl;
     cout << "Scope kind: ";
-    switch(scope->kind) {
+    switch(currentScope->kind) {
         case Scope::GLOBAL_SCOPE: cout << "GLOBAL"; break;
         case Scope::CLASS_SCOPE: cout << "CLASS"; break;
         case Scope::METHOD_SCOPE: cout << "METHOD"; break;
@@ -1121,9 +1267,14 @@ void SemanticContext::dumpCurrentScope() const {
     }
     cout << endl;
     
-    cout << "Local variables (" << scope->locals.size() << "):" << endl;
-    for (const auto& [name, var] : scope->locals) {
-        cout << "  " << var->toString() << endl;
+    cout << "Local variables (" << currentScope->locals.size() << "):" << endl;
+    for (const auto& [name, var] : currentScope->locals) {
+        bool shadows = existsInParentScopes(name);
+        cout << "  " << var->toString();
+        if (shadows) {
+            cout << " [shadows parent variable]";
+        }
+        cout << endl;
     }
 }
 
@@ -1141,13 +1292,6 @@ void SemanticContext::resolveInheritance() {
             }
         }
     }
-}
-
-optional<SemanticContext::Scope*> SemanticContext::currentScope() {
-    if (scopes.empty()) {
-        return nullopt;
-    }
-    return scopes.top().get();
 }
 
 void SemanticContext::initReservedNames() {

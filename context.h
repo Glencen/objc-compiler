@@ -1,8 +1,8 @@
 #include <map>
 #include <stack>
 #include <unordered_set>
-#include <optional>
 #include "classes.h"
+#include "semantic_exceptions.h"
 
 using namespace std;
 
@@ -64,6 +64,9 @@ public:
 class ClassInfo : public SymbolInfo {
 public:
     ClassInfo* superclass = nullptr;
+    bool hasInterface = false;
+    bool hasImplementation = false;
+    map<string, string> propertyIvarMapping;
     
     map<string, unique_ptr<FieldInfo>> fields;
     map<string, vector<unique_ptr<MethodInfo>>> methods;
@@ -72,6 +75,10 @@ public:
 
     unique_ptr<SymbolInfo> clone() const override;
     string toString() const override;
+
+    void markAsInterface();
+    void markAsImplementation();
+    bool isComplete() const;
     
     bool isSubclassOf(const ClassInfo* other) const;
 
@@ -82,6 +89,9 @@ public:
 
     void addField(unique_ptr<FieldInfo> field);
     void addMethod(unique_ptr<MethodInfo> method);
+
+    void addPropertyMapping(const string& property, const string& ivar);
+    string getIvarForProperty(const string& property) const;
     
     size_t getFieldCount(bool instanceOnly = false) const;
     size_t getMethodCount(bool instanceOnly = false) const;
@@ -207,16 +217,20 @@ private:
             BLOCK_STMT_SCOPE
         };
 
+        string name;
         map<string, unique_ptr<LocalVarInfo>> locals;
         Scope* parent;
         ScopeKind kind;
+        bool isActive = true;
         
-        Scope(Scope* parent = nullptr, ScopeKind kind = GLOBAL_SCOPE);
+        Scope(const string& name = "", Scope* parent = nullptr, ScopeKind kind = GLOBAL_SCOPE);
         LocalVarInfo* lookup(const string& name);
         const LocalVarInfo* lookup(const string& name) const;
     };
     
-    stack<unique_ptr<Scope>> scopes;
+    stack<Scope*> activeScopes;
+    vector<unique_ptr<Scope>> usedScopes;
+    Scope* currentScope = nullptr;
     ClassInfo* currentClass = nullptr;
     MethodInfo* currentMethod = nullptr;
     FunctionInfo* currentFunction = nullptr;
@@ -235,14 +249,14 @@ public:
     bool addParameter(MethodInfo* method, unique_ptr<LocalVarInfo> param);
     bool addParameter(FunctionInfo* func, unique_ptr<LocalVarInfo> param);
 
-    void enterScope(Scope::ScopeKind kind = Scope::BLOCK_STMT_SCOPE);
+    void enterScope(Scope::ScopeKind kind = Scope::BLOCK_STMT_SCOPE, const string& name);
     void leaveScope();
     void enterClassScope(ClassInfo* cls);
     void enterMethodScope(MethodInfo* method);
     void enterFunctionScope(FunctionInfo* func);
-    void SemanticContext::enterLoopScope();
-    void SemanticContext::enterConditionalScope();
-    void SemanticContext::enterBlockStmtScope();
+    void enterLoopScope();
+    void enterConditionalScope();
+    void enterBlockStmtScope();
     
     SymbolInfo* lookup(const string& name) const;
     ClassInfo* lookupClass(const string& name) const;
@@ -250,6 +264,10 @@ public:
     FieldInfo* lookupField(const string& className, const string& fieldName) const;
     LocalVarInfo* lookupLocalVar(const string& name) const;
     FunctionInfo* lookupFunction(const string& name) const;
+
+    bool existsInCurrentScope(const string& name) const;
+    bool existsInParentScopes(const string& name) const;
+    vector<LocalVarInfo*> getVisibleLocalVars() const;
     
     bool isAssignable(const Type& from, const Type& to) const;
     bool isConvertible(const Type& from, const Type& to) const;
@@ -267,10 +285,7 @@ public:
     MethodInfo* getCurrentMethod() const;
     FunctionInfo* getCurrentFunction() const;
     
-    bool isInClassScope() const;
-    bool isInMethodScope() const;
-    bool isInFunctionScope() const;
-    bool isGlobalScope() const;
+    Scope* getCurrentScope() const;
     
     string generateGetterName(const string& fieldName) const;
     string generateSetterName(const string& fieldName) const;
@@ -282,10 +297,12 @@ public:
     void dumpCurrentScope() const;
     
 private:
+    Scope* createScope(const string& name, Scope::ScopeKind kind, Scope* parent = nullptr);
+    void activateScope(Scope* scope);
+    void deactivateCurrentScope();
+
     bool checkCyclicInheritance(const string& className, unordered_set<string>& visited) const;
     void resolveInheritance();
-    
-    optional<Scope*> currentScope();
     
     void initReservedNames();
 };
