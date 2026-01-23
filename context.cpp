@@ -415,6 +415,10 @@ size_t ClassInfo::getMethodCount(bool instanceOnly) const {
     return count;
 }
 
+void ClassInfo::setSuperclass(ClassInfo* superclass) {
+    this->superclass = superclass;
+}
+
 bool ClassInfo::hasSuperclass() const {
     return superclass != nullptr;
 }

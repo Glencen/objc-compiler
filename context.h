@@ -94,6 +94,8 @@ public:
     size_t getFieldCount(bool instanceOnly = false) const;
     size_t getMethodCount(bool instanceOnly = false) const;
 
+    void setSuperclass(ClassInfo* superclass);
+
     bool hasSuperclass() const;
 
 private:
