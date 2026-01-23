@@ -932,7 +932,7 @@ SemanticContext::Scope* SemanticContext::createScope(
     Scope::ScopeKind kind, 
     Scope* parent) {
     
-    auto scope = make_unique<Scope>(name, kind, parent);
+    auto scope = make_unique<Scope>(name, parent, kind);
     Scope* scopePtr = scope.get();
     usedScopes.push_back(move(scope));
     return scopePtr;
