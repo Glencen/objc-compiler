@@ -448,7 +448,7 @@ public:
     TypeNode* getType() const;
     ValueNode* getIdentifier() const;
     ArraySizeSpecNode* getSizeSpec() const;
-    list<int> getArraySizes() const;
+    vector<int> getArraySizes() const;
 
     void fillTables(ConstantsTable* constantTable, LocalVariablesTable* localVariables);
     void semanticTransform(LocalVariablesTable* localVariables);
@@ -544,7 +544,7 @@ public:
     TypeNode* getType() const;
     ValueNode* getParamIdentifier() const;
     ArraySizeSpecNode* getArraySizeSpec() const;
-    list<int> getArraySizes() const;
+    vector<int> getArraySizes() const;
 
     void fillLiterals(ConstantsTable* constantTable);
     void semanticTransform(LocalVariablesTable* localVariables);

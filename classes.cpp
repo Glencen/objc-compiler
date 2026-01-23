@@ -1318,8 +1318,8 @@ ArraySizeSpecNode* ParamDeclNode::getSizeSpec() const {
     return arraySizeSpec;
 }
 
-list<int> ParamDeclNode::getArraySizes() const {
-    list<int> sizeList;
+vector<int> ParamDeclNode::getArraySizes() const {
+    vector<int> sizeList;
 
     if (kind == ParamDeclKind::ARRAY || kind == ParamDeclKind::FLEXIBLE_ARRAY) {
         sizeList.push_back(0);
@@ -1577,8 +1577,8 @@ ArraySizeSpecNode* MethodParamNode::getArraySizeSpec() const {
     return arraySizeSpec;
 }
 
-list<int> MethodParamNode::getArraySizes() const {
-    list<int> sizeList;
+vector<int> MethodParamNode::getArraySizes() const {
+    vector<int> sizeList;
 
     if (kind == MethodParamKind::ARRAY || kind == MethodParamKind::FLEXIBLE_ARRAY) {
         sizeList.push_back(0);
