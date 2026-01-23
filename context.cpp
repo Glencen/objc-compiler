@@ -1135,6 +1135,10 @@ SemanticContext::Scope* SemanticContext::getCurrentScope() const {
     return currentScope;
 }
 
+bool SemanticContext::isInGlobalScope() const {
+    return currentScope->kind == Scope::GLOBAL_SCOPE;
+}
+
 string SemanticContext::generateGetterName(const string& fieldName) const {
     // Преобразуем "fieldName" в "getFieldName"
     string getter = "get";

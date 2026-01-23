@@ -249,7 +249,7 @@ public:
     bool addParameter(MethodInfo* method, unique_ptr<LocalVarInfo> param);
     bool addParameter(FunctionInfo* func, unique_ptr<LocalVarInfo> param);
 
-    void enterScope(Scope::ScopeKind kind = Scope::BLOCK_STMT_SCOPE, const string& name);
+    void enterScope(Scope::ScopeKind kind = Scope::GLOBAL_SCOPE, const string& name = "global");
     void leaveScope();
     void enterClassScope(ClassInfo* cls);
     void enterMethodScope(MethodInfo* method);
@@ -286,6 +286,7 @@ public:
     FunctionInfo* getCurrentFunction() const;
     
     Scope* getCurrentScope() const;
+    bool isInGlobalScope() const;
     
     string generateGetterName(const string& fieldName) const;
     string generateSetterName(const string& fieldName) const;
