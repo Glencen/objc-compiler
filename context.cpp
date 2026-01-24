@@ -1220,6 +1220,7 @@ void SemanticContext::initSemanticContext() {
     initNSObjectClass();
     initNSStringClass();
     initNSArrayClass();
+    initNSNumberClass();
 
     enterScope();
 }
@@ -1756,5 +1757,105 @@ void SemanticContext::initNSArrayClass() {
     auto nsObject = lookupClass("rtl/NSObject");
     if (nsArray && nsObject) {
         nsArray->setSuperclass(nsObject);
+    }
+}
+
+void SemanticContext::initNSNumberClass() {
+    if (lookupClass("rtl/NSNumber")) return;
+
+    auto nsNumberClass = make_unique<ClassInfo>("rtl/NSNumber", nullptr);
+    nsNumberClass->markAsImplementation();
+
+    // Конструктор <init> ()V
+    {
+        auto constructor = make_unique<MethodInfo>(
+            "<init>",
+            Type(TypeKind::VOID),
+            false,
+            nsNumberClass.get()
+        );
+        constructor->selector = "<init>";
+        constructor->keywords = {};
+        constructor->parameterTypes = {};
+        nsNumberClass->addMethod(move(constructor));
+    }
+
+    // numberWithIntStatic (I)Lrtl/NSNumber;
+    {
+        auto numberWithIntStatic = make_unique<MethodInfo>(
+            "numberWithIntStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSNumber"),
+            true,
+            nsNumberClass.get()
+        );
+        numberWithIntStatic->selector = "numberWithIntStatic";
+        numberWithIntStatic->keywords = {};
+        numberWithIntStatic->parameterTypes = { new Type(TypeKind::INT) };
+        nsNumberClass->addMethod(move(numberWithIntStatic));
+    }
+
+    // numberWithFloatStatic (F)Lrtl/NSNumber;
+    {
+        auto numberWithFloatStatic = make_unique<MethodInfo>(
+            "numberWithFloatStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSNumber"),
+            true,
+            nsNumberClass.get()
+        );
+        numberWithFloatStatic->selector = "numberWithFloatStatic";
+        numberWithFloatStatic->keywords = {};
+        numberWithFloatStatic->parameterTypes = { new Type(TypeKind::FLOAT) };
+        nsNumberClass->addMethod(move(numberWithFloatStatic));
+    }
+
+    // intValueDynamic ()I
+    {
+        auto intValueDynamic = make_unique<MethodInfo>(
+            "intValueDynamic",
+            Type(TypeKind::INT),
+            false,
+            nsNumberClass.get()
+        );
+        intValueDynamic->selector = "intValueDynamic";
+        intValueDynamic->keywords = {};
+        intValueDynamic->parameterTypes = {};
+        nsNumberClass->addMethod(move(intValueDynamic));
+    }
+
+    // floatValueDynamic ()F
+    {
+        auto floatValueDynamic = make_unique<MethodInfo>(
+            "floatValueDynamic",
+            Type(TypeKind::FLOAT),
+            false,
+            nsNumberClass.get()
+        );
+        floatValueDynamic->selector = "floatValueDynamic";
+        floatValueDynamic->keywords = {};
+        floatValueDynamic->parameterTypes = {};
+        nsNumberClass->addMethod(move(floatValueDynamic));
+    }
+
+    // descriptionDynamic ()Lrtl/NSString;
+    {
+        auto descriptionDynamic = make_unique<MethodInfo>(
+            "descriptionDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsNumberClass.get()
+        );
+        descriptionDynamic->selector = "descriptionDynamic";
+        descriptionDynamic->keywords = {};
+        descriptionDynamic->parameterTypes = {};
+        nsNumberClass->addMethod(move(descriptionDynamic));
+    }
+
+    addClass(move(nsNumberClass));
+
+    // Установка суперкласса
+    auto nsNumber = lookupClass("rtl/NSNumber");
+    auto nsObject = lookupClass("rtl/NSObject");
+    if (nsNumber && nsObject) {
+        nsNumber->setSuperclass(nsObject);
     }
 }

@@ -310,6 +310,7 @@ private:
     void initNSObjectClass();
     void initNSStringClass();
     void initNSArrayClass();
+    void initNSNumberClass();
 };
 
 #endif
