@@ -1219,6 +1219,7 @@ void SemanticContext::initSemanticContext() {
     initReservedNames();
     initNSObjectClass();
     initNSStringClass();
+    initNSArrayClass();
 
     enterScope();
 }
@@ -1635,5 +1636,125 @@ void SemanticContext::initNSStringClass() {
     auto nsObject = lookupClass("rtl/NSObject");
     if (nsString && nsObject) {
         nsString->setSuperclass(nsObject);
+    }
+}
+
+void SemanticContext::initNSArrayClass() {
+    if (lookupClass("rtl/NSArray")) return;
+
+    auto nsArrayClass = make_unique<ClassInfo>("rtl/NSArray", nullptr);
+    nsArrayClass->markAsImplementation();
+
+    // Конструктор <init> ()V
+    {
+        auto constructor = make_unique<MethodInfo>(
+            "<init>",
+            Type(TypeKind::VOID),
+            false,
+            nsArrayClass.get()
+        );
+        constructor->selector = "<init>";
+        constructor->keywords = {};
+        constructor->parameterTypes = {};
+        nsArrayClass->addMethod(move(constructor));
+    }
+
+    // arrayStatic ()Lrtl/NSArray;
+    {
+        auto arrayStatic = make_unique<MethodInfo>(
+            "arrayStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
+            true,
+            nsArrayClass.get()
+        );
+        arrayStatic->selector = "arrayStatic";
+        arrayStatic->keywords = {};
+        arrayStatic->parameterTypes = {};
+        nsArrayClass->addMethod(move(arrayStatic));
+    }
+
+    // arrayWithArrayStatic (Lrtl/NSArray;)Lrtl/NSArray;
+    {
+        auto arrayWithArrayStatic = make_unique<MethodInfo>(
+            "arrayWithArrayStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
+            true,
+            nsArrayClass.get()
+        );
+        arrayWithArrayStatic->selector = "arrayWithArrayStatic";
+        arrayWithArrayStatic->keywords = {};
+        arrayWithArrayStatic->parameterTypes = {
+            new Type(TypeKind::CLASS_NAME, "rtl/NSArray")
+        };
+        nsArrayClass->addMethod(move(arrayWithArrayStatic));
+    }
+
+    // arrayWithObjectsStatic ([Lrtl/NSObject;)Lrtl/NSArray;
+    {
+        auto arrayWithObjectsStatic = make_unique<MethodInfo>(
+            "arrayWithObjectsStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
+            true,
+            nsArrayClass.get()
+        );
+        arrayWithObjectsStatic->selector = "arrayWithObjectsStatic";
+        arrayWithObjectsStatic->keywords = {};
+        arrayWithObjectsStatic->parameterTypes = {
+            new Type(TypeKind::CLASS_NAME, "Lrtl/NSObject;") // массив объектов
+        };
+        nsArrayClass->addMethod(move(arrayWithObjectsStatic));
+    }
+
+    // arrayByAddingObjectDynamic (Lrtl/NSObject;)Lrtl/NSArray;
+    {
+        auto arrayByAddingObjectDynamic = make_unique<MethodInfo>(
+            "arrayByAddingObjectDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
+            false,
+            nsArrayClass.get()
+        );
+        arrayByAddingObjectDynamic->selector = "arrayByAddingObjectDynamic";
+        arrayByAddingObjectDynamic->keywords = {};
+        arrayByAddingObjectDynamic->parameterTypes = {
+            new Type(TypeKind::CLASS_NAME, "rtl/NSObject")
+        };
+        nsArrayClass->addMethod(move(arrayByAddingObjectDynamic));
+    }
+
+    // objectAtIndexDynamic (I)Lrtl/NSObject;
+    {
+        auto objectAtIndexDynamic = make_unique<MethodInfo>(
+            "objectAtIndexDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSObject"),
+            false,
+            nsArrayClass.get()
+        );
+        objectAtIndexDynamic->selector = "objectAtIndexDynamic";
+        objectAtIndexDynamic->keywords = {};
+        objectAtIndexDynamic->parameterTypes = { new Type(TypeKind::INT) };
+        nsArrayClass->addMethod(move(objectAtIndexDynamic));
+    }
+
+    // countDynamic ()I
+    {
+        auto countDynamic = make_unique<MethodInfo>(
+            "countDynamic",
+            Type(TypeKind::INT),
+            false,
+            nsArrayClass.get()
+        );
+        countDynamic->selector = "countDynamic";
+        countDynamic->keywords = {};
+        countDynamic->parameterTypes = {};
+        nsArrayClass->addMethod(move(countDynamic));
+    }
+
+    addClass(move(nsArrayClass));
+
+    // Установка суперкласса
+    auto nsArray = lookupClass("rtl/NSArray");
+    auto nsObject = lookupClass("rtl/NSObject");
+    if (nsArray && nsObject) {
+        nsArray->setSuperclass(nsObject);
     }
 }
