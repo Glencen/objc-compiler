@@ -125,16 +125,43 @@ void MsgSelectorNode::analyzeSemantics(SemanticContext& context) {
                 throw semantic_exception("Simple selector must have an identifier",
                     "MsgSelectorNode::analyzeSemantics", -1, -1);
             }
-            string idName = identifier->getIdentifier();
-            if (context.isReservedName(idName)) {
-                throw semantic_exception("Selector name '" + idName + "' is a reserved keyword",
-                    "MsgSelectorNode::analyzeSemantics", -1, -1);
+            {
+                string idName = identifier->getIdentifier();
+                if (context.isReservedName(idName)) {
+                    throw semantic_exception("Selector name '" + idName + "' is a reserved keyword",
+                        "MsgSelectorNode::analyzeSemantics", -1, -1);
+                }
             }
             break;
             
         case MsgSelectorKind::ARGUMENT_LIST:
-            if (argList) {
-                argList->analyzeSemantics(context);
+            if (!argList) {
+                throw semantic_exception("Argument list selector must have arguments",
+                    "MsgSelectorNode::analyzeSemantics", -1, -1);
+            }
+            argList->analyzeSemantics(context);
+            
+            // Дополнительная проверка для Objective-C: 
+            // если есть аргументы, проверяем, что хотя бы у одного есть ключевое слово
+            // (в Objective-C все аргументы после первого должны иметь ключевые слова)
+            auto args = argList->getMsgArgList();
+            if (args && !args->empty()) {
+                bool hasKeyword = false;
+                for (MsgArgNode* arg : *args) {
+                    if (arg && arg->getIdentifier()) {
+                        hasKeyword = true;
+                        break;
+                    }
+                }
+                
+                if (!hasKeyword) {
+                    // В Objective-C это допустимо для методов с одним аргументом без ключевого слова
+                    // Но для методов с несколькими аргументами нужны ключевые слова
+                    if (args->size() > 1) {
+                        throw semantic_exception("Multiple arguments require keywords in Objective-C",
+                            "MsgSelectorNode::analyzeSemantics", -1, -1);
+                    }
+                }
             }
             break;
             
@@ -291,14 +318,12 @@ void ExprNode::analyzeIdentifierSemantics(SemanticContext& context) {
     
     string idName = identifier->getIdentifier();
     
-    // Ищем переменную в текущей области видимости
     LocalVarInfo* localVar = context.lookupLocalVar(idName);
     if (localVar) {
         exprType = new Type(localVar->type);
         return;
     }
     
-    // Ищем поле в текущем классе
     if (context.getCurrentClass()) {
         FieldInfo* field = context.getCurrentClass()->lookupField(idName, true);
         if (field) {
@@ -309,14 +334,12 @@ void ExprNode::analyzeIdentifierSemantics(SemanticContext& context) {
         }
     }
     
-    // Ищем функцию
     FunctionInfo* func = context.lookupFunction(idName);
     if (func) {
         exprType = new Type(func->type);
         return;
     }
     
-    // Ищем класс
     ClassInfo* cls = context.lookupClass(idName);
     if (cls) {
         exprType = new Type(TypeKind::CLASS_NAME, cls->name);
@@ -334,8 +357,7 @@ void ExprNode::analyzeLiteralSemantics(SemanticContext& context) {
     }
     
     // Определяем тип литерала на основе его значения
-    // TODO: Вам нужно реализовать метод getLiteralType() в ValueNode
-    // или определить тип по содержимому литерала
+    // TODO: Вам нужно реализовать метод getLiteralType() в ValueNode или определить тип по содержимому литерала
     string literalStr = literalValue->getIdentifier();
     
     // Простая эвристика для определения типа
@@ -344,16 +366,13 @@ void ExprNode::analyzeLiteralSemantics(SemanticContext& context) {
     } else if (literalStr.find('.') != string::npos || 
                literalStr.find('e') != string::npos ||
                literalStr.find('E') != string::npos) {
-        // Возможно, float
-        exprType = new Type(TypeKind::FLOAT);
+            // Возможно, float
+            exprType = new Type(TypeKind::FLOAT);
     } else if (literalStr.size() == 3 && literalStr[0] == '\'' && literalStr[2] == '\'') {
-        // Символьный литерал
         exprType = new Type(TypeKind::CHAR);
     } else if (literalStr[0] == '"') {
-        // Строковый литерал
         exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
     } else {
-        // Целочисленный литерал
         exprType = new Type(TypeKind::INT);
     }
 }
@@ -363,7 +382,6 @@ void ExprNode::analyzeObjcArrayLiteralSemantics(SemanticContext& context) {
     if (objcArrayExprList) {
         objcArrayExprList->analyzeSemantics(context);
     }
-    // Тип - NSArray
     exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSArray");
 }
 
@@ -372,7 +390,6 @@ void ExprNode::analyzeObjcBoxedExprSemantics(SemanticContext& context) {
     if (boxedExpr) {
         boxedExpr->analyzeSemantics(context);
     }
-    // Тип - NSNumber или NSValue
     exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSNumber");
 }
 
@@ -403,10 +420,85 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
     receiver->analyzeSemantics(context);
     selector->analyzeSemantics(context);
     
-    // TODO: Реализовать полную проверку сообщения Objective-C
-    // Пока устанавливаем общий тип
-    exprType = new Type(TypeKind::TYPE_ID);
-    isMethodCall = true;
+    // Определяем тип ресивера
+    Type* receiverType = nullptr;
+    if (receiver->getKind() == ReceiverKind::EXPR && receiver->getExpr()) {
+        receiverType = receiver->getExpr()->getExprType();
+    } else if (receiver->getKind() == ReceiverKind::CLASS_NAME) {
+        string className = receiver->getClassName()->getIdentifier();
+        ClassInfo* cls = context.lookupClass(className);
+        if (cls) {
+            receiverType = new Type(TypeKind::CLASS_NAME, cls->name);
+        }
+    } else if (receiver->getKind() == ReceiverKind::SUPER) {
+        if (context.getCurrentClass()) {
+            receiverType = new Type(TypeKind::CLASS_NAME, context.getCurrentClass()->name);
+        }
+    }
+    
+    vector<string> keywords;
+    vector<const Type*> argTypes;
+    
+    if (selector->getKind() == MsgSelectorKind::SIMPLE_SEL) {
+        keywords.push_back(selector->getIdentifier()->getIdentifier());
+    } else if (selector->getKind() == MsgSelectorKind::ARGUMENT_LIST) {
+        MsgArgListNode* argList = selector->getMsgArgList();
+        if (argList) {
+            argList->analyzeSemantics(context);
+            
+            auto args = argList->getMsgArgList();
+            if (args) {
+                for (MsgArgNode* argNode : *args) {
+                    if (argNode) {
+                        if (argNode->getIdentifier()) {
+                            keywords.push_back(argNode->getIdentifier()->getIdentifier());
+                        } else {
+                            keywords.push_back("");
+                        }
+                        
+                        if (argNode->getArg()) {
+                            argNode->getArg()->analyzeSemantics(context);
+                            argTypes.push_back(argNode->getArg()->getExprType());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    MethodInfo* method = nullptr;
+    if (receiverType && receiverType->dataType == TypeKind::CLASS_NAME) {
+        ClassInfo* receiverClass = context.lookupClass(receiverType->className);
+        if (receiverClass) {
+            string selectorName;
+            for (const string& keyword : keywords) {
+                if (!selectorName.empty()) selectorName += ":";
+                selectorName += keyword;
+            }
+            
+            method = receiverClass->lookupMethod(selectorName, argTypes, keywords, true);
+        }
+    }
+    
+    if (method) {
+        exprType = new Type(method->getReturnType());
+        isMethodCall = true;
+        className = method->declaringClass->name;
+        methodRefConstantId = -1;
+    } else {
+        // Метод не найден, но в Objective-C возможны динамические вызовы
+        // Устанавливаем общий тип для совместимости
+        exprType = new Type(TypeKind::TYPE_ID);
+        isMethodCall = true;
+        
+        // Выводим предупреждение (но не ошибку, т.к. Objective-C динамический)
+        cerr << "Warning: Method with selector '";
+        for (size_t i = 0; i < keywords.size(); i++) {
+            if (i > 0) cerr << ":";
+            cerr << keywords[i];
+        }
+        cerr << "' not found in class or its ancestors" << endl;
+    }
 }
 
 void ExprNode::analyzeSelfSemantics(SemanticContext& context) {
@@ -1066,13 +1158,7 @@ void StmtNode::analyzeReturnSemantics(SemanticContext& context) {
     }
     
     if (expr) {
-        // Есть возвращаемое значение
         expr->analyzeSemantics(context);
-        
-        // Тип проверяется в FuncDefNode::checkReturnStatements
-    } else {
-        // Нет возвращаемого значения - void return
-        // Проверка будет в FuncDefNode::checkReturnStatements
     }
 }
 
@@ -1084,18 +1170,16 @@ void StmtNode::analyzeIfSemantics(SemanticContext& context) {
     
     condition->analyzeSemantics(context);
     
-    // Проверяем, что условие имеет булевый тип
-    Type conditionType = getExpressionType(condition, context);
+    Type conditionType = *condition->getExprType();
     Type boolType(TypeKind::BOOL);
     
     if (!conditionType.equal(&boolType) && !context.isConvertible(conditionType, boolType)) {
-        throw statement_exception("If condition must be boolean",
+        throw statement_exception("If condition must be boolean or convertible to boolean",
             "StmtNode::analyzeIfSemantics", -1, -1,
             "Got type: " + conditionType.getDescriptor());
     }
     
     if (thenBranch) {
-        // Входим в область видимости условия
         context.enterConditionalScope();
         thenBranch->analyzeSemantics(context);
         context.leaveScope();
@@ -1325,11 +1409,9 @@ void FuncDefNode::checkReturnStatements(FunctionInfo* func, SemanticContext& con
     
     if (returnType.equal(&voidType)) {
         for (StmtNode* stmt : returnStmts) {
-            if (stmt->getKind() == StmtKind::RETURN) {
-                if (stmt->getExpr() != nullptr) {
-                    throw function_exception("Void function '" + func->name + "' cannot return a value",
-                        "FuncDefNode::checkReturnStatements", -1, -1, "Function: '" + func->name + "'");
-                }
+            if (stmt->getExpr() != nullptr) {
+                throw function_exception("Void function '" + func->name + "' cannot return a value",
+                    "FuncDefNode::checkReturnStatements", -1, -1, "Function: '" + func->name + "'");
             }
         }
     } else {
@@ -1340,24 +1422,20 @@ void FuncDefNode::checkReturnStatements(FunctionInfo* func, SemanticContext& con
         }
         
         for (StmtNode* stmt : returnStmts) {
-            if (stmt->getKind() == StmtKind::RETURN) {
-                if (stmt->getExpr() == nullptr) {
-                    throw function_exception("Function '" + func->name + "' must return a value, not void",
-                        "FuncDefNode::checkReturnStatements", -1, -1,
-                        "Return type: " + returnType.getDescriptor());
-                }
-                
-                // Проверяем тип возвращаемого выражения
-                // Для этого нужно сначала проанализировать выражение, если это еще не сделано
-                // Но в данном случае выражение уже должно быть проанализировано
-                // Проверяем совместимость типов
-                if (!context.isAssignable(returnType, returnType)) {
-                    // TODO: Здесь нужно получить фактический тип выражения
-                    // Для этого нужно добавить метод getType() в ExprNode
-                    throw function_exception("Function '" + func->name + "' return type mismatch",
-                        "FuncDefNode::checkReturnStatements", -1, -1,
-                        "Expected: " + returnType.getDescriptor());
-                }
+            if (stmt->getExpr() == nullptr) {
+                throw function_exception("Function '" + func->name + "' must return a value, not void",
+                    "FuncDefNode::checkReturnStatements", -1, -1,
+                    "Return type: " + returnType.getDescriptor());
+            }
+            
+            stmt->getExpr()->analyzeSemantics(context);
+            Type exprType = *stmt->getExpr()->getExprType();
+            
+            if (!context.isAssignable(exprType, returnType)) {
+                throw function_exception("Function '" + func->name + "' return type mismatch",
+                    "FuncDefNode::checkReturnStatements", -1, -1,
+                    "Expected: " + returnType.getDescriptor() +
+                    ", Got: " + exprType.getDescriptor());
             }
         }
     }
