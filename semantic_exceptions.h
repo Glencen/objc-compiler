@@ -88,4 +88,11 @@ public:
         : semantic_exception(message, context, line, column, nodeInfo) {}
 };
 
+class statement_exception : public semantic_exception {
+public:
+    statement_exception(const std::string& message, const std::string& context = "", 
+                     int line = -1, int column = -1, const std::string& nodeInfo = "")
+        : semantic_exception(message, context, line, column, nodeInfo) {}
+};
+
 #endif
