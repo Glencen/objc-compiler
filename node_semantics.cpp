@@ -1137,11 +1137,132 @@ void TypeNode::analyzeSemantics(SemanticContext& context) {}
 
 //--------------------------------------------------------------DeclaratorListNode--------------------------------------------------------------
 
-void DeclaratorListNode::analyzeSemantics(SemanticContext& context) {}
+void DeclaratorListNode::analyzeSemantics(SemanticContext& context) {
+    if (!initDeclList) return;
+    
+    unordered_set<string> declaredNames;
+    
+    for (InitDeclNode* initDecl : *initDeclList) {
+        if (initDecl) {
+            initDecl->analyzeSemantics(context);
+            
+            // Проверяем уникальность имен в текущем объявлении
+            DeclaratorNode* declarator = initDecl->getDeclarator();
+            if (declarator && declarator->getIdentifier()) {
+                string varName = declarator->getIdentifier()->getIdentifier();
+                
+                if (!declaredNames.insert(varName).second) {
+                    throw semantic_exception("Duplicate variable name '" + varName + "' in declaration",
+                        "DeclaratorListNode::analyzeSemantics", -1, -1);
+                }
+                
+                // Проверяем, что переменная с таким именем еще не объявлена в текущей области
+                if (context.existsInCurrentScope(varName)) {
+                    throw semantic_exception("Variable '" + varName + "' already declared in current scope",
+                        "DeclaratorListNode::analyzeSemantics", -1, -1);
+                }
+            }
+            
+            // Проверяем инициализаторы
+            if (initDecl->getInitializer()) {
+                // Проверка типов будет выполнена в DeclNode, где известен тип
+                initDecl->getInitializer()->analyzeSemantics(context);
+            }
+        }
+    }
+}
 
 //--------------------------------------------------------------DeclNode--------------------------------------------------------------
 
-void DeclNode::analyzeSemantics(SemanticContext& context) {}
+void DeclNode::analyzeSemantics(SemanticContext& context) {
+    if (!type) {
+        throw semantic_exception("Declaration must have a type",
+            "DeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    if (!declaratorList) {
+        throw semantic_exception("Declaration must have at least one declarator",
+            "DeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Анализируем тип
+    type->analyzeSemantics(context);
+    Type baseType = convertTypeNodeToType(type);
+    
+    // Проверяем, что тип корректен
+    if (baseType.dataType == TypeKind::NONE) {
+        throw semantic_exception("Invalid type in declaration",
+            "DeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Проверяем, что тип класса существует (если это класс)
+    if (baseType.dataType == TypeKind::CLASS_NAME) {
+        string className = baseType.className;
+        if (context.lookupClass(className) == nullptr) {
+            // TODO: Возможно, класс будет объявлен позже
+            cerr << "Warning: Class '" << className + "' used in declaration not found" << endl;
+        }
+    }
+    
+    // Анализируем список объявителей
+    declaratorList->analyzeSemantics(context);
+    
+    // Проходим по всем объявителям и добавляем переменные в контекст
+    auto initDeclList = declaratorList->getInitDeclList();
+    if (initDeclList) {
+        for (InitDeclNode* initDecl : *initDeclList) {
+            if (initDecl) {
+                DeclaratorNode* declarator = initDecl->getDeclarator();
+                if (declarator && declarator->getIdentifier()) {
+                    string varName = declarator->getIdentifier()->getIdentifier();
+                    
+                    // Определяем тип переменной с учетом массива
+                    Type varType = baseType;
+                    
+                    // Обрабатываем массивы
+                    auto arraySizes = declarator->getArraySizes();
+                    if (arraySizes && !arraySizes->empty()) {
+                        // Преобразуем вектор ExpressionNode* в вектор int
+                        vector<int> sizes;
+                        for (ExprNode* sizeExpr : *arraySizes) {
+                            if (sizeExpr) {
+                                sizeExpr->analyzeSemantics(context);
+                                
+                                // Проверяем, что размер массива - целочисленная константа
+                                // TODO: Нужно вычислять константные выражения
+                                sizes.push_back(0); // Временно 0 для динамических массивов
+                            }
+                        }
+                        
+                        // Создаем тип массива
+                        varType = Type(baseType.dataType, baseType.className, sizes);
+                    }
+                    
+                    // Добавляем переменную в контекст
+                    bool isConst = false; // TODO: Определить, является ли переменная константой
+                    auto varInfo = make_unique<LocalVarInfo>(varName, varType, isConst, nullptr);
+                    
+                    if (!context.addLocalVar(move(varInfo))) {
+                        throw semantic_exception("Failed to add variable '" + varName + "' to scope",
+                            "DeclNode::analyzeSemantics", -1, -1);
+                    }
+                    
+                    // Проверяем инициализатор (если есть)
+                    if (initDecl->getInitializer()) {
+                        // TODO: Проверить совместимость типа инициализатора с типом переменной
+                        // Это уже сделано в InitDeclNode::analyzeSemantics
+                    }
+                }
+            }
+        }
+    }
+    
+    // Проверяем, что объявление не пустое
+    if (initDeclList && initDeclList->empty()) {
+        throw semantic_exception("Declaration has no declarators",
+            "DeclNode::analyzeSemantics", -1, -1);
+    }
+}
 
 //--------------------------------------------------------------StmtListNode--------------------------------------------------------------
 
@@ -1462,11 +1583,154 @@ void ArraySizeSpecNode::analyzeSemantics(SemanticContext& context) {}
 
 //--------------------------------------------------------------ParamDeclNode--------------------------------------------------------------
 
-void ParamDeclNode::analyzeSemantics(SemanticContext& context) {}
+void ParamDeclNode::analyzeSemantics(SemanticContext& context) {
+    // Проверяем обязательные поля
+    if (!type) {
+        throw semantic_exception("Parameter declaration must have a type",
+            "ParamDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    if (!identifier) {
+        throw semantic_exception("Parameter declaration must have an identifier",
+            "ParamDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Проверяем тип
+    type->analyzeSemantics(context);
+    Type paramType = convertTypeNodeToType(type);
+    
+    // Проверяем, что тип корректен
+    if (paramType.dataType == TypeKind::NONE) {
+        throw semantic_exception("Invalid parameter type",
+            "ParamDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Проверяем, что тип класса существует (если это класс)
+    if (paramType.dataType == TypeKind::CLASS_NAME) {
+        string className = paramType.className;
+        if (context.lookupClass(className) == nullptr) {
+            // TODO: Возможно, класс будет объявлен позже
+            cerr << "Warning: Class '" << className << "' used in parameter declaration not found" << endl;
+        }
+    }
+    
+    // Проверяем идентификатор
+    string paramName = identifier->getIdentifier();
+    
+    if (paramName.empty()) {
+        throw semantic_exception("Parameter name cannot be empty",
+            "ParamDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    if (context.isReservedName(paramName)) {
+        throw semantic_exception("Parameter name '" + paramName + "' is a reserved keyword",
+            "ParamDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Проверяем корректность идентификатора (без специальных символов)
+    for (char c : paramName) {
+        if (!isalnum(c) && c != '_') {
+            throw semantic_exception("Parameter name '" + paramName + "' contains invalid characters",
+                "ParamDeclNode::analyzeSemantics", -1, -1);
+        }
+    }
+    
+    // Обрабатываем массивы
+    if (isArray()) {
+        vector<int> arraySizes;
+        
+        // Обрабатываем спецификацию размера массива
+        if (arraySizeSpec) {
+            arraySizeSpec->analyzeSemantics(context);
+            
+            // Получаем размеры массива
+            arraySizes = getArraySizes();
+            
+            // Проверяем, что размеры массива корректны
+            for (int size : arraySizes) {
+                if (size < 0) {
+                    throw semantic_exception("Array size cannot be negative",
+                        "ParamDeclNode::analyzeSemantics", -1, -1);
+                }
+                if (size == 0 && kind != ParamDeclKind::FLEXIBLE_ARRAY) {
+                    throw semantic_exception("Array size must be positive",
+                        "ParamDeclNode::analyzeSemantics", -1, -1);
+                }
+            }
+        } else if (kind == ParamDeclKind::SIZED_ARRAY || kind == ParamDeclKind::FLEXIBLE_ARRAY) {
+            throw semantic_exception("Array parameter must have size specification",
+                "ParamDeclNode::analyzeSemantics", -1, -1);
+        }
+        
+        // Для гибких массивов (flexible array member) проверяем особые условия
+        if (kind == ParamDeclKind::FLEXIBLE_ARRAY) {
+            // В Objective-C гибкие массивы обычно не используются
+            // В C они должны быть последним членом структуры
+            cerr << "Warning: Flexible array members are not standard in Objective-C" << endl;
+        }
+    }
+}
 
 //--------------------------------------------------------------ParamListNode--------------------------------------------------------------
 
-void ParamListNode::analyzeSemantics(SemanticContext& context) {}
+void ParamListNode::analyzeSemantics(SemanticContext& context) {
+    if (!paramList) return;
+    
+    unordered_set<string> paramNames;
+    
+    for (ParamDeclNode* paramDecl : *paramList) {
+        if (paramDecl) {
+            paramDecl->analyzeSemantics(context);
+            
+            // Проверяем уникальность имен параметров
+            if (paramDecl->getIdentifier()) {
+                string paramName = paramDecl->getIdentifier()->getIdentifier();
+                
+                if (!paramNames.insert(paramName).second) {
+                    throw semantic_exception("Duplicate parameter name '" + paramName + "'",
+                        "ParamListNode::analyzeSemantics", -1, -1);
+                }
+                
+                // Проверяем, что имя параметра не зарезервировано
+                if (context.isReservedName(paramName)) {
+                    throw semantic_exception("Parameter name '" + paramName + "' is a reserved keyword",
+                        "ParamListNode::analyzeSemantics", -1, -1);
+                }
+            }
+            
+            // Проверяем тип параметра
+            TypeNode* paramType = paramDecl->getType();
+            if (paramType) {
+                Type typeObj = convertTypeNodeToType(paramType);
+                
+                // Проверяем, что тип существует (если это класс)
+                if (typeObj.dataType == TypeKind::CLASS_NAME) {
+                    string className = typeObj.className;
+                    if (context.lookupClass(className) == nullptr) {
+                        cerr << "Warning: Class '" << className << "' used in parameter not found" << endl;
+                    }
+                }
+                
+                // Проверяем массивы
+                if (paramDecl->isArray()) {
+                    // Для массивов проверяем спецификацию размера
+                    if (paramDecl->getSizeSpec()) {
+                        // TODO: Проверить спецификацию размера массива
+                        // Например, что размеры положительные и т.д.
+                    }
+                }
+            }
+        }
+    }
+    
+    // Проверяем ограничения на количество параметров (если есть)
+    // Например, Objective-C не имеет явных ограничений, но можно добавить свои
+    if (paramList->size() > 255) { // Примерное ограничение
+        throw semantic_exception("Too many parameters in function/method",
+            "ParamListNode::analyzeSemantics", -1, -1,
+            "Maximum allowed: 255, Got: " + to_string(paramList->size()));
+    }
+}
 
 //--------------------------------------------------------------FuncDefNode--------------------------------------------------------------
 
@@ -2250,7 +2514,128 @@ void PropertyNode::analyzeSemantics(SemanticContext& context) {}
 
 //--------------------------------------------------------------InterfaceDeclListNode--------------------------------------------------------------
 
-void InterfaceDeclListNode::analyzeSemantics(SemanticContext& context) {}
+void InterfaceDeclListNode::analyzeSemantics(SemanticContext& context) {
+    // Анализируем свойства
+    if (properties) {
+        for (PropertyNode* property : *properties) {
+            if (property) {
+                property->analyzeSemantics(context);
+                
+                // Проверяем, что тип свойства существует
+                TypeNode* propType = property->getType();
+                if (propType) {
+                    Type propTypeObj = convertTypeNodeToType(propType);
+                    if (propTypeObj.dataType == TypeKind::CLASS_NAME) {
+                        string className = propTypeObj.className;
+                        if (context.lookupClass(className) == nullptr) {
+                            // TODO: Возможно, класс еще не объявлен, но будет объявлен позже
+                            // Выводим предупреждение, но не ошибку
+                            cerr << "Warning: Class '" << className << "' used in property declaration not found" << endl;
+                        }
+                    }
+                }
+                
+                // Проверяем имя свойства
+                ValueNode* propName = property->getName();
+                if (propName) {
+                    string nameStr = propName->getIdentifier();
+                    if (context.isReservedName(nameStr)) {
+                        throw semantic_exception("Property name '" + nameStr + "' is a reserved keyword",
+                            "InterfaceDeclListNode::analyzeSemantics", -1, -1);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Анализируем методы класса
+    if (classMethodDecls) {
+        for (MethodDeclNode* methodDecl : *classMethodDecls) {
+            if (methodDecl) {
+                methodDecl->analyzeSemantics(context);
+            }
+        }
+    }
+    
+    // Анализируем методы экземпляра
+    if (instanceMethodDecls) {
+        for (MethodDeclNode* methodDecl : *instanceMethodDecls) {
+            if (methodDecl) {
+                methodDecl->analyzeSemantics(context);
+            }
+        }
+    }
+    
+    // Проверяем на конфликты имен между свойствами и методами
+    unordered_set<string> declaredNames;
+    
+    // Собираем имена свойств
+    if (properties) {
+        for (PropertyNode* property : *properties) {
+            if (property && property->getName()) {
+                string propName = property->getName()->getIdentifier();
+                if (!declaredNames.insert(propName).second) {
+                    throw semantic_exception("Duplicate property name '" + propName + "' in interface",
+                        "InterfaceDeclListNode::analyzeSemantics", -1, -1);
+                }
+            }
+        }
+    }
+    
+    // Собираем имена методов класса
+    if (classMethodDecls) {
+        for (MethodDeclNode* methodDecl : *classMethodDecls) {
+            if (methodDecl) {
+                // Получаем имя метода из идентификатора или селектора
+                string methodName;
+                if (methodDecl->getIdentifier()) {
+                    methodName = methodDecl->getIdentifier()->getIdentifier();
+                } else if (methodDecl->getMethodSel()) {
+                    // Для методов с селектором формируем имя из ключевых слов
+                    auto paramList = methodDecl->getMethodSel()->getMethodParamList();
+                    if (paramList) {
+                        for (MethodParamNode* param : *paramList) {
+                            if (param && param->getSelectorIdentifier()) {
+                                methodName += param->getSelectorIdentifier()->getIdentifier();
+                            }
+                        }
+                    }
+                }
+                
+                if (!methodName.empty() && !declaredNames.insert(methodName).second) {
+                    cerr << "Warning: Method '" << methodName << "' hides property with the same name" << endl;
+                }
+            }
+        }
+    }
+    
+    // Собираем имена методов экземпляра
+    if (instanceMethodDecls) {
+        for (MethodDeclNode* methodDecl : *instanceMethodDecls) {
+            if (methodDecl) {
+                // Получаем имя метода из идентификатора или селектора
+                string methodName;
+                if (methodDecl->getIdentifier()) {
+                    methodName = methodDecl->getIdentifier()->getIdentifier();
+                } else if (methodDecl->getMethodSel()) {
+                    // Для методов с селектором формируем имя из ключевых слов
+                    auto paramList = methodDecl->getMethodSel()->getMethodParamList();
+                    if (paramList) {
+                        for (MethodParamNode* param : *paramList) {
+                            if (param && param->getSelectorIdentifier()) {
+                                methodName += param->getSelectorIdentifier()->getIdentifier();
+                            }
+                        }
+                    }
+                }
+                
+                if (!methodName.empty() && !declaredNames.insert(methodName).second) {
+                    cerr << "Warning: Method '" << methodName << "' hides property with the same name" << endl;
+                }
+            }
+        }
+    }
+}
 
 //--------------------------------------------------------------InitializerListNode--------------------------------------------------------------
 
