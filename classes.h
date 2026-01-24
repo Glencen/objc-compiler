@@ -66,13 +66,13 @@ public:
     float getFloat() const;
     bool getBool() const;
     char getChar() const;
-    string* getString() const;
-    string* getObjcInt() const;
-    string* getObjcFloat() const;
-    string* getObjcBool() const;
-    string* getObjcString() const;
-    string* getIdentifier() const;
-    string* getClassName() const;
+    string getString() const;
+    string getObjcInt() const;
+    string getObjcFloat() const;
+    string getObjcBool() const;
+    string getObjcString() const;
+    string getIdentifier() const;
+    string getClassName() const;
 
     void setClassName(string className);
     void setLocalVarId(int id);
@@ -91,7 +91,7 @@ protected:
     float floatValue;
     bool boolValue;
     char charValue;
-    string *stringValue;
+    string stringValue;
 
     int localVarId;
     bool isLocalVar;

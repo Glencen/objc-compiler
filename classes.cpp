@@ -28,7 +28,7 @@ ValueNode::ValueNode() : AstNode() {
     floatValue = 0;
     boolValue = false;
     charValue = 0;
-    stringValue = nullptr;
+    stringValue = "";
 }
 
 ValueNode* ValueNode::createInt(int value) {
@@ -62,7 +62,7 @@ ValueNode* ValueNode::createChar(char value) {
 ValueNode* ValueNode::createString(string *value) {
     ValueNode *node = new ValueNode();
     node->valueType = ValueKind::STRING_LIT;
-    node->stringValue = value;
+    node->stringValue = *value;
     return node;
 }
 
@@ -96,21 +96,21 @@ ValueNode* ValueNode::createObjcBool(bool value) {
 ValueNode* ValueNode::createObjcString(string *value) {
     ValueNode *node = new ValueNode();
     node->valueType = ValueKind::OBJC_STRING_LIT;
-    node->stringValue = value;
+    node->stringValue = *value;
     return node;
 }
 
 ValueNode* ValueNode::createIdentifier(string *value) {
     ValueNode *node = new ValueNode();
     node->valueType = ValueKind::IDENTIFIER;
-    node->stringValue = value;
+    node->stringValue = *value;
     return node;
 }
 
 ValueNode* ValueNode::createClassName(string *value) {
     ValueNode *node = new ValueNode();
     node->valueType = ValueKind::CLASS_NAME;
-    node->stringValue = value;
+    node->stringValue = *value;
     return node;
 }
 
@@ -134,41 +134,36 @@ char ValueNode::getChar() const {
     return charValue;
 }
 
-string* ValueNode::getString() const {
+string ValueNode::getString() const {
     return stringValue;
 }
 
-string* ValueNode::getObjcInt() const {
+string ValueNode::getObjcInt() const {
     return stringValue;
 }
 
-string* ValueNode::getObjcFloat() const {
+string ValueNode::getObjcFloat() const {
     return stringValue;
 }
 
-string* ValueNode::getObjcBool() const {
+string ValueNode::getObjcBool() const {
     return stringValue;
 }
 
-string* ValueNode::getObjcString() const {
+string ValueNode::getObjcString() const {
     return stringValue;
 }
 
-string* ValueNode::getIdentifier() const {
+string ValueNode::getIdentifier() const {
     return stringValue;
 }
 
-string* ValueNode::getClassName() const {
+string ValueNode::getClassName() const {
     return stringValue;
 }
 
 void ValueNode::setClassName(string className) {
-    if (!stringValue) {
-        stringValue = new string(className);
-    }
-    else {
-        *stringValue = className;
-    }
+    stringValue = className;
 }
 
 void ValueNode::setLocalVarId(int id) {
@@ -188,7 +183,7 @@ bool ValueNode::getIsLocalVar() const {
 }
 
 string ValueNode::getDotLabel() const {
-    auto escapeString = [](const string &src) {
+    auto escapeString = [](const string& src) {
         string out;
         out.reserve(src.size());
         for (char c : src) {
@@ -208,14 +203,14 @@ string ValueNode::getDotLabel() const {
         case ValueKind::FLOAT_LIT:          return "float: " + to_string(floatValue);
         case ValueKind::BOOL_LIT:           return string("bool: ") + (boolValue ? "true" : "false");
         case ValueKind::CHAR_LIT:           return "char: '" + string(1, charValue) + "'";
-        case ValueKind::STRING_LIT:         return "string: " + escapeString(*stringValue);
+        case ValueKind::STRING_LIT:         return "string: " + escapeString(stringValue);
         case ValueKind::NIL:                return "nil";
         case ValueKind::OBJC_INT_LIT:       return "OBJ-C int: " + to_string(intValue);
         case ValueKind::OBJC_FLOAT_LIT:     return "OBJ-C float: " + to_string(floatValue);
         case ValueKind::OBJC_BOOL_LIT:      return "OBJ-C bool: " + ((boolValue) ? string("true") : string("false"));
-        case ValueKind::OBJC_STRING_LIT:    return "OBJ-C string: " + *stringValue;
-        case ValueKind::IDENTIFIER:         return "Identifier: " + *stringValue;
-        case ValueKind::CLASS_NAME:         return "Class name: " + *stringValue;
+        case ValueKind::OBJC_STRING_LIT:    return "OBJ-C string: " + stringValue;
+        case ValueKind::IDENTIFIER:         return "Identifier: " + stringValue;
+        case ValueKind::CLASS_NAME:         return "Class name: " + stringValue;
         default:                            return "UNKNOWN_VALUE";
     }
 }

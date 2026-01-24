@@ -1,14 +1,14 @@
 #include "context.h"
 
-Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) {
+Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) { // TODO: куда впихнуть TYPE_ID ???
     if (!typeNode) return Type(TypeKind::NONE);
     
     TypeKind typeKind = typeNode->getKind();
-    string className = *typeNode->getClassName()->getClassName();
+    string className = typeKind == TypeKind::CLASS_NAME ? typeNode->getClassName()->getClassName() : "";
     
     if (typeNode->isPrimitive()) {
         return Type(typeKind);
-    } else if (typeNode->getKind() == TypeKind::CLASS_NAME) {
+    } else if (typeKind == TypeKind::CLASS_NAME) {
         if (!arraySizes.empty()) {
             return Type(TypeKind::CLASS_NAME, className, arraySizes);
         } else {
@@ -162,7 +162,7 @@ void InterfaceNode::processProperties(SemanticContext& context) {
     list<PropertyNode*> properties = *interfaceDeclList->getProperties();
     
     for (auto* property : properties) {
-        string propertyName = *property->getName()->getIdentifier();
+        string propertyName = property->getName()->getIdentifier();
         Type propertyType = convertTypeNodeToType(property->getType());
         bool isReadonly = property->getAttribute() == Attribute::READONLY;
         
@@ -195,8 +195,8 @@ void InterfaceNode::processProperties(SemanticContext& context) {
 }
 
 void InterfaceNode::analyzeSemantics(SemanticContext& context) {
-    string classNameStr = *className->getClassName();
-    string superclassNameStr = superClassName ? *superClassName->getClassName() : "";
+    string classNameStr = className->getClassName();
+    string superclassNameStr = superClassName ? superClassName->getClassName() : "";
     
     ClassInfo* cls = context.lookupClass(classNameStr);
     if (!cls) {
@@ -255,7 +255,7 @@ void ExternalDeclNode::analyzeSemantics(SemanticContext& context) {
             if (funcDef) {
                 if (!context.isInGlobalScope()) {
                     throw function_exception("Function can only be declared at global scope",
-                        "ExternalDeclNode::analyzeSemantics", -1, -1, "Function name: '" + *funcDef->getIdentifier()->getIdentifier() + "'");
+                        "ExternalDeclNode::analyzeSemantics", -1, -1, "Function name: '" + funcDef->getIdentifier()->getIdentifier() + "'");
                 }
                 funcDef->analyzeSemantics(context);
             }
@@ -264,7 +264,7 @@ void ExternalDeclNode::analyzeSemantics(SemanticContext& context) {
             if (funcDecl) {
                 if (!context.isInGlobalScope()) {
                     throw function_exception("Function can only be declared at global scope",
-                        "ExternalDeclNode::analyzeSemantics", -1, -1, "Function name: '" + *funcDef->getIdentifier()->getIdentifier() + "'");
+                        "ExternalDeclNode::analyzeSemantics", -1, -1, "Function name: '" + funcDef->getIdentifier()->getIdentifier() + "'");
                 }
                 funcDecl->analyzeSemantics(context);
             }
@@ -274,7 +274,7 @@ void ExternalDeclNode::analyzeSemantics(SemanticContext& context) {
                 auto* list = classNames->getClassFwDeclList();
                 if (list) {
                     for (auto* classNameNode : *list) {
-                        auto className = *classNameNode->getClassName();
+                        auto className = classNameNode->getClassName();
                         if (!context.lookupClass(className)) {
                             auto cls = make_unique<ClassInfo>(className);
                             context.addClass(move(cls));
