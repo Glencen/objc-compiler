@@ -16,7 +16,7 @@ public:
     static std::unique_ptr<NSString> stringWithStringStatic(const NSString& str);
 
     // ------------------- Динамические методы -------------------
-    std::unique_ptr<char[]> cStringDynamic();
+    std::unique_ptr<char[]> cStringDynamic() const;
     std::unique_ptr<NSString> capitalizeStringDynamic();
     char characterAtIndexDynamic(int index);
     int hasPrefixDynamic(const NSString& prefix);

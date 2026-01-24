@@ -26,11 +26,15 @@ std::unique_ptr<NSString> NSString::stringWithStringStatic(const NSString& str) 
 }
 
 // ------------------- Динамические методы -------------------
-std::unique_ptr<char[]> NSString::cStringDynamic() {
+std::unique_ptr<char[]> NSString::cStringDynamic() const {
     auto res = std::make_unique<char[]>(string.size() + 1);
-    std::strcpy(res.get(), string.c_str());
+    for (size_t i = 0; i < string.size(); ++i) {
+        res[i] = string[i];
+    }
+    res[string.size()] = '\0';
     return res;
 }
+
 
 std::unique_ptr<NSString> NSString::capitalizeStringDynamic() {
     std::string res = string;
