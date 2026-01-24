@@ -317,6 +317,10 @@ private:
     
     void initReservedNames();
     void initNSObjectClass();
+    void initNSStringClass();
+    void initNSArrayClass();
+    void initNSNumberClass();
+    void initInOutFuncsClass();
 };
 
 #endif

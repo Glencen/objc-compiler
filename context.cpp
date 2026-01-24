@@ -1258,6 +1258,10 @@ void SemanticContext::dumpCurrentScope() const {
 void SemanticContext::initSemanticContext() {
     initReservedNames();
     initNSObjectClass();
+    initNSStringClass();
+    initNSArrayClass();
+    initNSNumberClass();
+    initInOutFuncsClass();
 
     enterScope();
 }
@@ -1497,3 +1501,621 @@ void SemanticContext::initNSObjectClass() { // TODO: пересмотреть н
         nsObject->setSuperclass(javaObject);
     }
 }
+
+void SemanticContext::initNSStringClass() {
+    if (lookupClass("rtl/NSString")) {
+        return;
+    }
+
+    auto nsStringClass = make_unique<ClassInfo>("rtl/NSString", nullptr);
+    nsStringClass->markAsImplementation();
+
+    // ===============================
+    // Статические методы
+    // ===============================
+
+    // + (id)string
+    {
+        auto method = make_unique<MethodInfo>(
+            "stringStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            true,
+            nsStringClass.get()
+        );
+        method->selector = "stringStatic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // + (id)stringWithCString:(const char*)cstr
+    {
+        auto method = make_unique<MethodInfo>(
+            "stringWithCStringStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            true,
+            nsStringClass.get()
+        );
+        method->selector = "stringWithCStringStatic";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CHAR, "", 1) }; // char[]
+        nsStringClass->addMethod(move(method));
+    }
+
+    // + (id)stringWithString:(NSString*)str
+    {
+        auto method = make_unique<MethodInfo>(
+            "stringWithStringStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            true,
+            nsStringClass.get()
+        );
+        method->selector = "stringWithStringStatic";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
+        nsStringClass->addMethod(move(method));
+    }
+
+    // ===============================
+    // Динамические методы
+    // ===============================
+
+    // - (const char*)cString
+    {
+        auto method = make_unique<MethodInfo>(
+            "cStringDynamic",
+            Type(TypeKind::CHAR, "", 1),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "cStringDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (NSString*)capitalizeString
+    {
+        auto method = make_unique<MethodInfo>(
+            "capitalizeStringDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "capitalizeStringDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (int)length
+    {
+        auto method = make_unique<MethodInfo>(
+            "lengthDynamic",
+            Type(TypeKind::INT),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "lengthDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (NSString*)uppercaseString
+    {
+        auto method = make_unique<MethodInfo>(
+            "uppercaseStringDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "uppercaseStringDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (NSString*)lowercaseString
+    {
+        auto method = make_unique<MethodInfo>(
+            "lowercaseStringDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "lowercaseStringDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (int)isEqual:(NSObject*)other
+    {
+        auto method = make_unique<MethodInfo>(
+            "isEqualDynamic",
+            Type(TypeKind::INT),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "isEqualDynamic";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSObject") };
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (NSString*)description
+    {
+        auto method = make_unique<MethodInfo>(
+            "descriptionDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "descriptionDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (NSString*)stringByAppendingString:(NSString*)other
+    {
+        auto method = make_unique<MethodInfo>(
+            "stringByAppendingStringDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "stringByAppendingStringDynamic";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
+        nsStringClass->addMethod(move(method));
+    }
+
+    addClass(move(nsStringClass));
+
+    auto nsString = lookupClass("rtl/NSString");
+    auto nsObject = lookupClass("rtl/NSObject");
+    if (nsString && nsObject) {
+        nsString->setSuperclass(nsObject);
+    }
+}
+
+void SemanticContext::initNSArrayClass() {
+    if (lookupClass("rtl/NSArray")) return;
+
+    auto nsArrayClass = make_unique<ClassInfo>("rtl/NSArray", nullptr);
+    nsArrayClass->markAsImplementation();
+
+    {
+        auto constructor = make_unique<MethodInfo>(
+            "<init>",
+            Type(TypeKind::VOID),
+            false,
+            nsArrayClass.get()
+        );
+        constructor->selector = "<init>";
+        constructor->keywords = {};
+        constructor->parameterTypes = {};
+        nsArrayClass->addMethod(move(constructor));
+    }
+
+    // arrayStatic ()Lrtl/NSArray;
+    {
+        auto arrayStatic = make_unique<MethodInfo>(
+            "arrayStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
+            true,
+            nsArrayClass.get()
+        );
+        arrayStatic->selector = "arrayStatic";
+        arrayStatic->keywords = {};
+        arrayStatic->parameterTypes = {};
+        nsArrayClass->addMethod(move(arrayStatic));
+    }
+
+    // arrayWithArrayStatic (Lrtl/NSArray;)Lrtl/NSArray;
+    {
+        auto arrayWithArrayStatic = make_unique<MethodInfo>(
+            "arrayWithArrayStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
+            true,
+            nsArrayClass.get()
+        );
+        arrayWithArrayStatic->selector = "arrayWithArrayStatic";
+        arrayWithArrayStatic->keywords = {};
+        arrayWithArrayStatic->parameterTypes = {
+            new Type(TypeKind::CLASS_NAME, "rtl/NSArray")
+        };
+        nsArrayClass->addMethod(move(arrayWithArrayStatic));
+    }
+
+    // arrayWithObjectsStatic ([Lrtl/NSObject;)Lrtl/NSArray;
+    {
+        auto arrayWithObjectsStatic = make_unique<MethodInfo>(
+            "arrayWithObjectsStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
+            true,
+            nsArrayClass.get()
+        );
+        arrayWithObjectsStatic->selector = "arrayWithObjectsStatic";
+        arrayWithObjectsStatic->keywords = {};
+        arrayWithObjectsStatic->parameterTypes = {
+            new Type(TypeKind::CLASS_NAME, "Lrtl/NSObject;") // массив объектов
+        };
+        nsArrayClass->addMethod(move(arrayWithObjectsStatic));
+    }
+
+    // arrayByAddingObjectDynamic (Lrtl/NSObject;)Lrtl/NSArray;
+    {
+        auto arrayByAddingObjectDynamic = make_unique<MethodInfo>(
+            "arrayByAddingObjectDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
+            false,
+            nsArrayClass.get()
+        );
+        arrayByAddingObjectDynamic->selector = "arrayByAddingObjectDynamic";
+        arrayByAddingObjectDynamic->keywords = {};
+        arrayByAddingObjectDynamic->parameterTypes = {
+            new Type(TypeKind::CLASS_NAME, "rtl/NSObject")
+        };
+        nsArrayClass->addMethod(move(arrayByAddingObjectDynamic));
+    }
+
+    // objectAtIndexDynamic (I)Lrtl/NSObject;
+    {
+        auto objectAtIndexDynamic = make_unique<MethodInfo>(
+            "objectAtIndexDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSObject"),
+            false,
+            nsArrayClass.get()
+        );
+        objectAtIndexDynamic->selector = "objectAtIndexDynamic";
+        objectAtIndexDynamic->keywords = {};
+        objectAtIndexDynamic->parameterTypes = { new Type(TypeKind::INT) };
+        nsArrayClass->addMethod(move(objectAtIndexDynamic));
+    }
+
+    // countDynamic ()I
+    {
+        auto countDynamic = make_unique<MethodInfo>(
+            "countDynamic",
+            Type(TypeKind::INT),
+            false,
+            nsArrayClass.get()
+        );
+        countDynamic->selector = "countDynamic";
+        countDynamic->keywords = {};
+        countDynamic->parameterTypes = {};
+        nsArrayClass->addMethod(move(countDynamic));
+    }
+
+    addClass(move(nsArrayClass));
+
+    auto nsArray = lookupClass("rtl/NSArray");
+    auto nsObject = lookupClass("rtl/NSObject");
+    if (nsArray && nsObject) {
+        nsArray->setSuperclass(nsObject);
+    }
+}
+
+void SemanticContext::initNSNumberClass() {
+    if (lookupClass("rtl/NSNumber")) return;
+
+    auto nsNumberClass = make_unique<ClassInfo>("rtl/NSNumber", nullptr);
+    nsNumberClass->markAsImplementation();
+
+    {
+        auto constructor = make_unique<MethodInfo>(
+            "<init>",
+            Type(TypeKind::VOID),
+            false,
+            nsNumberClass.get()
+        );
+        constructor->selector = "<init>";
+        constructor->keywords = {};
+        constructor->parameterTypes = {};
+        nsNumberClass->addMethod(move(constructor));
+    }
+
+    // numberWithIntStatic (I)Lrtl/NSNumber;
+    {
+        auto numberWithIntStatic = make_unique<MethodInfo>(
+            "numberWithIntStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSNumber"),
+            true,
+            nsNumberClass.get()
+        );
+        numberWithIntStatic->selector = "numberWithIntStatic";
+        numberWithIntStatic->keywords = {};
+        numberWithIntStatic->parameterTypes = { new Type(TypeKind::INT) };
+        nsNumberClass->addMethod(move(numberWithIntStatic));
+    }
+
+    // numberWithFloatStatic (F)Lrtl/NSNumber;
+    {
+        auto numberWithFloatStatic = make_unique<MethodInfo>(
+            "numberWithFloatStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSNumber"),
+            true,
+            nsNumberClass.get()
+        );
+        numberWithFloatStatic->selector = "numberWithFloatStatic";
+        numberWithFloatStatic->keywords = {};
+        numberWithFloatStatic->parameterTypes = { new Type(TypeKind::FLOAT) };
+        nsNumberClass->addMethod(move(numberWithFloatStatic));
+    }
+
+    // intValueDynamic ()I
+    {
+        auto intValueDynamic = make_unique<MethodInfo>(
+            "intValueDynamic",
+            Type(TypeKind::INT),
+            false,
+            nsNumberClass.get()
+        );
+        intValueDynamic->selector = "intValueDynamic";
+        intValueDynamic->keywords = {};
+        intValueDynamic->parameterTypes = {};
+        nsNumberClass->addMethod(move(intValueDynamic));
+    }
+
+    // floatValueDynamic ()F
+    {
+        auto floatValueDynamic = make_unique<MethodInfo>(
+            "floatValueDynamic",
+            Type(TypeKind::FLOAT),
+            false,
+            nsNumberClass.get()
+        );
+        floatValueDynamic->selector = "floatValueDynamic";
+        floatValueDynamic->keywords = {};
+        floatValueDynamic->parameterTypes = {};
+        nsNumberClass->addMethod(move(floatValueDynamic));
+    }
+
+    // descriptionDynamic ()Lrtl/NSString;
+    {
+        auto descriptionDynamic = make_unique<MethodInfo>(
+            "descriptionDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsNumberClass.get()
+        );
+        descriptionDynamic->selector = "descriptionDynamic";
+        descriptionDynamic->keywords = {};
+        descriptionDynamic->parameterTypes = {};
+        nsNumberClass->addMethod(move(descriptionDynamic));
+    }
+
+    addClass(move(nsNumberClass));
+
+    auto nsNumber = lookupClass("rtl/NSNumber");
+    auto nsObject = lookupClass("rtl/NSObject");
+    if (nsNumber && nsObject) {
+        nsNumber->setSuperclass(nsObject);
+    }
+}
+
+void SemanticContext::initInOutFuncsClass() {
+    if (lookupClass("rtl/InOutFuncs")) return;
+
+    auto ioClass = make_unique<ClassInfo>("rtl/InOutFuncs", nullptr);
+    ioClass->markAsImplementation();
+
+    // ===============================
+    // Print Methods
+    // ===============================
+
+    // +printInt:(int)value
+    {
+        auto method = make_unique<MethodInfo>(
+            "printIntStatic",
+            Type(TypeKind::VOID),
+            true,
+            ioClass.get()
+        );
+        method->selector = "printInt:";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::INT) };
+        ioClass->addMethod(move(method));
+    }
+
+    // +printFloat:(float)value
+    {
+        auto method = make_unique<MethodInfo>(
+            "printFloatStatic",
+            Type(TypeKind::VOID),
+            true,
+            ioClass.get()
+        );
+        method->selector = "printFloat:";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::FLOAT) };
+        ioClass->addMethod(move(method));
+    }
+
+    // +printChar:(char)value
+    {
+        auto method = make_unique<MethodInfo>(
+            "printCharStatic",
+            Type(TypeKind::VOID),
+            true,
+            ioClass.get()
+        );
+        method->selector = "printChar:";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CHAR) };
+        ioClass->addMethod(move(method));
+    }
+
+    // +printNSString:(NSString*)str
+    {
+        auto method = make_unique<MethodInfo>(
+            "printNSStringStatic",
+            Type(TypeKind::VOID),
+            true,
+            ioClass.get()
+        );
+        method->selector = "printNSString:";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
+        ioClass->addMethod(move(method));
+    }
+
+    // +printNSNumber:(NSNumber*)num
+    {
+        auto method = make_unique<MethodInfo>(
+            "printNSNumberStatic",
+            Type(TypeKind::VOID),
+            true,
+            ioClass.get()
+        );
+        method->selector = "printNSNumber:";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSNumber") };
+        ioClass->addMethod(move(method));
+    }
+
+    // +printNSArray:(NSArray*)arr
+    {
+        auto method = make_unique<MethodInfo>(
+            "printNSArrayStatic",
+            Type(TypeKind::VOID),
+            true,
+            ioClass.get()
+        );
+        method->selector = "printNSArray:";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSArray") };
+        ioClass->addMethod(move(method));
+    }
+
+    // +printNSObject:(NSObject*)obj
+    {
+        auto method = make_unique<MethodInfo>(
+            "printNSObjectStatic",
+            Type(TypeKind::VOID),
+            true,
+            ioClass.get()
+        );
+        method->selector = "printNSObject:";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSObject") };
+        ioClass->addMethod(move(method));
+    }
+
+    // ===============================
+    // Read Methods
+    // ===============================
+
+    // +readInt
+    {
+        auto method = make_unique<MethodInfo>(
+            "readIntStatic",
+            Type(TypeKind::INT),
+            true,
+            ioClass.get()
+        );
+        method->selector = "readInt";
+        method->keywords = {};
+        method->parameterTypes = {};
+        ioClass->addMethod(move(method));
+    }
+
+    // +readFloat
+    {
+        auto method = make_unique<MethodInfo>(
+            "readFloatStatic",
+            Type(TypeKind::FLOAT),
+            true,
+            ioClass.get()
+        );
+        method->selector = "readFloat";
+        method->keywords = {};
+        method->parameterTypes = {};
+        ioClass->addMethod(move(method));
+    }
+
+    // +readChar
+    {
+        auto method = make_unique<MethodInfo>(
+            "readCharStatic",
+            Type(TypeKind::CHAR),
+            true,
+            ioClass.get()
+        );
+        method->selector = "readChar";
+        method->keywords = {};
+        method->parameterTypes = {};
+        ioClass->addMethod(move(method));
+    }
+
+    // +readNSString
+    {
+        auto method = make_unique<MethodInfo>(
+            "readNSStringStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            true,
+            ioClass.get()
+        );
+        method->selector = "readNSString";
+        method->keywords = {};
+        method->parameterTypes = {};
+        ioClass->addMethod(move(method));
+    }
+
+    // +readNSNumberInt
+    {
+        auto method = make_unique<MethodInfo>(
+            "readNSNumberIntStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSNumber"),
+            true,
+            ioClass.get()
+        );
+        method->selector = "readNSNumberInt";
+        method->keywords = {};
+        method->parameterTypes = {};
+        ioClass->addMethod(move(method));
+    }
+
+    // +readNSNumberFloat
+    {
+        auto method = make_unique<MethodInfo>(
+            "readNSNumberFloatStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSNumber"),
+            true,
+            ioClass.get()
+        );
+        method->selector = "readNSNumberFloat";
+        method->keywords = {};
+        method->parameterTypes = {};
+        ioClass->addMethod(move(method));
+    }
+
+    // +readNSArray
+    {
+        auto method = make_unique<MethodInfo>(
+            "readNSArrayStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
+            true,
+            ioClass.get()
+        );
+        method->selector = "readNSArray";
+        method->keywords = {};
+        method->parameterTypes = {};
+        ioClass->addMethod(move(method));
+    }
+
+    addClass(move(ioClass));
+
+    // ===============================
+    // Установка суперкласса
+    // ===============================
+    auto inOut = lookupClass("rtl/InOutFuncs");
+    auto nsObject = lookupClass("rtl/NSObject");
+    if (inOut && nsObject) {
+        inOut->setSuperclass(nsObject);
+    }
+}
+
