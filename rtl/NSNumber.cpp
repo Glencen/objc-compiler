@@ -14,12 +14,12 @@ NSNumber::NSNumber(int value) : type(NumberType::INT), intValue(value) { }
 NSNumber::NSNumber(float value) : type(NumberType::FLOAT), floatValue(value) { }
 
 // ------------------- Статические методы -------------------
-NSNumber* NSNumber::numberWithIntStatic(int value) {
-    return new NSNumber(value);
+std::shared_ptr<NSNumber> NSNumber::numberWithIntStatic(int value) {
+    return std::make_shared<NSNumber>(value);
 }
 
-NSNumber* NSNumber::numberWithFloatStatic(float value) {
-    return new NSNumber(value);
+std::shared_ptr<NSNumber> NSNumber::numberWithFloatStatic(float value) {
+    return std::make_shared<NSNumber>(value);
 }
 
 // ------------------- Динамические методы -------------------
@@ -33,7 +33,7 @@ float NSNumber::floatValueDynamic() {
     return static_cast<float>(intValue);
 }
 
-std::string NSNumber::descriptionDynamic() {
+std::string NSNumber::descriptionDynamic() const {
     std::ostringstream oss;
     if (type == NumberType::INT) oss << intValue;
     else oss << floatValue;

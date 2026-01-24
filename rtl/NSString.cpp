@@ -103,7 +103,7 @@ std::unique_ptr<NSString> NSString::stringByAppendingStringDynamic(const NSStrin
 }
 
 // ⚡ Виртуальный метод базового класса NSObject
-std::string NSString::descriptionDynamic() {
+std::string NSString::descriptionDynamic() const {
     return string;
 }
 

@@ -25,7 +25,7 @@ public:
     // Информационные методы
     virtual std::string classNameDynamic();
     virtual ClassInfo* superclassDynamic();
-    virtual std::string descriptionDynamic();
+    virtual std::string descriptionDynamic() const;
 
     virtual int isEqualDynamic(NSObject* other);
 

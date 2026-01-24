@@ -44,7 +44,7 @@ std::shared_ptr<NSArray> NSArray::arrayByAddingObjectsFromArrayDynamic(const NSA
     return std::make_shared<NSArray>(res);
 }
 
-std::shared_ptr<NSObject> NSArray::objectAtIndexDynamic(int index) {
+std::shared_ptr<NSObject> NSArray::objectAtIndexDynamic(int index) const {
     if (index < 0 || index >= static_cast<int>(array.size())) return nullptr;
     return array[index];
 }
@@ -53,7 +53,7 @@ int NSArray::countDynamic() const {
     return static_cast<int>(array.size());
 }
 
-int NSArray::containsObjectDynamic(std::shared_ptr<NSObject> object) {
+int NSArray::containsObjectDynamic(std::shared_ptr<NSObject> object) const {
     return std::any_of(array.begin(), array.end(),
                        [&](auto& o) { return o == object; }) ? 1 : 0;
 }
@@ -69,11 +69,11 @@ std::shared_ptr<NSString> NSArray::componentsJoinedByStringDynamic(const NSStrin
     return NSString::stringWithCStringStatic(res.c_str());
 }
 
-std::shared_ptr<NSObject> NSArray::firstObjectDynamic() {
+std::shared_ptr<NSObject> NSArray::firstObjectDynamic() const {
     return array.empty() ? nullptr : array[0];
 }
 
-std::shared_ptr<NSObject> NSArray::lastObjectDynamic() {
+std::shared_ptr<NSObject> NSArray::lastObjectDynamic() const {
     return array.empty() ? nullptr : array.back();
 }
 
@@ -84,14 +84,14 @@ std::shared_ptr<NSObject> NSArray::firstObjectCommonWithArrayDynamic(const NSArr
     return nullptr;
 }
 
-int NSArray::indexOfObjectDynamic(std::shared_ptr<NSObject> object) {
+int NSArray::indexOfObjectDynamic(std::shared_ptr<NSObject> object) const {
     for (size_t i = 0; i < array.size(); ++i) {
         if (array[i] == object) return static_cast<int>(i);
     }
     return -1; // NSNotFound
 }
 
-int NSArray::isEqualToArrayDynamic(const NSArray& otherArray) {
+int NSArray::isEqualToArrayDynamic(const NSArray& otherArray) const {
     if (array.size() != otherArray.array.size()) return 0;
     for (size_t i = 0; i < array.size(); ++i) {
         if (array[i]->isEqualDynamic(otherArray.array[i].get()) == 0) return 0;
@@ -104,7 +104,7 @@ NSArray* NSArray::initDynamic() {
     return this;
 }
 
-std::string NSArray::descriptionDynamic() {
+std::string NSArray::descriptionDynamic() const {
     return "NSArray instance";
 }
 

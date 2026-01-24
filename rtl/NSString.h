@@ -31,7 +31,7 @@ public:
     std::unique_ptr<NSString> stringByAppendingStringDynamic(const NSString& other);
 
     // ⚡ Виртуальный метод базового класса
-    std::string descriptionDynamic() override;
+    std::string descriptionDynamic() const override;
 
     // ------------------- Инициализация ClassInfo -------------------
     static void initClassInfo(ClassInfo* info);

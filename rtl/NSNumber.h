@@ -12,13 +12,13 @@ public:
     NSNumber(float value);
 
     // ------------------- Статические методы -------------------
-    static NSNumber* numberWithIntStatic(int value);
-    static NSNumber* numberWithFloatStatic(float value);
+    static std::shared_ptr<NSNumber> numberWithIntStatic(int value);
+    static std::shared_ptr<NSNumber> numberWithFloatStatic(float value);
 
     // ------------------- Динамические методы -------------------
     int intValueDynamic();
     float floatValueDynamic();
-    std::string descriptionDynamic() override;
+    std::string descriptionDynamic() const override;
 
     NSNumber* initDynamic() override;
 

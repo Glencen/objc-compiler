@@ -42,7 +42,7 @@ ClassInfo* NSObject::superclassDynamic() {
     return s_classInfo ? s_classInfo->superclass : nullptr;
 }
 
-std::string NSObject::descriptionDynamic() {
+std::string NSObject::descriptionDynamic() const {
     return "<NSObject>";
 }
 

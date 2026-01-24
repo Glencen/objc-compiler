@@ -25,17 +25,17 @@ public:
     // ------------------- Динамические методы -------------------
     std::shared_ptr<NSArray> arrayByAddingObjectDynamic(std::shared_ptr<NSObject> object);
     std::shared_ptr<NSArray> arrayByAddingObjectsFromArrayDynamic(const NSArray& anotherArray);
-    std::shared_ptr<NSObject> objectAtIndexDynamic(int index);
+    std::shared_ptr<NSObject> objectAtIndexDynamic(int index) const;
     int countDynamic() const;
-    int containsObjectDynamic(std::shared_ptr<NSObject> object);
+    int containsObjectDynamic(std::shared_ptr<NSObject> object) const;
     std::shared_ptr<NSString> componentsJoinedByStringDynamic(const NSString& separator);
-    std::shared_ptr<NSObject> firstObjectDynamic();
-    std::shared_ptr<NSObject> lastObjectDynamic();
+    std::shared_ptr<NSObject> firstObjectDynamic() const;
+    std::shared_ptr<NSObject> lastObjectDynamic() const;
     std::shared_ptr<NSObject> firstObjectCommonWithArrayDynamic(const NSArray& otherArray);
-    int indexOfObjectDynamic(std::shared_ptr<NSObject> object);
-    int isEqualToArrayDynamic(const NSArray& otherArray);
+    int indexOfObjectDynamic(std::shared_ptr<NSObject> object) const;
+    int isEqualToArrayDynamic(const NSArray& otherArray) const;
     NSArray* initDynamic() override;
-    std::string descriptionDynamic() override;
+    std::string descriptionDynamic() const override;
 
 protected:
     static ClassInfo* s_classInfo;
