@@ -83,11 +83,204 @@ void ParamListNode::analyzeSemantics(SemanticContext& context) {}
 
 //--------------------------------------------------------------FuncDefNode--------------------------------------------------------------
 
-void FuncDefNode::analyzeSemantics(SemanticContext& context) {}
+void FuncDefNode::analyzeSemantics(SemanticContext& context) {
+    string funcName = identifier->getIdentifier();
+    Type returnType = convertTypeNodeToType(type);
+
+    FunctionInfo* funcToAnalyze = nullptr;
+    
+    FunctionInfo* existingFunc = context.lookupFunction(funcName);
+    
+    if (existingFunc) {
+        if (!returnType.equal(&existingFunc->getReturnType())) {
+            throw function_exception("Function '" + funcName + "' return type mismatch with previous declaration",
+                "FuncDefNode::analyzeSemantics", -1, -1, 
+                "Expected: " + existingFunc->getReturnType().getDescriptor() + 
+                ", Got: " + returnType.getDescriptor());
+        }
+        
+        size_t existingParamCount = existingFunc->getParameterCount();
+        size_t currentParamCount = 0;
+        
+        if (paramList) {
+            auto params = paramList->getParamList();
+            currentParamCount = params ? params->size() : 0;
+        }
+        
+        if (existingParamCount != currentParamCount) {
+            throw function_exception("Function '" + funcName + "' parameter count mismatch with previous declaration",
+                "FuncDefNode::analyzeSemantics", -1, -1,
+                "Expected: " + to_string(existingParamCount) + 
+                ", Got: " + to_string(currentParamCount));
+        }
+        
+        if (paramList && currentParamCount > 0) {
+            auto params = paramList->getParamList();
+            if (params) {
+                size_t i = 0;
+                for (auto* paramDecl : *params) {
+                    paramDecl->analyzeSemantics(context);
+                    
+                    Type paramType = convertTypeNodeToType(paramDecl->getType());
+                    const LocalVarInfo* existingParam = existingFunc->getParameter(i);
+                    
+                    if (!existingParam) {
+                        throw function_exception("Function '" + funcName + "' parameter mismatch",
+                            "FuncDefNode::analyzeSemantics", -1, -1,
+                            "Parameter at index " + to_string(i) + " is missing in declaration");
+                    }
+                    
+                    if (!paramType.equal(&existingParam->type)) {
+                        throw function_exception("Function '" + funcName + "' parameter type mismatch",
+                            "FuncDefNode::analyzeSemantics", -1, -1,
+                            "Parameter " + to_string(i + 1) + 
+                            ": Expected: " + existingParam->type.getDescriptor() + 
+                            ", Got: " + paramType.getDescriptor());
+                    }
+                    
+                    i++;
+                }
+            }
+        }
+
+        if (existingFunc->body) {
+            throw function_exception("Function '" + funcName + "' already defined",
+                "FuncDefNode::analyzeSemantics", -1, -1, "Function name: '" + funcName + "'");
+        }
+
+        existingFunc->body = compoundStmt;
+        funcToAnalyze = existingFunc;
+    } else {
+        auto func = make_unique<FunctionInfo>(funcName, returnType);
+        FunctionInfo* funcPtr = func.get();
+        
+        if (paramList) {
+            auto params = paramList->getParamList();
+            if (params) {
+                for (auto* paramDecl : *params) {
+                    paramDecl->analyzeSemantics(context);
+                    
+                    Type paramType = convertTypeNodeToType(paramDecl->getType());
+                    
+                    auto paramInfo = make_unique<LocalVarInfo>(
+                        paramDecl->getIdentifier()->getIdentifier(),
+                        paramType,
+                        true,
+                        nullptr
+                    );
+                    
+                    func->addParameter(move(paramInfo));
+                }
+            }
+        }
+        
+        func->body = compoundStmt;
+        
+        if (!context.addFunction(move(func))) {
+            throw function_exception("Failed to add function '" + funcName + "' to context",
+                "FuncDefNode::analyzeSemantics", -1, -1, "Function name: '" + funcName + "'");
+        }
+        
+        funcToAnalyze = funcPtr;
+    }
+    
+    if (context.isReservedName(funcName)) {
+        throw function_exception("Function name '" + funcName + "' is a reserved keyword",
+            "FuncDefNode::analyzeSemantics", -1, -1, "Function name: '" + funcName + "'");
+    }
+    
+    if (compoundStmt) {
+        // TODO: проверка именно compound statement, а не какого-то другого
+        ClassInfo* savedClass = context.getCurrentClass();
+        MethodInfo* savedMethod = context.getCurrentMethod();
+        FunctionInfo* savedFunction = context.getCurrentFunction();
+        
+        try {
+            context.enterFunctionScope(funcToAnalyze);
+            for (size_t i = 0; i < funcToAnalyze->getParameterCount(); i++) {
+                const LocalVarInfo* param = funcToAnalyze->getParameter(i);
+                if (param) {
+                    auto paramCopy = make_unique<LocalVarInfo>(
+                        param->name,
+                        param->type,
+                        true,
+                        nullptr
+                    );
+                    
+                    if (!context.addLocalVar(move(paramCopy))) {
+                        throw function_exception("Failed to add parameter '" + param->name + "' to function scope",
+                            "FuncDefNode::analyzeSemantics", -1, -1, "Function: '" + funcName + "'");
+                    }
+                }
+            }
+            
+            compoundStmt->analyzeSemantics(context);
+            context.dumpCurrentScope();
+
+            context.leaveScope();
+            context.setCurrentClass(savedClass);
+            context.setCurrentMethod(savedMethod);
+            context.setCurrentFunction(savedFunction);
+            
+        } catch (...) {
+            context.dumpCurrentScope();
+            context.leaveScope();
+            context.setCurrentClass(savedClass);
+            context.setCurrentMethod(savedMethod);
+            context.setCurrentFunction(savedFunction);
+            throw;
+        }
+    } else {
+        throw function_exception("Function '" + funcName + "' has no body",
+            "FuncDefNode::analyzeSemantics", -1, -1, "Function name: '" + funcName + "'");
+    }
+    
+    // Проверяем, что функция с типом возврата void не возвращает значение (если это возможно проверить на этом этапе)
+}
 
 //--------------------------------------------------------------FuncDeclNode--------------------------------------------------------------
 
-void FuncDeclNode::analyzeSemantics(SemanticContext& context) {}
+void FuncDeclNode::analyzeSemantics(SemanticContext& context) {
+    string funcName = identifier->getIdentifier();
+    Type returnType = convertTypeNodeToType(type);
+    
+    if (context.lookupFunction(funcName)) {
+        throw function_exception("Function '" + funcName + "' already declared",
+            "FuncDeclNode::analyzeSemantics", -1, -1, "Function name: '" + funcName + "'");
+    }
+    
+    auto func = make_unique<FunctionInfo>(funcName, returnType);
+    
+    if (paramList) {
+        auto params = paramList->getParamList();
+        if (params) {
+            for (auto* paramDecl : *params) {
+                paramDecl->analyzeSemantics(context);
+                
+                Type paramType = convertTypeNodeToType(paramDecl->getType());
+                
+                auto paramInfo = make_unique<LocalVarInfo>(
+                    paramDecl->getIdentifier()->getIdentifier(),
+                    paramType,
+                    true,
+                    nullptr
+                );
+                
+                func->addParameter(move(paramInfo));
+            }
+        }
+    }
+    
+    if (!context.addFunction(move(func))) {
+        throw function_exception("Failed to add function '" + funcName + "' to context",
+            "FuncDeclNode::analyzeSemantics", -1, -1, "Function name: '" + funcName + "'");
+    }
+    
+    if (context.isReservedName(funcName)) {
+        throw function_exception("Function name '" + funcName + "' is a reserved keyword",
+            "FuncDeclNode::analyzeSemantics", -1, -1, "Function name: '" + funcName + "'");
+    }
+}
 
 //--------------------------------------------------------------MethodParamNode--------------------------------------------------------------
 
