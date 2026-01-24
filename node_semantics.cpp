@@ -66,11 +66,55 @@ void ReceiverNode::analyzeSemantics(SemanticContext& context) {
 
 //--------------------------------------------------------------MsgArgNode--------------------------------------------------------------
 
-void MsgArgNode::analyzeSemantics(SemanticContext& context) {}
+void MsgArgNode::analyzeSemantics(SemanticContext& context) {
+    if (!arg) {
+        throw semantic_exception("Message argument must have an expression",
+            "MsgArgNode::analyzeSemantics", -1, -1);
+    }
+    
+    arg->analyzeSemantics(context);
+    
+    if (identifier) {
+        string idName = identifier->getIdentifier();
+        
+        if (context.isReservedName(idName)) {
+            throw semantic_exception("Message argument keyword '" + idName + "' is a reserved keyword",
+                "MsgArgNode::analyzeSemantics", -1, -1);
+        }
+        
+        if (idName.empty()) {
+            throw semantic_exception("Message argument keyword cannot be empty",
+                "MsgArgNode::analyzeSemantics", -1, -1);
+        }
+        
+        // TODO: Можно добавить дополнительные проверки для Objective-C ключевых слов
+        // проверка формата ключевых слов (должно заканчиваться двоеточием)
+    }
+}
 
 //--------------------------------------------------------------MsgArgListNode--------------------------------------------------------------
 
-void MsgArgListNode::analyzeSemantics(SemanticContext& context) {}
+void MsgArgListNode::analyzeSemantics(SemanticContext& context) {
+    if (!msgArgs) return;
+    
+    for (MsgArgNode* argNode : *msgArgs) {
+        if (argNode) {
+            argNode->analyzeSemantics(context);
+        }
+    }
+    
+    unordered_set<string> keywords;
+    for (MsgArgNode* argNode : *msgArgs) {
+        if (argNode && argNode->getIdentifier()) {
+            string keyword = argNode->getIdentifier()->getIdentifier();
+            
+            if (!keywords.insert(keyword).second) {
+                throw semantic_exception("Duplicate keyword '" + keyword + "' in message arguments",
+                    "MsgArgListNode::analyzeSemantics", -1, -1);
+            }
+        }
+    }
+}
 
 //--------------------------------------------------------------MsgSelectorNode--------------------------------------------------------------
 
