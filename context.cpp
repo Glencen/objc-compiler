@@ -671,7 +671,7 @@ ClassInfo* SemanticContext::lookupClass(const string& name) const {
             return it->second.get();
         }
     }
-    
+
     return nullptr;
 }
 
@@ -801,6 +801,10 @@ vector<LocalVarInfo*> SemanticContext::getVisibleLocalVars() const {
     }
     
     return result;
+}
+
+bool SemanticContext::isReservedName(const string& name) const {
+    return reservedNames.find(name) != reservedNames.end();
 }
 
 bool SemanticContext::isAssignable(const Type& from, const Type& to) const {

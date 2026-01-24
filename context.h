@@ -267,6 +267,8 @@ public:
     bool existsInCurrentScope(const string& name) const;
     bool existsInParentScopes(const string& name) const;
     vector<LocalVarInfo*> getVisibleLocalVars() const;
+
+    bool isReservedName(const string& name) const;
     
     bool isAssignable(const Type& from, const Type& to) const;
     bool isConvertible(const Type& from, const Type& to) const;
