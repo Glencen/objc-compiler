@@ -144,22 +144,24 @@ void MsgSelectorNode::analyzeSemantics(SemanticContext& context) {
             // Дополнительная проверка для Objective-C: 
             // если есть аргументы, проверяем, что хотя бы у одного есть ключевое слово
             // (в Objective-C все аргументы после первого должны иметь ключевые слова)
-            auto args = argList->getMsgArgList();
-            if (args && !args->empty()) {
-                bool hasKeyword = false;
-                for (MsgArgNode* arg : *args) {
-                    if (arg && arg->getIdentifier()) {
-                        hasKeyword = true;
-                        break;
+            {
+                auto args = argList->getMsgArgList();
+                if (args && !args->empty()) {
+                    bool hasKeyword = false;
+                    for (MsgArgNode* arg : *args) {
+                        if (arg && arg->getIdentifier()) {
+                            hasKeyword = true;
+                            break;
+                        }
                     }
-                }
-                
-                if (!hasKeyword) {
-                    // В Objective-C это допустимо для методов с одним аргументом без ключевого слова
-                    // Но для методов с несколькими аргументами нужны ключевые слова
-                    if (args->size() > 1) {
-                        throw semantic_exception("Multiple arguments require keywords in Objective-C",
-                            "MsgSelectorNode::analyzeSemantics", -1, -1);
+                    
+                    if (!hasKeyword) {
+                        // В Objective-C это допустимо для методов с одним аргументом без ключевого слова
+                        // Но для методов с несколькими аргументами нужны ключевые слова
+                        if (args->size() > 1) {
+                            throw semantic_exception("Multiple arguments require keywords in Objective-C",
+                                "MsgSelectorNode::analyzeSemantics", -1, -1);
+                        }
                     }
                 }
             }
