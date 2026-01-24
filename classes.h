@@ -351,8 +351,8 @@ protected:
 
 class DeclaratorListNode : public AstNode {
 public:
-    static DeclaratorListNode* createExternalDeclList(InitDeclNode *initDecl);
-    static DeclaratorListNode* addExternalDecl(DeclaratorListNode *declaratorList, InitDeclNode *initDecl);
+    static DeclaratorListNode* createDeclaratorList(InitDeclNode *initDecl);
+    static DeclaratorListNode* addInitDecl(DeclaratorListNode *declaratorList, InitDeclNode *initDecl);
 
     list<InitDeclNode*>* getInitDeclList() const;
 

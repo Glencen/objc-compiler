@@ -309,8 +309,8 @@ decl        :   type declarator_list    {$$=DeclNode::createDecl($1, $2);}
             ;
 
 declarator_list
-            :   init_decl                           {$$=DeclaratorListNode::createExternalDeclList($1);}
-            |   declarator_list ',' init_decl       {$$=DeclaratorListNode::addExternalDecl($1, $3);}
+            :   init_decl                           {$$=DeclaratorListNode::createDeclaratorList($1);}
+            |   declarator_list ',' init_decl       {$$=DeclaratorListNode::addInitDecl($1, $3);}
             ;
 
 declarator  :   ID                          {$$=DeclaratorNode::createDeclarator(ValueNode::createIdentifier($1));}

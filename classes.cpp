@@ -926,13 +926,13 @@ DeclaratorListNode::DeclaratorListNode() : AstNode() {
     initDeclList = nullptr;
 }
 
-DeclaratorListNode* DeclaratorListNode::createExternalDeclList(InitDeclNode *initDecl) {
+DeclaratorListNode* DeclaratorListNode::createDeclaratorList(InitDeclNode *initDecl) {
     DeclaratorListNode *node = new DeclaratorListNode();
     node->initDeclList = new list<InitDeclNode*>{initDecl};
     return node;
 }
 
-DeclaratorListNode* DeclaratorListNode::addExternalDecl(DeclaratorListNode *declaratorList, InitDeclNode *initDecl) {
+DeclaratorListNode* DeclaratorListNode::addInitDecl(DeclaratorListNode *declaratorList, InitDeclNode *initDecl) {
     if (!declaratorList->initDeclList) {
         declaratorList->initDeclList = new std::list<InitDeclNode*>();
     }
