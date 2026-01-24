@@ -327,8 +327,20 @@ void ExprNode::analyzeIdentifierSemantics(SemanticContext& context) {
         return;
     }
     
-    if (context.getCurrentClass()) {
-        FieldInfo* field = context.getCurrentClass()->lookupField(idName, true);
+    MethodInfo* currentMethod = context.getCurrentMethod();
+    if (currentMethod) {
+        for (size_t i = 0; i < currentMethod->getParameterCount(); i++) {
+            const LocalVarInfo* param = currentMethod->getParameter(i);
+            if (param && param->name == idName) {
+                exprType = new Type(param->type);
+                return;
+            }
+        }
+    }
+    
+    ClassInfo* currentClass = context.getCurrentClass();
+    if (currentClass) {
+        FieldInfo* field = currentClass->lookupField(idName, true);
         if (field) {
             exprType = new Type(field->type);
             isFieldAccess = true;
@@ -473,13 +485,38 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
     if (receiverType && receiverType->dataType == TypeKind::CLASS_NAME) {
         ClassInfo* receiverClass = context.lookupClass(receiverType->className);
         if (receiverClass) {
-            string selectorName;
+            // Формируем имя метода для поиска
+            string methodName;
             for (const string& keyword : keywords) {
-                if (!selectorName.empty()) selectorName += ":";
-                selectorName += keyword;
+                if (!methodName.empty() && !keyword.empty()) methodName += ":";
+                methodName += keyword;
             }
             
-            method = receiverClass->lookupMethod(selectorName, argTypes, keywords, true);
+            // В Objective-C селектор может быть без аргументов
+            if (methodName.empty() && !keywords.empty()) {
+                methodName = keywords[0];
+            }
+            
+            // Определяем, статический это вызов или динамический
+            bool isStaticCall = (receiver->getKind() == ReceiverKind::CLASS_NAME);
+            
+            // Сначала ищем метод с суффиксом
+            method = receiverClass->lookupMethod(methodName, argTypes, keywords, true);
+            
+            // Если не нашли, пробуем без суффикса
+            if (!method) {
+                method = receiverClass->lookupMethod(methodName, argTypes, keywords, true);
+            }
+            
+            // Если все еще не нашли, выводим предупреждение
+            if (!method) {
+                cerr << "Warning: Method with selector '" << methodName
+                     << "' not found in class or its ancestors" << endl;
+                // Устанавливаем общий тип для совместимости
+                exprType = new Type(TypeKind::TYPE_ID);
+                isMethodCall = true;
+                return;
+            }
         }
     }
     
@@ -489,18 +526,18 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
         className = method->declaringClass->name;
         methodRefConstantId = -1;
     } else {
-        // Метод не найден, но в Objective-C возможны динамические вызовы
-        // Устанавливаем общий тип для совместимости
+        // Метод не найден
         exprType = new Type(TypeKind::TYPE_ID);
         isMethodCall = true;
         
-        // Выводим предупреждение (но не ошибку, т.к. Objective-C динамический)
-        cerr << "Warning: Method with selector '";
+        // Выводим предупреждение
+        string selectorStr;
         for (size_t i = 0; i < keywords.size(); i++) {
-            if (i > 0) cerr << ":";
-            cerr << keywords[i];
+            if (i > 0) selectorStr += ":";
+            selectorStr += keywords[i];
         }
-        cerr << "' not found in class or its ancestors" << endl;
+        cerr << "Warning: Method with selector '" << selectorStr 
+             << "' not found in class or its ancestors" << endl;
     }
 }
 
@@ -1040,17 +1077,47 @@ void ExprNode::analyzeDotSemantics(SemanticContext& context) {
 }
 
 void ExprNode::analyzeArrowSemantics(SemanticContext& context) {
-    // TODO: Реализовать анализ операции доступа через стрелку (указатели)
     if (!left || !right) {
         throw semantic_exception("Arrow operator must have left and right operands",
             "ExprNode::analyzeArrowSemantics", -1, -1);
     }
     
     left->analyzeSemantics(context);
-    right->analyzeSemantics(context);
     
-    // Пока устанавливаем тип левого операнда
-    exprType = new Type(*left->getExprType());
+    // Проверяем, что левый операнд - указатель на объект
+    Type* leftType = left->getExprType();
+    if (!leftType || leftType->dataType != TypeKind::CLASS_NAME) {
+        throw semantic_exception("Arrow operator left operand must be an object pointer",
+            "ExprNode::analyzeArrowSemantics", -1, -1,
+            "Got type: " + leftType->toString());
+    }
+    
+    // Проверяем правый операнд (должен быть идентификатором ivar)
+    if (!right || right->getKind() != ExprKind::IDENTIFIER) {
+        throw semantic_exception("Arrow operator right operand must be an identifier",
+            "ExprNode::analyzeArrowSemantics", -1, -1);
+    }
+    
+    string ivarName = right->getIdentifier()->getIdentifier();
+    
+    // Находим класс левого операнда
+    ClassInfo* cls = context.lookupClass(leftType->className);
+    if (!cls) {
+        throw semantic_exception("Class '" + leftType->className + "' not found",
+            "ExprNode::analyzeArrowSemantics", -1, -1);
+    }
+    
+    // Ищем ivar в классе и его суперклассах
+    FieldInfo* field = cls->lookupField(ivarName, true);
+    if (!field) {
+        throw semantic_exception("Ivar '" + ivarName + "' not found in class '" + 
+            cls->name + "' or its ancestors",
+            "ExprNode::analyzeArrowSemantics", -1, -1);
+    }
+    
+    exprType = new Type(field->type);
+    isFieldAccess = true;
+    className = field->declaringClass->name;
 }
 
 Type* ExprNode::getExprType() const {
