@@ -27,7 +27,42 @@ void ValueNode::analyzeSemantics(SemanticContext& context) {}
 
 //--------------------------------------------------------------ReceiverNode--------------------------------------------------------------
 
-void ReceiverNode::analyzeSemantics(SemanticContext& context) {}
+void ReceiverNode::analyzeSemantics(SemanticContext& context) {
+    switch (kind) {
+        case ReceiverKind::EXPR:
+            if (expr) {
+                expr->analyzeSemantics(context);
+            }
+            break;
+            
+        case ReceiverKind::CLASS_NAME:
+            if (className) {
+                string classNameStr = className->getIdentifier();
+                ClassInfo* cls = context.lookupClass(classNameStr);
+                if (!cls) {
+                    throw semantic_exception("Unknown class '" + classNameStr + "'",
+                        "ReceiverNode::analyzeSemantics", -1, -1);
+                }
+            }
+            break;
+            
+        case ReceiverKind::SUPER: // TODO: проверка вызова метода родительского класса
+            if (!context.getCurrentClass()) {
+                throw semantic_exception("'super' can only be used in a method",
+                    "ReceiverNode::analyzeSemantics", -1, -1);
+            }
+            if (!context.getCurrentMethod()) {
+                throw semantic_exception("'super' can only be used in a method",
+                    "ReceiverNode::analyzeSemantics", -1, -1);
+            }
+            break;
+            
+        case ReceiverKind::NONE:
+        default:
+            throw semantic_exception("Invalid receiver kind",
+                "ReceiverNode::analyzeSemantics", -1, -1);
+    }
+}
 
 //--------------------------------------------------------------MsgArgNode--------------------------------------------------------------
 
@@ -39,15 +74,856 @@ void MsgArgListNode::analyzeSemantics(SemanticContext& context) {}
 
 //--------------------------------------------------------------MsgSelectorNode--------------------------------------------------------------
 
-void MsgSelectorNode::analyzeSemantics(SemanticContext& context) {}
+void MsgSelectorNode::analyzeSemantics(SemanticContext& context) {
+    switch (kind) {
+        case MsgSelectorKind::SIMPLE_SEL:
+            if (!identifier) {
+                throw semantic_exception("Simple selector must have an identifier",
+                    "MsgSelectorNode::analyzeSemantics", -1, -1);
+            }
+            string idName = identifier->getIdentifier();
+            if (context.isReservedName(idName)) {
+                throw semantic_exception("Selector name '" + idName + "' is a reserved keyword",
+                    "MsgSelectorNode::analyzeSemantics", -1, -1);
+            }
+            break;
+            
+        case MsgSelectorKind::ARGUMENT_LIST:
+            if (argList) {
+                argList->analyzeSemantics(context);
+            }
+            break;
+            
+        default:
+            throw semantic_exception("Invalid message selector kind",
+                "MsgSelectorNode::analyzeSemantics", -1, -1);
+    }
+}
 
 //--------------------------------------------------------------ExprListNode--------------------------------------------------------------
 
-void ExprListNode::analyzeSemantics(SemanticContext& context) {}
+void ExprListNode::analyzeSemantics(SemanticContext& context) {
+    if (!exprList) return;
+    
+    for (ExprNode* expr : *exprList) {
+        if (expr) {
+            expr->analyzeSemantics(context);
+        }
+    }
+}
 
 //--------------------------------------------------------------ExprNode--------------------------------------------------------------
 
-void ExprNode::analyzeSemantics(SemanticContext& context) {}
+void ExprNode::analyzeSemantics(SemanticContext& context) {
+    switch (kind) {
+        case ExprKind::IDENTIFIER:
+            analyzeIdentifierSemantics(context);
+            break;
+            
+        case ExprKind::LITERAL:
+            analyzeLiteralSemantics(context);
+            break;
+            
+        case ExprKind::OBJC_ARRAY_LITERAL:
+            analyzeObjcArrayLiteralSemantics(context);
+            break;
+            
+        case ExprKind::OBJC_BOXED_EXPR:
+            analyzeObjcBoxedExprSemantics(context);
+            break;
+            
+        case ExprKind::NIL:
+            analyzeNilSemantics(context);
+            break;
+            
+        case ExprKind::BOXED_EXPR:
+            analyzeBoxedExprSemantics(context);
+            break;
+            
+        case ExprKind::MESSAGE:
+            analyzeMessageSemantics(context);
+            break;
+            
+        case ExprKind::SELF:
+            analyzeSelfSemantics(context);
+            break;
+            
+        case ExprKind::UNARY_MINUS:
+            analyzeUnaryMinusSemantics(context);
+            break;
+            
+        case ExprKind::NOT:
+            analyzeNotSemantics(context);
+            break;
+            
+        case ExprKind::POST_INC:
+            analyzePostIncSemantics(context);
+            break;
+            
+        case ExprKind::POST_DEC:
+            analyzePostDecSemantics(context);
+            break;
+            
+        case ExprKind::ADDITION:
+            analyzeAdditionSemantics(context);
+            break;
+            
+        case ExprKind::SUBTRACTION:
+            analyzeSubtractionSemantics(context);
+            break;
+            
+        case ExprKind::MULTIPLICATION:
+            analyzeMultiplicationSemantics(context);
+            break;
+            
+        case ExprKind::DIVISION:
+            analyzeDivisionSemantics(context);
+            break;
+            
+        case ExprKind::EQUAL:
+            analyzeEqualSemantics(context);
+            break;
+            
+        case ExprKind::NOT_EQUAL:
+            analyzeNotEqualSemantics(context);
+            break;
+            
+        case ExprKind::GREATER:
+            analyzeGreaterSemantics(context);
+            break;
+            
+        case ExprKind::LESS:
+            analyzeLessSemantics(context);
+            break;
+            
+        case ExprKind::LESS_OR_EQUAL:
+            analyzeLessOrEqualSemantics(context);
+            break;
+            
+        case ExprKind::GREATER_OR_EQUAL:
+            analyzeGreaterOrEqualSemantics(context);
+            break;
+            
+        case ExprKind::AND:
+            analyzeAndSemantics(context);
+            break;
+            
+        case ExprKind::OR:
+            analyzeOrSemantics(context);
+            break;
+            
+        case ExprKind::ASSIGN:
+            analyzeAssignSemantics(context);
+            break;
+            
+        case ExprKind::ARRAY_ACCESS:
+            analyzeArrayAccessSemantics(context);
+            break;
+            
+        case ExprKind::FUNCTION_CALL:
+            analyzeFunctionCallSemantics(context);
+            break;
+            
+        case ExprKind::DOT:
+            analyzeDotSemantics(context);
+            break;
+            
+        case ExprKind::ARROW:
+            analyzeArrowSemantics(context);
+            break;
+            
+        case ExprKind::NONE:
+        default:
+            throw semantic_exception("Invalid expression kind",
+                "ExprNode::analyzeSemantics", -1, -1);
+    }
+}
+
+void ExprNode::analyzeIdentifierSemantics(SemanticContext& context) {
+    if (!identifier) {
+        throw semantic_exception("Identifier expression must have an identifier",
+            "ExprNode::analyzeIdentifierSemantics", -1, -1);
+    }
+    
+    string idName = identifier->getIdentifier();
+    
+    // Ищем переменную в текущей области видимости
+    LocalVarInfo* localVar = context.lookupLocalVar(idName);
+    if (localVar) {
+        exprType = new Type(localVar->type);
+        return;
+    }
+    
+    // Ищем поле в текущем классе
+    if (context.getCurrentClass()) {
+        FieldInfo* field = context.getCurrentClass()->lookupField(idName, true);
+        if (field) {
+            exprType = new Type(field->type);
+            isFieldAccess = true;
+            className = field->declaringClass->name;
+            return;
+        }
+    }
+    
+    // Ищем функцию
+    FunctionInfo* func = context.lookupFunction(idName);
+    if (func) {
+        exprType = new Type(func->type);
+        return;
+    }
+    
+    // Ищем класс
+    ClassInfo* cls = context.lookupClass(idName);
+    if (cls) {
+        exprType = new Type(TypeKind::CLASS_NAME, cls->name);
+        return;
+    }
+    
+    throw semantic_exception("Undeclared identifier '" + idName + "'",
+        "ExprNode::analyzeIdentifierSemantics", -1, -1);
+}
+
+void ExprNode::analyzeLiteralSemantics(SemanticContext& context) {
+    if (!literalValue) {
+        throw semantic_exception("Literal expression must have a value",
+            "ExprNode::analyzeLiteralSemantics", -1, -1);
+    }
+    
+    // Определяем тип литерала на основе его значения
+    // TODO: Вам нужно реализовать метод getLiteralType() в ValueNode
+    // или определить тип по содержимому литерала
+    string literalStr = literalValue->getIdentifier();
+    
+    // Простая эвристика для определения типа
+    if (literalStr == "true" || literalStr == "false") {
+        exprType = new Type(TypeKind::BOOL);
+    } else if (literalStr.find('.') != string::npos || 
+               literalStr.find('e') != string::npos ||
+               literalStr.find('E') != string::npos) {
+        // Возможно, float
+        exprType = new Type(TypeKind::FLOAT);
+    } else if (literalStr.size() == 3 && literalStr[0] == '\'' && literalStr[2] == '\'') {
+        // Символьный литерал
+        exprType = new Type(TypeKind::CHAR);
+    } else if (literalStr[0] == '"') {
+        // Строковый литерал
+        exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
+    } else {
+        // Целочисленный литерал
+        exprType = new Type(TypeKind::INT);
+    }
+}
+
+void ExprNode::analyzeObjcArrayLiteralSemantics(SemanticContext& context) {
+    // TODO: Реализовать анализ Objective-C array literal
+    if (objcArrayExprList) {
+        objcArrayExprList->analyzeSemantics(context);
+    }
+    // Тип - NSArray
+    exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSArray");
+}
+
+void ExprNode::analyzeObjcBoxedExprSemantics(SemanticContext& context) {
+    // TODO: Реализовать анализ Objective-C boxed expression
+    if (boxedExpr) {
+        boxedExpr->analyzeSemantics(context);
+    }
+    // Тип - NSNumber или NSValue
+    exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSNumber");
+}
+
+void ExprNode::analyzeNilSemantics(SemanticContext& context) {
+    // nil имеет тип указателя на объект
+    exprType = new Type(TypeKind::TYPE_ID);
+}
+
+void ExprNode::analyzeBoxedExprSemantics(SemanticContext& context) {
+    if (!boxedExpr) {
+        throw semantic_exception("Boxed expression must have an inner expression",
+            "ExprNode::analyzeBoxedExprSemantics", -1, -1);
+    }
+    
+    boxedExpr->analyzeSemantics(context);
+    
+    // Тип коробочного выражения зависит от типа внутреннего выражения
+    // TODO: Реализовать правильное определение типа
+    exprType = new Type(TypeKind::CLASS_NAME, "java/lang/Object");
+}
+
+void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
+    if (!receiver || !selector) {
+        throw semantic_exception("Message expression must have receiver and selector",
+            "ExprNode::analyzeMessageSemantics", -1, -1);
+    }
+    
+    receiver->analyzeSemantics(context);
+    selector->analyzeSemantics(context);
+    
+    // TODO: Реализовать полную проверку сообщения Objective-C
+    // Пока устанавливаем общий тип
+    exprType = new Type(TypeKind::TYPE_ID);
+    isMethodCall = true;
+}
+
+void ExprNode::analyzeSelfSemantics(SemanticContext& context) {
+    if (!context.getCurrentClass()) {
+        throw semantic_exception("'self' can only be used in a class context",
+            "ExprNode::analyzeSelfSemantics", -1, -1);
+    }
+    
+    // 'self' имеет тип текущего класса
+    exprType = new Type(TypeKind::CLASS_NAME, context.getCurrentClass()->name);
+}
+
+void ExprNode::analyzeUnaryMinusSemantics(SemanticContext& context) {
+    if (!operand) {
+        throw semantic_exception("Unary minus must have an operand",
+            "ExprNode::analyzeUnaryMinusSemantics", -1, -1);
+    }
+    
+    operand->analyzeSemantics(context);
+    
+    // Проверяем, что операнд числового типа
+    if (!operand->getExprType() || !operand->getExprType()->isNumeric()) {
+        throw semantic_exception("Unary minus operand must be numeric",
+            "ExprNode::analyzeUnaryMinusSemantics", -1, -1,
+            "Got type: " + operand->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(*operand->getExprType());
+}
+
+void ExprNode::analyzeNotSemantics(SemanticContext& context) {
+    if (!operand) {
+        throw semantic_exception("Not operator must have an operand",
+            "ExprNode::analyzeNotSemantics", -1, -1);
+    }
+    
+    operand->analyzeSemantics(context);
+    
+    // Проверяем, что операнд логического типа
+    Type boolType(TypeKind::BOOL);
+    if (!operand->getExprType() || !operand->getExprType()->equal(&boolType)) {
+        throw semantic_exception("Not operator operand must be boolean",
+            "ExprNode::analyzeNotSemantics", -1, -1,
+            "Got type: " + operand->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(TypeKind::BOOL);
+}
+
+void ExprNode::analyzePostIncSemantics(SemanticContext& context) {
+    if (!operand) {
+        throw semantic_exception("Post-increment must have an operand",
+            "ExprNode::analyzePostIncSemantics", -1, -1);
+    }
+    
+    operand->analyzeSemantics(context);
+    
+    // Проверяем, что операнд числового типа и l-value
+    if (!operand->getExprType() || !operand->getExprType()->isNumeric()) {
+        throw semantic_exception("Post-increment operand must be numeric",
+            "ExprNode::analyzePostIncSemantics", -1, -1,
+            "Got type: " + operand->getExprType()->getDescriptor());
+    }
+    
+    // TODO: Проверить, что операнд является l-value
+    
+    exprType = new Type(*operand->getExprType());
+}
+
+void ExprNode::analyzePostDecSemantics(SemanticContext& context) {
+    if (!operand) {
+        throw semantic_exception("Post-decrement must have an operand",
+            "ExprNode::analyzePostDecSemantics", -1, -1);
+    }
+    
+    operand->analyzeSemantics(context);
+    
+    // Проверяем, что операнд числового типа и l-value
+    if (!operand->getExprType() || !operand->getExprType()->isNumeric()) {
+        throw semantic_exception("Post-decrement operand must be numeric",
+            "ExprNode::analyzePostDecSemantics", -1, -1,
+            "Got type: " + operand->getExprType()->getDescriptor());
+    }
+    
+    // TODO: Проверить, что операнд является l-value
+    
+    exprType = new Type(*operand->getExprType());
+}
+
+void ExprNode::analyzeAdditionSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Addition must have left and right operands",
+            "ExprNode::analyzeAdditionSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем, что операнды числовых типов
+    if (!left->getExprType() || !left->getExprType()->isNumeric()) {
+        throw semantic_exception("Left operand of addition must be numeric",
+            "ExprNode::analyzeAdditionSemantics", -1, -1,
+            "Got type: " + left->getExprType()->getDescriptor());
+    }
+    
+    if (!right->getExprType() || !right->getExprType()->isNumeric()) {
+        throw semantic_exception("Right operand of addition must be numeric",
+            "ExprNode::analyzeAdditionSemantics", -1, -1,
+            "Got type: " + right->getExprType()->getDescriptor());
+    }
+    
+    // Определяем общий тип для числовой операции
+    unique_ptr<Type> commonType = context.commonType(*left->getExprType(), *right->getExprType());
+    if (!commonType) {
+        throw semantic_exception("Incompatible types in addition",
+            "ExprNode::analyzeAdditionSemantics", -1, -1,
+            "Left: " + left->getExprType()->getDescriptor() + 
+            ", Right: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(*commonType);
+}
+
+void ExprNode::analyzeSubtractionSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Subtraction must have left and right operands",
+            "ExprNode::analyzeSubtractionSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем, что операнды числовых типов
+    if (!left->getExprType() || !left->getExprType()->isNumeric()) {
+        throw semantic_exception("Left operand of subtraction must be numeric",
+            "ExprNode::analyzeSubtractionSemantics", -1, -1,
+            "Got type: " + left->getExprType()->getDescriptor());
+    }
+    
+    if (!right->getExprType() || !right->getExprType()->isNumeric()) {
+        throw semantic_exception("Right operand of subtraction must be numeric",
+            "ExprNode::analyzeSubtractionSemantics", -1, -1,
+            "Got type: " + right->getExprType()->getDescriptor());
+    }
+    
+    // Определяем общий тип для числовой операции
+    unique_ptr<Type> commonType = context.commonType(*left->getExprType(), *right->getExprType());
+    if (!commonType) {
+        throw semantic_exception("Incompatible types in subtraction",
+            "ExprNode::analyzeSubtractionSemantics", -1, -1,
+            "Left: " + left->getExprType()->getDescriptor() + 
+            ", Right: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(*commonType);
+}
+
+void ExprNode::analyzeMultiplicationSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Multiplication must have left and right operands",
+            "ExprNode::analyzeMultiplicationSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем, что операнды числовых типов
+    if (!left->getExprType() || !left->getExprType()->isNumeric()) {
+        throw semantic_exception("Left operand of multiplication must be numeric",
+            "ExprNode::analyzeMultiplicationSemantics", -1, -1,
+            "Got type: " + left->getExprType()->getDescriptor());
+    }
+    
+    if (!right->getExprType() || !right->getExprType()->isNumeric()) {
+        throw semantic_exception("Right operand of multiplication must be numeric",
+            "ExprNode::analyzeMultiplicationSemantics", -1, -1,
+            "Got type: " + right->getExprType()->getDescriptor());
+    }
+    
+    // Определяем общий тип для числовой операции
+    unique_ptr<Type> commonType = context.commonType(*left->getExprType(), *right->getExprType());
+    if (!commonType) {
+        throw semantic_exception("Incompatible types in multiplication",
+            "ExprNode::analyzeMultiplicationSemantics", -1, -1,
+            "Left: " + left->getExprType()->getDescriptor() + 
+            ", Right: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(*commonType);
+}
+
+void ExprNode::analyzeDivisionSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Division must have left and right operands",
+            "ExprNode::analyzeDivisionSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем, что операнды числовых типов
+    if (!left->getExprType() || !left->getExprType()->isNumeric()) {
+        throw semantic_exception("Left operand of division must be numeric",
+            "ExprNode::analyzeDivisionSemantics", -1, -1,
+            "Got type: " + left->getExprType()->getDescriptor());
+    }
+    
+    if (!right->getExprType() || !right->getExprType()->isNumeric()) {
+        throw semantic_exception("Right operand of division must be numeric",
+            "ExprNode::analyzeDivisionSemantics", -1, -1,
+            "Got type: " + right->getExprType()->getDescriptor());
+    }
+    
+    // Определяем общий тип для числовой операции
+    unique_ptr<Type> commonType = context.commonType(*left->getExprType(), *right->getExprType());
+    if (!commonType) {
+        throw semantic_exception("Incompatible types in division",
+            "ExprNode::analyzeDivisionSemantics", -1, -1,
+            "Left: " + left->getExprType()->getDescriptor() + 
+            ", Right: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(*commonType);
+}
+
+void ExprNode::analyzeEqualSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Equality comparison must have left and right operands",
+            "ExprNode::analyzeEqualSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем совместимость типов
+    if (!context.isConvertible(*left->getExprType(), *right->getExprType()) &&
+        !context.isConvertible(*right->getExprType(), *left->getExprType())) {
+        throw semantic_exception("Incompatible types in equality comparison",
+            "ExprNode::analyzeEqualSemantics", -1, -1,
+            "Left: " + left->getExprType()->getDescriptor() + 
+            ", Right: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(TypeKind::BOOL);
+}
+
+void ExprNode::analyzeNotEqualSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Inequality comparison must have left and right operands",
+            "ExprNode::analyzeNotEqualSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем совместимость типов
+    if (!context.isConvertible(*left->getExprType(), *right->getExprType()) &&
+        !context.isConvertible(*right->getExprType(), *left->getExprType())) {
+        throw semantic_exception("Incompatible types in inequality comparison",
+            "ExprNode::analyzeNotEqualSemantics", -1, -1,
+            "Left: " + left->getExprType()->getDescriptor() + 
+            ", Right: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(TypeKind::BOOL);
+}
+
+void ExprNode::analyzeGreaterSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Greater than comparison must have left and right operands",
+            "ExprNode::analyzeGreaterSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем, что операнды числовых типов
+    if (!left->getExprType() || !left->getExprType()->isNumeric()) {
+        throw semantic_exception("Left operand of greater than comparison must be numeric",
+            "ExprNode::analyzeGreaterSemantics", -1, -1,
+            "Got type: " + left->getExprType()->getDescriptor());
+    }
+    
+    if (!right->getExprType() || !right->getExprType()->isNumeric()) {
+        throw semantic_exception("Right operand of greater than comparison must be numeric",
+            "ExprNode::analyzeGreaterSemantics", -1, -1,
+            "Got type: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(TypeKind::BOOL);
+}
+
+void ExprNode::analyzeLessSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Less than comparison must have left and right operands",
+            "ExprNode::analyzeLessSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем, что операнды числовых типов
+    if (!left->getExprType() || !left->getExprType()->isNumeric()) {
+        throw semantic_exception("Left operand of less than comparison must be numeric",
+            "ExprNode::analyzeLessSemantics", -1, -1,
+            "Got type: " + left->getExprType()->getDescriptor());
+    }
+    
+    if (!right->getExprType() || !right->getExprType()->isNumeric()) {
+        throw semantic_exception("Right operand of less than comparison must be numeric",
+            "ExprNode::analyzeLessSemantics", -1, -1,
+            "Got type: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(TypeKind::BOOL);
+}
+
+void ExprNode::analyzeLessOrEqualSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Less than or equal comparison must have left and right operands",
+            "ExprNode::analyzeLessOrEqualSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем, что операнды числовых типов
+    if (!left->getExprType() || !left->getExprType()->isNumeric()) {
+        throw semantic_exception("Left operand of less than or equal comparison must be numeric",
+            "ExprNode::analyzeLessOrEqualSemantics", -1, -1,
+            "Got type: " + left->getExprType()->getDescriptor());
+    }
+    
+    if (!right->getExprType() || !right->getExprType()->isNumeric()) {
+        throw semantic_exception("Right operand of less than or equal comparison must be numeric",
+            "ExprNode::analyzeLessOrEqualSemantics", -1, -1,
+            "Got type: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(TypeKind::BOOL);
+}
+
+void ExprNode::analyzeGreaterOrEqualSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Greater than or equal comparison must have left and right operands",
+            "ExprNode::analyzeGreaterOrEqualSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем, что операнды числовых типов
+    if (!left->getExprType() || !left->getExprType()->isNumeric()) {
+        throw semantic_exception("Left operand of greater than or equal comparison must be numeric",
+            "ExprNode::analyzeGreaterOrEqualSemantics", -1, -1,
+            "Got type: " + left->getExprType()->getDescriptor());
+    }
+    
+    if (!right->getExprType() || !right->getExprType()->isNumeric()) {
+        throw semantic_exception("Right operand of greater than or equal comparison must be numeric",
+            "ExprNode::analyzeGreaterOrEqualSemantics", -1, -1,
+            "Got type: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(TypeKind::BOOL);
+}
+
+void ExprNode::analyzeAndSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Logical AND must have left and right operands",
+            "ExprNode::analyzeAndSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем, что операнды логического типа
+    Type boolType(TypeKind::BOOL);
+    if (!left->getExprType() || !left->getExprType()->equal(&boolType)) {
+        throw semantic_exception("Left operand of logical AND must be boolean",
+            "ExprNode::analyzeAndSemantics", -1, -1,
+            "Got type: " + left->getExprType()->getDescriptor());
+    }
+    
+    if (!right->getExprType() || !right->getExprType()->equal(&boolType)) {
+        throw semantic_exception("Right operand of logical AND must be boolean",
+            "ExprNode::analyzeAndSemantics", -1, -1,
+            "Got type: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(TypeKind::BOOL);
+}
+
+void ExprNode::analyzeOrSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Logical OR must have left and right operands",
+            "ExprNode::analyzeOrSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем, что операнды логического типа
+    Type boolType(TypeKind::BOOL);
+    if (!left->getExprType() || !left->getExprType()->equal(&boolType)) {
+        throw semantic_exception("Left operand of logical OR must be boolean",
+            "ExprNode::analyzeOrSemantics", -1, -1,
+            "Got type: " + left->getExprType()->getDescriptor());
+    }
+    
+    if (!right->getExprType() || !right->getExprType()->equal(&boolType)) {
+        throw semantic_exception("Right operand of logical OR must be boolean",
+            "ExprNode::analyzeOrSemantics", -1, -1,
+            "Got type: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(TypeKind::BOOL);
+}
+
+void ExprNode::analyzeAssignSemantics(SemanticContext& context) {
+    if (!left || !right) {
+        throw semantic_exception("Assignment must have left and right operands",
+            "ExprNode::analyzeAssignSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Проверяем, что левый операнд является l-value
+    // TODO: Проверить, что left является l-value (идентификатор, доступ к полю, доступ к массиву)
+    
+    // Проверяем совместимость типов
+    if (!context.isAssignable(*right->getExprType(), *left->getExprType())) {
+        throw semantic_exception("Type mismatch in assignment",
+            "ExprNode::analyzeAssignSemantics", -1, -1,
+            "Left: " + left->getExprType()->getDescriptor() + 
+            ", Right: " + right->getExprType()->getDescriptor());
+    }
+    
+    exprType = new Type(*left->getExprType());
+}
+
+void ExprNode::analyzeArrayAccessSemantics(SemanticContext& context) {
+    if (!operand || !index) {
+        throw semantic_exception("Array access must have array and index expressions",
+            "ExprNode::analyzeArrayAccessSemantics", -1, -1);
+    }
+    
+    operand->analyzeSemantics(context);
+    index->analyzeSemantics(context);
+    
+    // Проверяем, что операнд является массивом
+    if (!operand->getExprType() || !operand->getExprType()->isArray()) {
+        throw semantic_exception("Array access operand must be an array",
+            "ExprNode::analyzeArrayAccessSemantics", -1, -1,
+            "Got type: " + operand->getExprType()->getDescriptor());
+    }
+    
+    // Проверяем, что индекс целочисленный
+    Type intType(TypeKind::INT);
+    if (!index->getExprType() || !index->getExprType()->equal(&intType)) {
+        throw semantic_exception("Array index must be integer",
+            "ExprNode::analyzeArrayAccessSemantics", -1, -1,
+            "Got type: " + index->getExprType()->getDescriptor());
+    }
+    
+    // Тип результата - тип элемента массива
+    Type elemType(operand->getExprType()->dataType, operand->getExprType()->className);
+    exprType = new Type(elemType);
+}
+
+void ExprNode::analyzeFunctionCallSemantics(SemanticContext& context) {
+    if (!funcId) {
+        throw semantic_exception("Function call must have a function identifier",
+            "ExprNode::analyzeFunctionCallSemantics", -1, -1);
+    }
+    
+    string funcName = funcId->getIdentifier();
+    FunctionInfo* func = context.lookupFunction(funcName);
+    
+    if (!func) {
+        throw semantic_exception("Undefined function '" + funcName + "'",
+            "ExprNode::analyzeFunctionCallSemantics", -1, -1);
+    }
+    
+    // Анализируем аргументы
+    vector<const Type*> argTypes;
+    if (args) {
+        args->analyzeSemantics(context);
+        
+        auto exprList = args->getExprList();
+        if (exprList) {
+            for (ExprNode* arg : *exprList) {
+                if (arg) {
+                    arg->analyzeSemantics(context);
+                    argTypes.push_back(arg->getExprType());
+                }
+            }
+        }
+    }
+    
+    // Проверяем количество аргументов
+    if (argTypes.size() != func->getParameterCount()) {
+        throw semantic_exception("Function '" + funcName + "' called with wrong number of arguments",
+            "ExprNode::analyzeFunctionCallSemantics", -1, -1,
+            "Expected: " + to_string(func->getParameterCount()) + 
+            ", Got: " + to_string(argTypes.size()));
+    }
+    
+    // Проверяем типы аргументов
+    for (size_t i = 0; i < argTypes.size(); i++) {
+        const LocalVarInfo* param = func->getParameter(i);
+        if (param && !context.isAssignable(*argTypes[i], param->type)) {
+            throw semantic_exception("Type mismatch in function call argument " + to_string(i + 1),
+                "ExprNode::analyzeFunctionCallSemantics", -1, -1,
+                "Expected: " + param->type.getDescriptor() + 
+                ", Got: " + argTypes[i]->getDescriptor());
+        }
+    }
+    
+    exprType = new Type(func->getReturnType());
+}
+
+void ExprNode::analyzeDotSemantics(SemanticContext& context) {
+    // TODO: Реализовать анализ операции доступа через точку (структуры/классы)
+    if (!left || !right) {
+        throw semantic_exception("Dot operator must have left and right operands",
+            "ExprNode::analyzeDotSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Пока устанавливаем тип левого операнда
+    exprType = new Type(*left->getExprType());
+}
+
+void ExprNode::analyzeArrowSemantics(SemanticContext& context) {
+    // TODO: Реализовать анализ операции доступа через стрелку (указатели)
+    if (!left || !right) {
+        throw semantic_exception("Arrow operator must have left and right operands",
+            "ExprNode::analyzeArrowSemantics", -1, -1);
+    }
+    
+    left->analyzeSemantics(context);
+    right->analyzeSemantics(context);
+    
+    // Пока устанавливаем тип левого операнда
+    exprType = new Type(*left->getExprType());
+}
+
+Type* ExprNode::getExprType() const {
+    return exprType;
+}
+
+void ExprNode::setType(Type* type) {
+    if (exprType) {
+        delete exprType;
+    }
+    exprType = type;
+}
 
 //--------------------------------------------------------------TypeNode--------------------------------------------------------------
 
