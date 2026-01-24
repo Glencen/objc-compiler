@@ -1,7 +1,5 @@
 package rtl;
 
-import java.util.*;
-
 public class ClassInfo {
     private String name;
     private ClassInfo superclass;
