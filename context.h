@@ -311,6 +311,7 @@ private:
     void initNSStringClass();
     void initNSArrayClass();
     void initNSNumberClass();
+    void initInOutFuncsClass();
 };
 
 #endif
