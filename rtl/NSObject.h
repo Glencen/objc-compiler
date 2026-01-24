@@ -2,9 +2,11 @@
 #include <string>
 #include <memory>
 
+// Forward declaration класса ClassInfo, чтобы не включать context.h
 class ClassInfo;
 
 class NSObject {
+    friend void initNSObjectClassInfo(ClassInfo* info);
 public:
     NSObject();
     virtual ~NSObject();
@@ -28,6 +30,8 @@ public:
     virtual int isEqualDynamic(NSObject* other);
 
 protected:
-    // Ссылка на ClassInfo для этого класса
     static ClassInfo* s_classInfo;
 };
+
+// Функция для связывания с ClassInfo (вызывается из context.cpp)
+void initNSObjectClassInfo(ClassInfo* info);
