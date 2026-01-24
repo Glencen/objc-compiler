@@ -659,8 +659,20 @@ SymbolInfo* SemanticContext::lookup(const string& name) const {
 }
 
 ClassInfo* SemanticContext::lookupClass(const string& name) const {
-    auto it = classes.find(name);
-    return it != classes.end() ? it->second.get() : nullptr;
+    vector<string> searchPaths = {
+        name,
+        "java/lang/" + name,
+        "rtl/" + name
+    };
+
+    for (const auto& searchName : searchPaths) {
+        auto it = classes.find(searchName);
+        if (it != classes.end()) {
+            return it->second.get();
+        }
+    }
+    
+    return nullptr;
 }
 
 MethodInfo* SemanticContext::lookupMethod(const string& className, const string& methodName, const vector<const Type*>& argTypes, const vector<string>& keywords) const {
