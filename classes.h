@@ -13,6 +13,8 @@ class LocalVariablesTable;
 class ClassesTableElement;
 class SemanticContext;
 class FunctionInfo;
+class MethodInfo;
+class ClassInfo;
 
 using namespace std;
 
@@ -647,6 +649,9 @@ public:
     bool isInstanceMethod() const;
     bool isClassMethod() const;
 
+    void checkMethodReturnStatements(MethodInfo* method, SemanticContext& context, StmtNode* body);
+    void collectReturnStatements(StmtNode* stmt, vector<StmtNode*>& returnStmts);
+
     void analyzeSemantics(SemanticContext& context) override;
 
     string getDotLabel() const override;
@@ -932,6 +937,8 @@ public:
 
     void setClassName(string className);
     void setSuperClassName(string superClassName);
+
+    void checkAllMethodsImplemented(ClassInfo* cls, SemanticContext& context);
 
     void analyzeSemantics(SemanticContext& context) override;
 

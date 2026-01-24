@@ -1692,23 +1692,489 @@ void FuncDeclNode::analyzeSemantics(SemanticContext& context) {
 
 //--------------------------------------------------------------MethodParamNode--------------------------------------------------------------
 
-void MethodParamNode::analyzeSemantics(SemanticContext& context) {}
+void MethodParamNode::analyzeSemantics(SemanticContext& context) {
+    // Проверяем обязательные поля
+    if (!type) {
+        throw semantic_exception("Method parameter must have a type",
+            "MethodParamNode::analyzeSemantics", -1, -1);
+    }
+    
+    if (!paramIdentifier) {
+        throw semantic_exception("Method parameter must have an identifier",
+            "MethodParamNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Проверяем тип параметра
+    Type paramType = convertTypeNodeToType(type);
+    
+    // Обрабатываем массивы
+    if (isArray()) {
+        // Для массивов добавляем информацию о размере
+        if (arraySizeSpec) {
+            // TODO: Обработать спецификацию размера массива
+            // Для фиксированных массивов нужно проверить размеры
+            // Для гибких массивов (flexible array) - особый случай
+        }
+        
+        // Устанавливаем тип массива
+        paramType = Type(paramType.dataType, paramType.className, vector<int>{0}); // 0 для неизвестного размера
+    }
+    
+    // Проверяем идентификатор параметра
+    string paramName = paramIdentifier->getIdentifier();
+    if (context.isReservedName(paramName)) {
+        throw semantic_exception("Parameter name '" + paramName + "' is a reserved keyword",
+            "MethodParamNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Проверяем идентификатор селектора (если есть)
+    if (selectorIdentifier) {
+        string selectorName = selectorIdentifier->getIdentifier();
+        if (!selectorName.empty() && context.isReservedName(selectorName)) {
+            throw semantic_exception("Selector keyword '" + selectorName + "' is a reserved keyword",
+                "MethodParamNode::analyzeSemantics", -1, -1);
+        }
+    }
+}
 
 //--------------------------------------------------------------MethodSelNode--------------------------------------------------------------
 
-void MethodSelNode::analyzeSemantics(SemanticContext& context) {}
+void MethodSelNode::analyzeSemantics(SemanticContext& context) {
+    if (!methodParams) {
+        throw semantic_exception("Method selector must have parameters",
+            "MethodSelNode::analyzeSemantics", -1, -1);
+    }
+    
+    if (methodParams->empty()) {
+        throw semantic_exception("Method selector must have at least one parameter",
+            "MethodSelNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Анализируем каждый параметр
+    for (MethodParamNode* param : *methodParams) {
+        if (param) {
+            param->analyzeSemantics(context);
+        }
+    }
+    
+    // Проверяем, что все селекторные идентификаторы уникальны (не считая пустых)
+    unordered_set<string> selectorKeywords;
+    for (MethodParamNode* param : *methodParams) {
+        if (param && param->getSelectorIdentifier()) {
+            string keyword = param->getSelectorIdentifier()->getIdentifier();
+            if (!keyword.empty()) {
+                if (!selectorKeywords.insert(keyword).second) {
+                    throw semantic_exception("Duplicate selector keyword '" + keyword + "' in method selector",
+                        "MethodSelNode::analyzeSemantics", -1, -1);
+                }
+            }
+        }
+    }
+}
 
 //--------------------------------------------------------------MethodDefNode--------------------------------------------------------------
 
-void MethodDefNode::analyzeSemantics(SemanticContext& context) {}
+void MethodDefNode::analyzeSemantics(SemanticContext& context) {
+    // Проверяем, что находимся в контексте класса
+    ClassInfo* currentClass = context.getCurrentClass();
+    if (!currentClass) {
+        throw semantic_exception("Method can only be defined in class context",
+            "MethodDefNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Проверяем, что тело метода является compound statement
+    if (compoundStmt && compoundStmt->getKind() != StmtKind::COMPOUND) {
+        throw semantic_exception("Method body must be a compound statement",
+            "MethodDefNode::analyzeSemantics", -1, -1);
+    }
+    
+    Type returnType = convertTypeNodeToType(type);
+    
+    // Определяем имя метода и селектор (аналогично MethodDeclNode)
+    string methodName;
+    string selector;
+    vector<string> keywords;
+    vector<const Type*> paramTypes;
+    vector<unique_ptr<LocalVarInfo>> parameters;
+    
+    if (identifier) {
+        // Простой метод без параметров
+        methodName = identifier->getIdentifier();
+        selector = methodName;
+        keywords = {""};
+    } else if (methodSel) {
+        // Метод с селектором
+        methodSel->analyzeSemantics(context);
+        
+        auto paramList = methodSel->getMethodParamList();
+        if (paramList && !paramList->empty()) {
+            for (MethodParamNode* param : *paramList) {
+                if (param) {
+                    // Ключевое слово
+                    if (param->getSelectorIdentifier()) {
+                        keywords.push_back(param->getSelectorIdentifier()->getIdentifier());
+                    } else {
+                        keywords.push_back("");
+                    }
+                    
+                    // Тип параметра
+                    Type paramType = convertTypeNodeToType(param->getType());
+                    paramTypes.push_back(new Type(paramType));
+                    
+                    // Информация о параметре
+                    string paramName = param->getParamIdentifier()->getIdentifier();
+                    auto paramInfo = make_unique<LocalVarInfo>(paramName, paramType, true, nullptr);
+                    parameters.push_back(move(paramInfo));
+                }
+            }
+            
+            // Формируем имя метода и селектор
+            for (size_t i = 0; i < keywords.size(); i++) {
+                if (i > 0) selector += ":";
+                selector += keywords[i];
+                if (i > 0 || !keywords[i].empty()) {
+                    methodName += keywords[i];
+                    if (i < keywords.size() - 1) methodName += ":";
+                }
+            }
+        }
+    } else {
+        throw semantic_exception("Method must have either identifier or selector",
+            "MethodDefNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Ищем объявленный метод
+    MethodInfo* existingMethod = currentClass->lookupMethod(methodName, paramTypes, keywords, false);
+    
+    if (existingMethod) {
+        // Проверяем совместимость с объявлением
+        if (!returnType.equal(&existingMethod->getReturnType())) {
+            throw semantic_exception("Method '" + methodName + "' return type mismatch with declaration",
+                "MethodDefNode::analyzeSemantics", -1, -1,
+                "Declared: " + existingMethod->getReturnType().getDescriptor() + 
+                ", Defined: " + returnType.getDescriptor());
+        }
+        
+        // Проверяем, что метод еще не определен
+        if (existingMethod->body) {
+            throw semantic_exception("Method '" + methodName + "' already defined",
+                "MethodDefNode::analyzeSemantics", -1, -1);
+        }
+        
+        // Обновляем тело метода
+        existingMethod->body = compoundStmt;
+    } else {
+        // Создаем новый метод (если не было объявления)
+        auto method = make_unique<MethodInfo>(methodName, returnType, isClassMethod(), currentClass);
+        method->selector = selector;
+        method->keywords = keywords;
+        method->body = compoundStmt;
+        
+        // Копируем типы параметров
+        for (const Type* paramType : paramTypes) {
+            method->parameterTypes.push_back(paramType);
+        }
+        
+        // Добавляем параметры
+        for (auto& param : parameters) {
+            method->addParameter(move(param));
+        }
+        
+        currentClass->addMethod(move(method));
+    }
+    
+    // Если есть тело, анализируем его в контексте метода
+    if (compoundStmt) {
+        // Нужно найти метод, который мы только что создали или нашли
+        MethodInfo* methodToAnalyze = currentClass->lookupMethod(methodName, paramTypes, keywords, false);
+        if (!methodToAnalyze) {
+            throw semantic_exception("Failed to find method '" + methodName + "' for analysis",
+                "MethodDefNode::analyzeSemantics", -1, -1);
+        }
+        
+        ClassInfo* savedClass = context.getCurrentClass();
+        MethodInfo* savedMethod = context.getCurrentMethod();
+        
+        try {
+            context.enterMethodScope(methodToAnalyze);
+            
+            // Добавляем параметры в область видимости
+            for (size_t i = 0; i < methodToAnalyze->getParameterCount(); i++) {
+                const LocalVarInfo* param = methodToAnalyze->getParameter(i);
+                if (param) {
+                    auto paramCopy = make_unique<LocalVarInfo>(
+                        param->name,
+                        param->type,
+                        true,
+                        methodToAnalyze
+                    );
+                    
+                    if (!context.addLocalVar(move(paramCopy))) {
+                        throw semantic_exception("Failed to add parameter '" + param->name + "' to method scope",
+                            "MethodDefNode::analyzeSemantics", -1, -1,
+                            "Method: '" + methodName + "'");
+                    }
+                }
+            }
+            
+            // Анализируем тело метода
+            compoundStmt->analyzeSemantics(context);
+            
+            // Проверяем наличие return statement (аналогично функциям)
+            checkMethodReturnStatements(methodToAnalyze, context, compoundStmt);
+            
+            context.leaveScope();
+            context.setCurrentClass(savedClass);
+            context.setCurrentMethod(savedMethod);
+            
+        } catch (...) {
+            context.leaveScope();
+            context.setCurrentClass(savedClass);
+            context.setCurrentMethod(savedMethod);
+            throw;
+        }
+    }
+}
+
+void MethodDefNode::checkMethodReturnStatements(MethodInfo* method, SemanticContext& context, StmtNode* body) {
+    // Собираем все return statement из тела метода
+    vector<StmtNode*> returnStmts;
+    collectReturnStatements(body, returnStmts);
+    
+    Type voidType(TypeKind::VOID);
+    Type returnType = method->getReturnType();
+    
+    if (returnType.equal(&voidType)) {
+        // Для void методов: проверяем, что нет return с выражением
+        for (StmtNode* stmt : returnStmts) {
+            if (stmt->getExpr() != nullptr) {
+                throw semantic_exception("Void method '" + method->name + "' cannot return a value",
+                    "MethodDefNode::checkMethodReturnStatements", -1, -1,
+                    "Method: '" + method->name + "'");
+            }
+        }
+    } else {
+        // Для не-void методов: должен быть хотя бы один return statement
+        if (returnStmts.empty()) {
+            throw semantic_exception("Method '" + method->name + "' must return a value",
+                "MethodDefNode::checkMethodReturnStatements", -1, -1,
+                "Return type: " + returnType.getDescriptor());
+        }
+        
+        // Проверяем, что все return statement имеют совместимые типы
+        for (StmtNode* stmt : returnStmts) {
+            if (stmt->getExpr() == nullptr) {
+                throw semantic_exception("Method '" + method->name + "' must return a value, not void",
+                    "MethodDefNode::checkMethodReturnStatements", -1, -1,
+                    "Return type: " + returnType.getDescriptor());
+            }
+            
+            // Получаем тип возвращаемого выражения
+            stmt->getExpr()->analyzeSemantics(context);
+            Type exprType = *stmt->getExpr()->getExprType();
+            
+            // Проверяем совместимость типов
+            if (!context.isAssignable(exprType, returnType)) {
+                throw semantic_exception("Method '" + method->name + "' return type mismatch",
+                    "MethodDefNode::checkMethodReturnStatements", -1, -1,
+                    "Expected: " + returnType.getDescriptor() +
+                    ", Got: " + exprType.getDescriptor());
+            }
+        }
+    }
+}
+
+void MethodDefNode::collectReturnStatements(StmtNode* stmt, vector<StmtNode*>& returnStmts) {
+    if (!stmt) return;
+    
+    // Если это return statement, добавляем в список
+    if (stmt->getKind() == StmtKind::RETURN) {
+        returnStmts.push_back(stmt);
+        return;
+    }
+    
+    // Рекурсивно обходим вложенные statement'ы
+    switch (stmt->getKind()) {
+        case StmtKind::COMPOUND: {
+            StmtListNode* stmtList = stmt->getCompound();
+            if (stmtList) {
+                auto stmts = stmtList->getStmtList();
+                if (stmts) {
+                    for (StmtNode* child : *stmts) {
+                        collectReturnStatements(child, returnStmts);
+                    }
+                }
+            }
+            break;
+        }
+        
+        case StmtKind::IF:
+            collectReturnStatements(stmt->getThenBranch(), returnStmts);
+            break;
+            
+        case StmtKind::IF_ELSE:
+            collectReturnStatements(stmt->getThenBranch(), returnStmts);
+            collectReturnStatements(stmt->getElseBranch(), returnStmts);
+            break;
+            
+        case StmtKind::FOR_WITH_EXPR:
+        case StmtKind::FOR_WITH_DECL:
+        case StmtKind::FOR_IN:
+        case StmtKind::TYPED_FOR_IN:
+        case StmtKind::WHILE:
+        case StmtKind::DO_WHILE:
+            collectReturnStatements(stmt->getBody(), returnStmts);
+            break;
+            
+        default:
+            break;
+    }
+}
 
 //--------------------------------------------------------------ImplementationDefListNode--------------------------------------------------------------
 
-void ImplementationDefListNode::analyzeSemantics(SemanticContext& context) {}
+void ImplementationDefListNode::analyzeSemantics(SemanticContext& context) {
+    if (classMethodDefs) {
+        for (MethodDefNode* methodDef : *classMethodDefs) {
+            if (methodDef) {
+                methodDef->analyzeSemantics(context);
+            }
+        }
+    }
+    
+    if (instanceMethodDefs) {
+        for (MethodDefNode* methodDef : *instanceMethodDefs) {
+            if (methodDef) {
+                methodDef->analyzeSemantics(context);
+            }
+        }
+    }
+}
 
 //--------------------------------------------------------------MethodDeclNode--------------------------------------------------------------
 
-void MethodDeclNode::analyzeSemantics(SemanticContext& context) {}
+void MethodDeclNode::analyzeSemantics(SemanticContext& context) {
+    // Проверяем, что находимся в контексте класса
+    ClassInfo* currentClass = context.getCurrentClass();
+    if (!currentClass) {
+        throw semantic_exception("Method can only be declared in class context",
+            "MethodDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    if (!type) {
+        throw semantic_exception("Method must have a return type",
+            "MethodDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    Type returnType = convertTypeNodeToType(type);
+    
+    // Определяем имя метода и селектор
+    string methodName;
+    string selector;
+    vector<string> keywords;
+    vector<const Type*> paramTypes;
+    vector<unique_ptr<LocalVarInfo>> parameters;
+    
+    if (identifier) {
+        // Простой метод без параметров
+        methodName = identifier->getIdentifier();
+        selector = methodName;
+        keywords = {""}; // Пустое ключевое слово для метода без параметров
+    } else if (methodSel) {
+        // Метод с селектором
+        methodSel->analyzeSemantics(context);
+        
+        auto paramList = methodSel->getMethodParamList();
+        if (paramList && !paramList->empty()) {
+            // Собираем информацию из параметров
+            for (MethodParamNode* param : *paramList) {
+                if (param) {
+                    // Добавляем ключевое слово
+                    if (param->getSelectorIdentifier()) {
+                        keywords.push_back(param->getSelectorIdentifier()->getIdentifier());
+                    } else {
+                        keywords.push_back("");
+                    }
+                    
+                    // Добавляем тип параметра
+                    Type paramType = convertTypeNodeToType(param->getType());
+                    paramTypes.push_back(new Type(paramType));
+                    
+                    // Создаем информацию о параметре
+                    string paramName = param->getParamIdentifier()->getIdentifier();
+                    auto paramInfo = make_unique<LocalVarInfo>(paramName, paramType, true, nullptr);
+                    parameters.push_back(move(paramInfo));
+                }
+            }
+            
+            // Формируем имя метода и селектор
+            for (size_t i = 0; i < keywords.size(); i++) {
+                if (i > 0) selector += ":";
+                selector += keywords[i];
+                if (i > 0 || !keywords[i].empty()) {
+                    methodName += keywords[i];
+                    if (i < keywords.size() - 1) methodName += ":";
+                }
+            }
+            
+            // Для методов с одним параметром без ключевого слова
+            if (keywords.size() == 1 && keywords[0].empty()) {
+                methodName = "set" + parameters[0]->name; // Пример для сеттера
+            }
+        }
+    } else {
+        throw semantic_exception("Method must have either identifier or selector",
+            "MethodDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Проверяем, что имя метода не зарезервировано
+    if (context.isReservedName(methodName)) {
+        throw semantic_exception("Method name '" + methodName + "' is a reserved keyword",
+            "MethodDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Проверяем, что метод с такой сигнатурой еще не объявлен
+    // В Objective-C можно иметь методы с одинаковым именем но разными типами параметров
+    // Нужно проверять полную сигнатуру
+    const MethodInfo* existingMethod = currentClass->lookupMethod(methodName, paramTypes, keywords, false);
+    if (existingMethod) {
+        // Проверяем, совпадает ли возвращаемый тип
+        if (!returnType.equal(&existingMethod->getReturnType())) {
+            throw semantic_exception("Method '" + methodName + "' already declared with different return type",
+                "MethodDeclNode::analyzeSemantics", -1, -1,
+                "Existing: " + existingMethod->getReturnType().getDescriptor() + 
+                ", New: " + returnType.getDescriptor());
+        }
+        
+        // Проверяем, совпадают ли типы параметров
+        if (existingMethod->getParameterCount() != parameters.size()) {
+            throw semantic_exception("Method '" + methodName + "' already declared with different number of parameters",
+                "MethodDeclNode::analyzeSemantics", -1, -1);
+        }
+        
+        // Если все совпадает, то это дубликат объявления
+        throw semantic_exception("Method '" + methodName + "' already declared",
+            "MethodDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Создаем информацию о методе
+    auto method = make_unique<MethodInfo>(methodName, returnType, isClassMethod(), currentClass);
+    method->selector = selector;
+    method->keywords = keywords;
+    
+    // Копируем типы параметров
+    for (const Type* paramType : paramTypes) {
+        method->parameterTypes.push_back(paramType);
+    }
+    
+    // Добавляем параметры
+    for (auto& param : parameters) {
+        method->addParameter(move(param));
+    }
+    
+    // Добавляем метод в класс
+    currentClass->addMethod(move(method));
+}
 
 //--------------------------------------------------------------PropertyNode--------------------------------------------------------------
 
@@ -1720,19 +2186,102 @@ void InterfaceDeclListNode::analyzeSemantics(SemanticContext& context) {}
 
 //--------------------------------------------------------------InitializerListNode--------------------------------------------------------------
 
-void InitializerListNode::analyzeSemantics(SemanticContext& context) {}
+void InitializerListNode::analyzeSemantics(SemanticContext& context) {
+    if (!initializers) return;
+    
+    for (InitializerNode* init : *initializers) {
+        if (init) {
+            init->analyzeSemantics(context);
+        }
+    }
+}
 
 //--------------------------------------------------------------InitializerNode--------------------------------------------------------------
 
-void InitializerNode::analyzeSemantics(SemanticContext& context) {}
+void InitializerNode::analyzeSemantics(SemanticContext& context) {
+    switch (kind) {
+        case InitializerKind::EXPR:
+            if (!expr) {
+                throw semantic_exception("Expression initializer must have an expression",
+                    "InitializerNode::analyzeSemantics", -1, -1);
+            }
+            expr->analyzeSemantics(context);
+            break;
+            
+        case InitializerKind::ARRAY:
+            if (!initList) {
+                throw semantic_exception("Array initializer must have an initializer list",
+                    "InitializerNode::analyzeSemantics", -1, -1);
+            }
+            initList->analyzeSemantics(context);
+            break;
+            
+        case InitializerKind::NONE:
+        default:
+            throw semantic_exception("Invalid initializer kind",
+                "InitializerNode::analyzeSemantics", -1, -1);
+    }
+}
 
 //--------------------------------------------------------------DeclaratorNode--------------------------------------------------------------
 
-void DeclaratorNode::analyzeSemantics(SemanticContext& context) {}
+void DeclaratorNode::analyzeSemantics(SemanticContext& context) {
+    if (!identifier) {
+        throw semantic_exception("Declarator must have an identifier",
+            "DeclaratorNode::analyzeSemantics", -1, -1);
+    }
+    
+    string idName = identifier->getIdentifier();
+    
+    if (context.isReservedName(idName)) {
+        throw semantic_exception("Variable name '" + idName + "' is a reserved keyword",
+            "DeclaratorNode::analyzeSemantics", -1, -1);
+    }
+    
+    if (context.existsInCurrentScope(idName)) {
+        throw semantic_exception("Variable '" + idName + "' already declared in current scope",
+            "DeclaratorNode::analyzeSemantics", -1, -1);
+    }
+    
+    if (arraySizes) {
+        for (ExprNode* sizeExpr : *arraySizes) {
+            if (sizeExpr) {
+                sizeExpr->analyzeSemantics(context);
+                
+                // Проверяем, что размер массива - целочисленное константное выражение
+                Type intType(TypeKind::INT);
+                if (!sizeExpr->getExprType() || !sizeExpr->getExprType()->equal(&intType)) {
+                    throw semantic_exception("Array size must be integer",
+                        "DeclaratorNode::analyzeSemantics", -1, -1,
+                        "Got type: " + sizeExpr->getExprType()->getDescriptor());
+                }
+                
+                // TODO: Проверить, что размер массива - положительная константа
+                // Для этого нужно добавить вычисление константных выражений
+            }
+        }
+    }
+}
 
 //--------------------------------------------------------------InitDeclNode--------------------------------------------------------------
 
-void InitDeclNode::analyzeSemantics(SemanticContext& context) {}
+void InitDeclNode::analyzeSemantics(SemanticContext& context) {
+    if (!declarator) {
+        throw semantic_exception("InitDecl must have a declarator",
+            "InitDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Анализируем объявитель
+    declarator->analyzeSemantics(context);
+    
+    // Анализируем инициализатор (если есть)
+    if (initializer) {
+        initializer->analyzeSemantics(context);
+        
+        // TODO: Проверка совместимости типа инициализатора с типом переменной
+        // Для этого нужно знать тип переменной, который определяется в вызывающем коде
+    }
+}
 
 //--------------------------------------------------------------AccessModifierNode--------------------------------------------------------------
 
@@ -1740,19 +2289,157 @@ void AccessModifierNode::analyzeSemantics(SemanticContext& context) {}
 
 //--------------------------------------------------------------InstanceVarDeclNode--------------------------------------------------------------
 
-void InstanceVarDeclNode::analyzeSemantics(SemanticContext& context) {}
+void InstanceVarDeclNode::analyzeSemantics(SemanticContext& context) {
+    ClassInfo* currentClass = context.getCurrentClass();
+    if (!currentClass) {
+        throw semantic_exception("Instance variables can only be declared in class context",
+            "InstanceVarDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    if (!type) {
+        throw semantic_exception("Instance variable declaration must have a type",
+            "InstanceVarDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    if (!initDecl) {
+        throw semantic_exception("Instance variable declaration must have an initializer declaration",
+            "InstanceVarDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    Type varType = convertTypeNodeToType(type);
+    
+    // Анализируем объявитель с инициализатором
+    initDecl->analyzeSemantics(context);
+    
+    // Получаем имя переменной из объявителя
+    ValueNode* identifier = initDecl->getDeclarator()->getIdentifier();
+    string varName = identifier->getIdentifier();
+    
+    // Проверяем, что поле с таким именем еще не объявлено в текущем классе
+    if (currentClass->lookupField(varName, false)) {
+        throw semantic_exception("Instance variable '" + varName + "' already declared in class '" + 
+            currentClass->name + "'", "InstanceVarDeclNode::analyzeSemantics", -1, -1);
+    }
+    
+    // Проверяем, что имя не конфликтует с именем метода
+    // (в Objective-C поля и методы имеют разные пространства имен, но лучше проверить)
+    
+    // Создаем информацию о поле
+    auto field = make_unique<FieldInfo>(varName, varType, true, currentClass);
+    
+    // Обрабатываем модификатор доступа (если есть)
+    if (accessModifier) {
+        // TODO: Сохранить модификатор доступа в FieldInfo
+        // В текущей реализации FieldInfo не хранит модификатор доступа
+        // Нужно расширить класс или использовать attribute поле
+    }
+    
+    // Обрабатываем инициализатор (если есть)
+    if (initDecl->getInitializer()) {
+        // TODO: Проверить совместимость типа инициализатора с типом поля
+        // field->initialValue = ...; // Сохранить инициализатор для генерации кода
+    }
+    
+    // Проверяем специфичные для Objective-C атрибуты
+    // (например, IBOutlet, IBAction и т.д.)
+    
+    // Добавляем поле в класс
+    currentClass->addField(move(field));
+    
+    // Если есть инициализатор, добавляем его в список инициализаторов класса
+    // для генерации кода в конструкторе
+}
 
 //--------------------------------------------------------------InstanceVarsDeclListNode--------------------------------------------------------------
 
-void InstanceVarsDeclListNode::analyzeSemantics(SemanticContext& context) {}
+void InstanceVarsDeclListNode::analyzeSemantics(SemanticContext& context) {
+    if (!instanceVarDecls) return;
+    
+    for (InstanceVarDeclNode* varDecl : *instanceVarDecls) {
+        if (varDecl) {
+            varDecl->analyzeSemantics(context);
+        }
+    }
+}
 
 //--------------------------------------------------------------InstanceVarsNode--------------------------------------------------------------
 
-void InstanceVarsNode::analyzeSemantics(SemanticContext& context) {}
+void InstanceVarsNode::analyzeSemantics(SemanticContext& context) {
+    if (instanceVarsDeclList) {
+        instanceVarsDeclList->analyzeSemantics(context);
+    }
+}
 
 //--------------------------------------------------------------ImplementationNode--------------------------------------------------------------
 
-void ImplementationNode::analyzeSemantics(SemanticContext& context) {}
+void ImplementationNode::analyzeSemantics(SemanticContext& context) {
+    string classNameStr = className->getIdentifier();
+    string superclassNameStr = superClassName ? superClassName->getIdentifier() : "";
+    
+    // Находим класс
+    ClassInfo* cls = context.lookupClass(classNameStr);
+    if (!cls) {
+        // Класс должен быть объявлен в интерфейсе
+        throw class_exception("Class '" + classNameStr + "' not declared in interface",
+            "ImplementationNode::analyzeSemantics", -1, -1);
+    }
+    
+    cls->markAsImplementation();
+    
+    // Проверяем суперкласс (если указан)
+    if (!superclassNameStr.empty()) {
+        ClassInfo* superclass = context.lookupClass(superclassNameStr);
+        if (!superclass) {
+            throw class_exception("Undefined super class '" + superclassNameStr + "'",
+                "ImplementationNode::analyzeSemantics", -1, -1,
+                "Class: " + classNameStr);
+        }
+        
+        // Проверяем совместимость с объявлением в интерфейсе
+        if (cls->superclass && cls->superclass->name != superclassNameStr) {
+            throw class_exception("Superclass mismatch in implementation",
+                "ImplementationNode::analyzeSemantics", -1, -1,
+                "Interface: " + (cls->superclass ? cls->superclass->name : "none") +
+                ", Implementation: " + superclassNameStr);
+        }
+    }
+    
+    ClassInfo* prevClass = context.getCurrentClass();
+    context.enterClassScope(cls);
+    
+    try {
+        // Анализируем переменные экземпляра
+        if (instanceVars) {
+            instanceVars->analyzeSemantics(context);
+        }
+        
+        // Анализируем определения методов
+        if (implDefList) {
+            implDefList->analyzeSemantics(context);
+        }
+        
+        // Проверяем, что все методы, объявленные в интерфейсе, определены
+        checkAllMethodsImplemented(cls, context);
+        
+        context.leaveScope();
+        context.setCurrentClass(prevClass);
+        
+    } catch (...) {
+        context.leaveScope();
+        context.setCurrentClass(prevClass);
+        throw;
+    }
+}
+
+void ImplementationNode::checkAllMethodsImplemented(ClassInfo* cls, SemanticContext& context) {
+    // TODO: Реализовать проверку, что все методы, объявленные в интерфейсе, имеют определения в реализации
+    
+    // Пока что просто отмечаем, что класс имеет реализацию
+    // В будущем можно добавить проверку:
+    // 1. Все методы, объявленные в интерфейсе (instanceMethodDecls)
+    // 2. Все свойства должны иметь реализацию геттеров/сеттеров
+    // 3. Проверка обязательных методов (init, dealloc и т.д.)
+}
 
 //--------------------------------------------------------------InterfaceNode--------------------------------------------------------------
 
@@ -1767,31 +2454,54 @@ void InterfaceNode::processProperties(SemanticContext& context) {
         Type propertyType = convertTypeNodeToType(property->getType());
         bool isReadonly = property->getAttribute() == Attribute::READONLY;
         
-        string ivarName = "_" + propertyName;
+        // Проверяем, есть ли уже поле с именем свойства
+        if (cls->lookupField(propertyName, false)) {
+            // Поле уже существует, возможно, это ivar
+            // В Objective-C свойство может использовать существующее поле
+            continue;
+        }
         
+        // Создаем ivar для свойства (если его еще нет)
+        string ivarName = "_" + propertyName;
+
         if (!cls->lookupField(ivarName, false)) {
             auto ivar = make_unique<FieldInfo>(ivarName, propertyType, true, cls);
             cls->addField(move(ivar));
-        } // нужно ли добавлять исключение при уже объявленном ivar ???
+        }
         
+        // Добавляем маппинг свойства на ivar
         cls->addPropertyMapping(propertyName, ivarName);
         
+        // Создаем геттер
         string getterName = context.generateGetterName(propertyName);
         if (!cls->lookupMethod(getterName)) {
             auto getter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
+            // TODO: Установить selector и keywords для Objective-C
+            // getter->selector = propertyName;
+            // getter->keywords = {""};
             cls->addMethod(move(getter));
         }
         
+        // Создаем сеттер для не-readonly свойств
         if (!isReadonly) {
             string setterName = context.generateSetterName(propertyName);
             if (!cls->lookupMethod(setterName)) {
                 Type voidType(TypeKind::VOID);
                 auto setter = make_unique<MethodInfo>(setterName, voidType, false, cls);
+                
+                // Устанавливаем параметр для сеттера
                 auto param = make_unique<LocalVarInfo>("value", propertyType, true, setter.get());
                 setter->addParameter(move(param));
+                
+                // TODO: Установить selector и keywords для Objective-C
+                // setter->selector = "set" + propertyName + ":";
+                // setter->keywords = {"set" + propertyName};
+                
                 cls->addMethod(move(setter));
             }
         }
+        
+        // TODO: Сохранить атрибуты свойства для генерации кода
     }
 }
 
