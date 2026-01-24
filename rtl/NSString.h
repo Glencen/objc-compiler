@@ -5,42 +5,38 @@
 
 class NSString : public NSObject {
 public:
-    // Конструкторы
-    NSString();                        // пустая строка
-    explicit NSString(const std::string& str); // строка из std::string
-    NSString(const NSString& other);   // копия другой строки
+    // ------------------- Конструкторы -------------------
+    NSString();
+    NSString(const std::string& str);
+    NSString(const NSString& other);
 
-    virtual ~NSString() = default;
-
-    // ===============================
-    // Статические методы
-    // ===============================
+    // ------------------- Статические методы -------------------
     static std::unique_ptr<NSString> stringStatic();
     static std::unique_ptr<NSString> stringWithCStringStatic(const char* cstr);
     static std::unique_ptr<NSString> stringWithStringStatic(const NSString& str);
 
-    // ===============================
-    // Динамические методы
-    // ===============================
-    virtual std::unique_ptr<char[]> cStringDynamic();
-    virtual std::unique_ptr<NSString> capitalizeStringDynamic();
-    virtual char characterAtIndexDynamic(int index);
-    virtual int hasPrefixDynamic(const NSString& prefix);
-    virtual int hasSuffixDynamic(const NSString& suffix);
-    virtual std::unique_ptr<NSString> init();
-    virtual int intValueDynamic();
-    virtual int isEqualDynamic(NSObject* other);
-    virtual int isEqualToStringDynamic(const NSString& other);
-    virtual int lengthDynamic();
-    virtual std::unique_ptr<NSString> lowercaseStringDynamic();
-    virtual std::unique_ptr<NSString> uppercaseStringDynamic();
-    virtual std::unique_ptr<NSString> stringByAppendingStringDynamic(const NSString& other);
-    virtual std::unique_ptr<NSString> descriptionDynamic();
+    // ------------------- Динамические методы -------------------
+    std::unique_ptr<char[]> cStringDynamic();
+    std::unique_ptr<NSString> capitalizeStringDynamic();
+    char characterAtIndexDynamic(int index);
+    int hasPrefixDynamic(const NSString& prefix);
+    int hasSuffixDynamic(const NSString& suffix);
+    std::unique_ptr<NSString> init();
+    int intValueDynamic();
+    int isEqualDynamic(NSObject* other);
+    int isEqualToStringDynamic(const NSString& other);
+    int lengthDynamic();
+    std::unique_ptr<NSString> lowercaseStringDynamic();
+    std::unique_ptr<NSString> uppercaseStringDynamic();
+    std::unique_ptr<NSString> stringByAppendingStringDynamic(const NSString& other);
+
+    // ⚡ Виртуальный метод базового класса
+    std::string descriptionDynamic() override;
+
+    // ------------------- Инициализация ClassInfo -------------------
+    static void initClassInfo(ClassInfo* info);
 
 protected:
     std::string string;
-
-public:
-    // Ссылка на ClassInfo для NSString
     static ClassInfo* s_classInfo;
 };

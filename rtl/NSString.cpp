@@ -9,9 +9,7 @@ ClassInfo* NSString::s_classInfo = nullptr;
 
 // ------------------- Конструкторы -------------------
 NSString::NSString() : string("") {}
-
 NSString::NSString(const std::string& str) : string(str) {}
-
 NSString::NSString(const NSString& other) : string(other.string) {}
 
 // ------------------- Статические методы -------------------
@@ -100,11 +98,12 @@ std::unique_ptr<NSString> NSString::stringByAppendingStringDynamic(const NSStrin
     return std::make_unique<NSString>(string + other.string);
 }
 
-std::unique_ptr<NSString> NSString::descriptionDynamic() {
-    return std::make_unique<NSString>(string);
+// ⚡ Виртуальный метод базового класса NSObject
+std::string NSString::descriptionDynamic() {
+    return string;
 }
 
 // ------------------- Инициализация ClassInfo -------------------
-void initNSStringClassInfo(ClassInfo* info) {
-    NSString::s_classInfo = info;
+void NSString::initClassInfo(ClassInfo* info) {
+    s_classInfo = info;
 }
