@@ -1,4 +1,5 @@
 #include "context.h"
+#include <unordered_map>
 
 Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) { // TODO: куда впихнуть TYPE_ID ???
     if (!typeNode) return Type(TypeKind::NONE);
@@ -2379,13 +2380,61 @@ void ImplementationNode::processProperties(SemanticContext& context) {
     ClassInfo* cls = context.getCurrentClass();
     if (!cls) return;
     
-    // Пока что используем свойства из интерфейса
-    list<PropertyNode*> properties = *interfaceDeclList->getProperties();
+    // Получаем свойства из реализации
+    ImplementationDefListNode* implDefList = getImplDefList();
+    if (!implDefList) return;
     
-    for (auto* property : properties) {
+    list<PropertyNode*>* implProperties = implDefList->getproperties();
+    if (!implProperties) return;
+    
+    // Получаем свойства из интерфейса (если есть)
+    list<PropertyNode*>* interfaceProperties = nullptr;
+    if (cls->interface && cls->interface->getInterfaceDeclList()) {
+        interfaceProperties = cls->interface->getInterfaceDeclList()->getProperties();
+    }
+    
+    // Создаем карту свойств интерфейса для быстрого поиска
+    unordered_map<string, PropertyNode*> interfacePropertyMap;
+    if (interfaceProperties) {
+        for (PropertyNode* prop : *interfaceProperties) {
+            if (prop && prop->getName()) {
+                string propName = prop->getName()->getIdentifier();
+                interfacePropertyMap[propName] = prop;
+            }
+        }
+    }
+    
+    // Обрабатываем свойства реализации
+    for (PropertyNode* property : *implProperties) {
+        if (!property) continue;
+        
         string propertyName = property->getName()->getIdentifier();
         Type propertyType = convertTypeNodeToType(property->getType());
         bool isReadonly = property->getAttribute() == Attribute::READONLY;
+        
+        PropertyNode* interfaceProperty = nullptr;
+        auto it = interfacePropertyMap.find(propertyName);
+        if (it != interfacePropertyMap.end()) {
+            interfaceProperty = it->second;
+            
+            // Проверяем совместимость типов
+            Type interfaceType = convertTypeNodeToType(interfaceProperty->getType());
+            if (!propertyType.equal(&interfaceType)) {
+                throw semantic_exception("Property type mismatch between interface and implementation",
+                    "ImplementationNode::processProperties", -1, -1,
+                    "Property: " + propertyName + 
+                    ", Interface type: " + interfaceType.getDescriptor() +
+                    ", Implementation type: " + propertyType.getDescriptor());
+            }
+            
+            // Проверяем совместимость атрибутов readonly
+            bool interfaceReadonly = interfaceProperty->getAttribute() == Attribute::READONLY;
+            if (interfaceReadonly && !isReadonly) {
+                throw semantic_exception("Cannot make readonly property writable in implementation",
+                    "ImplementationNode::processProperties", -1, -1,
+                    "Property: " + propertyName);
+            }
+        }
         
         // Получаем имя ivar из маппинга или генерируем
         string ivarName = cls->getIvarForProperty(propertyName);
@@ -2393,20 +2442,114 @@ void ImplementationNode::processProperties(SemanticContext& context) {
             ivarName = "_" + propertyName;
         }
         
-        // Проверяем, существует ли ivar
+        // Проверяем, существует ли ivar в текущем классе
         FieldInfo* ivar = cls->lookupField(ivarName, false);
         
         if (ivar) {
+            // IVar уже существует
             // В реализации всегда устанавливаем private для ivar
             ivar->setAccessModifier(AccessModifier::PRIVATE);
+            
+            // Проверяем совместимость типов
+            if (!propertyType.equal(&ivar->type)) {
+                throw semantic_exception("Property type does not match existing ivar type",
+                    "ImplementationNode::processProperties", -1, -1,
+                    "Property: " + propertyName + 
+                    ", Property type: " + propertyType.getDescriptor() +
+                    ", IVar type: " + ivar->type.getDescriptor());
+            }
         } else {
-            // Создаем ivar с модификатором private
-            auto newIvar = make_unique<FieldInfo>(ivarName, propertyType, true, cls, AccessModifier::PRIVATE);
+            // Создаем новую ivar
+            // В реализации всегда private
+            AccessModifier ivarAccess = AccessModifier::PRIVATE;
+            auto newIvar = make_unique<FieldInfo>(ivarName, propertyType, true, cls, ivarAccess);
+            ivar = newIvar.get();
             cls->addField(move(newIvar));
+            
+            // Добавляем маппинг свойства к ivar
+            cls->addPropertyMapping(propertyName, ivarName);
         }
         
-        // Проверяем существование геттера и сеттера
-        // (они уже должны быть созданы в интерфейсе)
+        // Проверяем/создаем геттер
+        string getterName = context.generateGetterName(propertyName);
+        MethodInfo* getter = cls->lookupMethod(getterName, {}, {}, false);
+        
+        if (getter) {
+            // Геттер уже существует, проверяем совместимость
+            if (!propertyType.equal(&getter->getReturnType())) {
+                throw semantic_exception("Getter return type does not match property type",
+                    "ImplementationNode::processProperties", -1, -1,
+                    "Property: " + propertyName + 
+                    ", Property type: " + propertyType.getDescriptor() +
+                    ", Getter return type: " + getter->getReturnType().getDescriptor());
+            }
+            
+            if (getter->getParameterCount() > 0) {
+                throw semantic_exception("Getter should not have parameters",
+                    "ImplementationNode::processProperties", -1, -1,
+                    "Property: " + propertyName);
+            }
+        } else {
+            // Создаем геттер
+            auto newGetter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
+            newGetter->selector = getterName;
+            newGetter->keywords = {""};
+            cls->addMethod(move(newGetter));
+        }
+        
+        // Проверяем/создаем сеттер (если свойство не readonly)
+        if (!isReadonly) {
+            string setterName = context.generateSetterName(propertyName);
+            MethodInfo* setter = cls->lookupMethod(setterName, {}, {}, false);
+            
+            if (setter) {
+                // Сеттер уже существует, проверяем совместимость
+                Type voidType(TypeKind::VOID);
+                if (!setter->getReturnType().equal(&voidType)) {
+                    throw semantic_exception("Setter should return void",
+                        "ImplementationNode::processProperties", -1, -1,
+                        "Property: " + propertyName);
+                }
+                
+                if (setter->getParameterCount() != 1) {
+                    throw semantic_exception("Setter should have exactly one parameter",
+                        "ImplementationNode::processProperties", -1, -1,
+                        "Property: " + propertyName);
+                }
+                
+                const LocalVarInfo* param = setter->getParameter(0);
+                if (!propertyType.equal(&param->type)) {
+                    throw semantic_exception("Setter parameter type does not match property type",
+                        "ImplementationNode::processProperties", -1, -1,
+                        "Property: " + propertyName + 
+                        ", Property type: " + propertyType.getDescriptor() +
+                        ", Setter parameter type: " + param->type.getDescriptor());
+                }
+            } else {
+                // Создаем сеттер
+                Type voidType(TypeKind::VOID);
+                auto newSetter = make_unique<MethodInfo>(setterName, voidType, false, cls);
+                newSetter->selector = setterName + ":";
+                newSetter->keywords = {setterName.substr(3)}; // Убираем "set" и делаем lowercase
+                
+                // Добавляем параметр
+                auto param = make_unique<LocalVarInfo>("value", propertyType, true, newSetter.get());
+                newSetter->parameterTypes.push_back(&propertyType);
+                newSetter->addParameter(move(param));
+                
+                cls->addMethod(move(newSetter));
+            }
+        }
+        
+        // Если свойство также существует в интерфейсе, убедимся, что оно связано с теми же методами
+        if (interfaceProperty) {
+            // Проверяем, что маппинг совпадает
+            string interfaceIvarName = cls->getIvarForProperty(propertyName);
+            if (!interfaceIvarName.empty() && interfaceIvarName != ivarName) {
+                // Обновляем маппинг для реализации
+                cls->addPropertyMapping(propertyName, ivarName);
+            }
+        }
     }
 }
 
