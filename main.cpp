@@ -137,6 +137,7 @@ int main(int argc, char* argv[])
         try {
             SemanticContext& inst = SemanticContext::getInstance();
             inst.initSemanticContext();
+            root->analyzeSemantics(inst);
             inst.dumpClassHierarchy();
             cout << "\n\n\n\n\n" << endl;
             inst.dumpCurrentScope();
