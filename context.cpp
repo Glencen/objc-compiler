@@ -130,7 +130,7 @@ bool Type::isArray() const {
     return !arraySizes.empty() && arrayDimension > 0;
 }
 
-string Type::toString() const {
+string Type::toString() const { // TODO: добавить отображение размерности массивов
     switch (dataType) {
         case TypeKind::INT:         return "int";
         case TypeKind::FLOAT:       return "float";
@@ -876,7 +876,8 @@ bool SemanticContext::isAssignable(const Type& from, const Type& to) const {
         return true;
     }
     
-    if (from.dataType == TypeKind::NONE && (to.dataType == TypeKind::CLASS_NAME || to.isArray())) {
+    if (from.dataType == TypeKind::NONE && 
+        (to.dataType == TypeKind::CLASS_NAME)) {
         return true;
     }
     
@@ -896,30 +897,84 @@ bool SemanticContext::isAssignable(const Type& from, const Type& to) const {
         Type toElem(to.dataType, to.className);
         return isAssignable(fromElem, toElem);
     }
-    // TODO: проверить каст по иерархии наследования
+    
+    if ((from.dataType == TypeKind::INT && to.dataType == TypeKind::CHAR) ||
+        (from.dataType == TypeKind::CHAR && to.dataType == TypeKind::INT)) {
+        return true;
+    }
+    
     return false;
 }
 
 bool SemanticContext::isConvertible(const Type& from, const Type& to) const {
-    // Конвертация включает явные приведения
     if (isAssignable(from, to)) return true;
     
-    // Дополнительные правила конвертации:
-    // 1. bool -> int
-    if (from.dataType == TypeKind::BOOL && to.dataType == TypeKind::INT) {
+    if (from.isNumeric() && to.isNumeric()) {
         return true;
     }
     
-    // 2. String -> char[]
+    // 1. bool <-> int
+    if ((from.dataType == TypeKind::BOOL && to.dataType == TypeKind::INT) ||
+        (from.dataType == TypeKind::INT && to.dataType == TypeKind::BOOL)) {
+        return true;
+    }
+    
+    // 2. bool <-> float
+    if ((from.dataType == TypeKind::BOOL && to.dataType == TypeKind::FLOAT) ||
+        (from.dataType == TypeKind::FLOAT && to.dataType == TypeKind::BOOL)) {
+        return true;
+    }
+    
+    // 3. char <-> int (в обе стороны)
+    if ((from.dataType == TypeKind::CHAR && to.dataType == TypeKind::INT) ||
+        (from.dataType == TypeKind::INT && to.dataType == TypeKind::CHAR)) {
+        return true;
+    }
+    
+    // 4. char -> float
+    if (from.dataType == TypeKind::CHAR && to.dataType == TypeKind::FLOAT) {
+        return true;
+    }
+    
+    // 5. String -> char[] или char -> char[]
     if (from.dataType == TypeKind::CHAR && to.isArray() && 
         to.dataType == TypeKind::CHAR) {
         return true;
     }
     
-    // 3. Любой объект -> Object
     if (from.dataType == TypeKind::CLASS_NAME && 
         to.dataType == TypeKind::CLASS_NAME && 
-        to.className == "Object") {
+        to.className == "rtl/NSObject") {
+        return true;
+    }
+    
+    if (from.dataType == TypeKind::CLASS_NAME && 
+        to.dataType == TypeKind::CLASS_NAME) {
+        auto fromClass = lookupClass(from.className);
+        auto toClass = lookupClass(to.className);
+        
+        if (fromClass && toClass) {
+            return fromClass->isSubclassOf(toClass) || 
+                   toClass->isSubclassOf(fromClass);
+        }
+    }
+    
+    if (from.isArray() && to.isArray()) {
+        if (from.arrayDimension != to.arrayDimension) return false;
+        
+        Type fromElem(from.dataType, from.className);
+        Type toElem(to.dataType, to.className);
+        
+        return isConvertible(fromElem, toElem);
+    }
+    
+    if ((from.dataType == TypeKind::TYPE_ID && to.dataType == TypeKind::CLASS_NAME) ||
+        (from.dataType == TypeKind::CLASS_NAME && to.dataType == TypeKind::TYPE_ID)) {
+        return true;
+    }
+    
+    if (from.dataType == TypeKind::NONE && // TODO: добавить обработку nil
+        (to.dataType == TypeKind::CLASS_NAME)) {
         return true;
     }
     
