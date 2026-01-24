@@ -735,14 +735,6 @@ ExprNode* ExprNode::getBoxedExpr() const {
     return boxedExpr;
 }
 
-void ExprNode::setType(Type* type) {
-    exprType = type;
-}
-
-Type* ExprNode::getExprType() const {
-    return exprType;
-}
-
 void ExprNode::setFieldRefConstantId(int id) {
     fieldRefConstantId = id;
 }

@@ -442,7 +442,6 @@ public:
     void analyzeForInSemantics(SemanticContext& context);
     void analyzeTypedForInSemantics(SemanticContext& context);
     void analyzeIfElseSemantics(SemanticContext& context);
-    void analyzeDoWhileSemantics(SemanticContext& context);
     void analyzeIfSemantics(SemanticContext& context);
     void analyzeReturnSemantics(SemanticContext& context);
     void analyzeDeclarationSemantics(SemanticContext& context);
