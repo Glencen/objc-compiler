@@ -147,8 +147,9 @@ public:
     Attribute attribute = Attribute::NONE;
     string getterName;
     string setterName;
+    AccessModifier accessModifier = AccessModifier::PROTECTED;
 
-    FieldInfo(const string& name, const Type& type, bool isInstance = true, ClassInfo* declaringClass = nullptr);
+    FieldInfo(const string& name, const Type& type, bool isInstance = true, ClassInfo* declaringClass = nullptr, AccessModifier access = AccessModifier::PROTECTED);
 
     string toString() const override;
     
@@ -156,6 +157,8 @@ public:
     bool hasSetter() const;
     bool isClassField() const;
     bool isInstanceField() const;
+
+    void setAccessModifier(AccessModifier access);
 };
 
 class LocalVarInfo : public SymbolInfo {

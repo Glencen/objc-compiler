@@ -145,10 +145,11 @@ bool LocalVarInfo::isParam() const {
 
 //--------------------------------------------------------------FieldInfo--------------------------------------------------------------
 
-FieldInfo::FieldInfo(const string& name, const Type& type, bool isInstance, ClassInfo* declaringClass)
+FieldInfo::FieldInfo(const string& name, const Type& type, bool isInstance, ClassInfo* declaringClass, AccessModifier access)
     : SymbolInfo(SymbolKind::FIELD, name, type),
       declaringClass(declaringClass),
-      isInstance(isInstance) {}
+      isInstance(isInstance),
+      accessModifier(access) {}
 
 string FieldInfo::toString() const {
     string base = SymbolInfo::toString();
@@ -176,6 +177,10 @@ bool FieldInfo::isClassField() const {
 
 bool FieldInfo::isInstanceField() const {
     return isInstance;
+}
+
+void FieldInfo::setAccessModifier(AccessModifier access) {
+    accessModifier = access;
 }
 
 //--------------------------------------------------------------MethodInfo--------------------------------------------------------------
