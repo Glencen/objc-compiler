@@ -82,7 +82,20 @@ bool Type::isCastableTo(const Type* other) const {
         || this->dataType == TypeKind::CLASS_NAME && other->dataType == TypeKind::TYPE_ID) {
         return true;
     }
-    return false; //TODO: Сделать проверку на каст с float и int, bool и float, bool и int, на каст объекта родительского класса в объект класса-наследника
+    if (this->dataType == TypeKind::FLOAT && other->dataType == TypeKind::INT
+        || this->dataType == TypeKind::INT && other->dataType == TypeKind::FLOAT) {
+        return true;
+    }
+    if (this->dataType == TypeKind::BOOL && other->dataType == TypeKind::FLOAT
+        || this->dataType == TypeKind::FLOAT && other->dataType == TypeKind::BOOL) {
+        return true;
+    }
+    if (this->dataType == TypeKind::BOOL && other->dataType == TypeKind::INT
+        || this->dataType == TypeKind::INT && other->dataType == TypeKind::BOOL) {
+        return true;
+    }
+    
+    return false; //TODO: Сделать проверку на каст объекта родительского класса в объект класса-наследника
 }
 
 bool Type::isPrimitive() const {
