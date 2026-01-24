@@ -253,6 +253,10 @@ ReceiverKind ReceiverNode::getKind() const {
     return kind;
 }
 
+ValueNode* ReceiverNode::getClassName() const {
+    return className;
+}
+
 ExprNode* ReceiverNode::getExpr() const {
     return expr;
 }

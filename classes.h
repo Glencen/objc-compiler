@@ -107,6 +107,7 @@ public:
     static ReceiverNode* createSuper();
 
     ReceiverKind getKind() const;
+    ValueNode* getClassName() const;
     ExprNode* getExpr() const;
 
     void analyzeSemantics(SemanticContext& context) override;
