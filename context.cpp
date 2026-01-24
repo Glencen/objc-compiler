@@ -424,6 +424,18 @@ void ClassInfo::setSuperclass(ClassInfo* superclass) {
     this->superclass = superclass;
 }
 
+void ClassInfo::setInterface(InterfaceNode* node) {
+    if (node) {
+        interface = node;
+    }
+}
+
+void ClassInfo::setImplementation(ImplementationNode* node) {
+    if (node) {
+        implementation = node;
+    }
+}
+
 bool ClassInfo::hasSuperclass() const {
     return superclass != nullptr;
 }

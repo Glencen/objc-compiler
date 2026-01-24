@@ -69,6 +69,8 @@ public:
     bool hasInterface = false;
     bool hasImplementation = false;
     map<string, string> propertyIvarMapping;
+    InterfaceNode* interface = nullptr;
+    ImplementationNode* implementation = nullptr;
     
     map<string, unique_ptr<FieldInfo>> fields;
     map<string, vector<unique_ptr<MethodInfo>>> methods;
@@ -98,6 +100,8 @@ public:
     size_t getMethodCount(bool instanceOnly = false) const;
 
     void setSuperclass(ClassInfo* superclass);
+    void setInterface(InterfaceNode* node);
+    void setImplementation(ImplementationNode* node);
 
     bool hasSuperclass() const;
 

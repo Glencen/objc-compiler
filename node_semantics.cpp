@@ -2385,8 +2385,8 @@ void ImplementationNode::analyzeSemantics(SemanticContext& context) {
     }
     
     cls->markAsImplementation();
+    cls->setImplementation(this);
     
-    // Проверяем суперкласс (если указан)
     if (!superclassNameStr.empty()) {
         ClassInfo* superclass = context.lookupClass(superclassNameStr);
         if (!superclass) {
@@ -2524,6 +2524,7 @@ void InterfaceNode::analyzeSemantics(SemanticContext& context) {
         context.addClass(move(newClass));
     }
     cls->markAsInterface();
+    cls->setInterface(this);
     
     ClassInfo* prevClass = context.getCurrentClass();
     context.enterClassScope(cls);
