@@ -455,12 +455,11 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
     vector<const Type*> argTypes;
     
     if (selector->getKind() == MsgSelectorKind::SIMPLE_SEL) {
-        keywords.push_back(selector->getIdentifier()->getIdentifier());
+        string idName = selector->getIdentifier()->getIdentifier();
+        keywords.push_back(idName);
     } else if (selector->getKind() == MsgSelectorKind::ARGUMENT_LIST) {
         MsgArgListNode* argList = selector->getMsgArgList();
         if (argList) {
-            argList->analyzeSemantics(context);
-            
             auto args = argList->getMsgArgList();
             if (args) {
                 for (MsgArgNode* argNode : *args) {
@@ -994,7 +993,7 @@ void ExprNode::analyzeArrayAccessSemantics(SemanticContext& context) {
     if (!operand->getExprType() || !operand->getExprType()->isArray()) {
         throw semantic_exception("Array access operand must be an array",
             "ExprNode::analyzeArrayAccessSemantics", -1, -1,
-            "Got type: " + operand->getExprType()->getDescriptor());
+            "Got type: " + operand->getExprType()->toString());
     }
     
     // Проверяем, что индекс целочисленный
@@ -1002,7 +1001,7 @@ void ExprNode::analyzeArrayAccessSemantics(SemanticContext& context) {
     if (!index->getExprType() || !index->getExprType()->equal(&intType)) {
         throw semantic_exception("Array index must be integer",
             "ExprNode::analyzeArrayAccessSemantics", -1, -1,
-            "Got type: " + index->getExprType()->getDescriptor());
+            "Got type: " + index->getExprType()->toString());
     }
     
     // Тип результата - тип элемента массива
@@ -1054,8 +1053,8 @@ void ExprNode::analyzeFunctionCallSemantics(SemanticContext& context) {
         if (param && !context.isAssignable(*argTypes[i], param->type)) {
             throw semantic_exception("Type mismatch in function call argument " + to_string(i + 1),
                 "ExprNode::analyzeFunctionCallSemantics", -1, -1,
-                "Expected: " + param->type.getDescriptor() + 
-                ", Got: " + argTypes[i]->getDescriptor());
+                "Expected: " + param->type.toString() + 
+                ", Got: " + argTypes[i]->toString());
         }
     }
     
@@ -1367,7 +1366,7 @@ void StmtNode::analyzeIfSemantics(SemanticContext& context) {
     if (!conditionType.equal(&boolType) && !context.isConvertible(conditionType, boolType)) {
         throw statement_exception("If condition must be boolean or convertible to boolean",
             "StmtNode::analyzeIfSemantics", -1, -1,
-            "Got type: " + conditionType.getDescriptor());
+            "Got type: " + conditionType.toString());
     }
     
     if (thenBranch) {
@@ -1513,7 +1512,7 @@ void StmtNode::analyzeWhileSemantics(SemanticContext& context) {
     if (!conditionType.equal(&boolType) && !context.isConvertible(conditionType, boolType)) {
         throw statement_exception("While condition must be boolean",
             "StmtNode::analyzeWhileSemantics", -1, -1,
-            "Got type: " + conditionType.getDescriptor());
+            "Got type: " + conditionType.toString());
     }
     
     if (body) {
@@ -1544,7 +1543,7 @@ void StmtNode::analyzeDoWhileSemantics(SemanticContext& context) {
     if (!conditionType.equal(&boolType) && !context.isConvertible(conditionType, boolType)) {
         throw statement_exception("Do-while condition must be boolean",
             "StmtNode::analyzeDoWhileSemantics", -1, -1,
-            "Got type: " + conditionType.getDescriptor());
+            "Got type: " + conditionType.toString());
     }
 }
 
@@ -1752,14 +1751,14 @@ void FuncDefNode::checkReturnStatements(FunctionInfo* func, SemanticContext& con
         if (returnStmts.empty()) {
             throw function_exception("Function '" + func->name + "' must return a value",
                 "FuncDefNode::checkReturnStatements", -1, -1, 
-                "Return type: " + returnType.getDescriptor());
+                "Return type: " + returnType.toString());
         }
         
         for (StmtNode* stmt : returnStmts) {
             if (stmt->getExpr() == nullptr) {
                 throw function_exception("Function '" + func->name + "' must return a value, not void",
                     "FuncDefNode::checkReturnStatements", -1, -1,
-                    "Return type: " + returnType.getDescriptor());
+                    "Return type: " + returnType.toString());
             }
             
             stmt->getExpr()->analyzeSemantics(context);
@@ -1768,8 +1767,8 @@ void FuncDefNode::checkReturnStatements(FunctionInfo* func, SemanticContext& con
             if (!context.isAssignable(exprType, returnType)) {
                 throw function_exception("Function '" + func->name + "' return type mismatch",
                     "FuncDefNode::checkReturnStatements", -1, -1,
-                    "Expected: " + returnType.getDescriptor() +
-                    ", Got: " + exprType.getDescriptor());
+                    "Expected: " + returnType.toString() +
+                    ", Got: " + exprType.toString());
             }
         }
     }
@@ -1842,8 +1841,8 @@ void FuncDefNode::analyzeSemantics(SemanticContext& context) {
         if (!returnType.equal(&existingFunc->getReturnType())) {
             throw function_exception("Function '" + funcName + "' return type mismatch with previous declaration",
                 "FuncDefNode::analyzeSemantics", -1, -1, 
-                "Expected: " + existingFunc->getReturnType().getDescriptor() + 
-                ", Got: " + returnType.getDescriptor());
+                "Expected: " + existingFunc->getReturnType().toString() + 
+                ", Got: " + returnType.toString());
         }
         
         size_t existingParamCount = existingFunc->getParameterCount();
@@ -1881,8 +1880,8 @@ void FuncDefNode::analyzeSemantics(SemanticContext& context) {
                         throw function_exception("Function '" + funcName + "' parameter type mismatch",
                             "FuncDefNode::analyzeSemantics", -1, -1,
                             "Parameter " + to_string(i + 1) + 
-                            ": Expected: " + existingParam->type.getDescriptor() + 
-                            ", Got: " + paramType.getDescriptor());
+                            ": Expected: " + existingParam->type.toString() + 
+                            ", Got: " + paramType.toString());
                     }
                     
                     i++;
@@ -2183,8 +2182,8 @@ void MethodDefNode::analyzeSemantics(SemanticContext& context) {
         if (!returnType.equal(&existingMethod->getReturnType())) {
             throw semantic_exception("Method '" + methodName + "' return type mismatch with declaration",
                 "MethodDefNode::analyzeSemantics", -1, -1,
-                "Declared: " + existingMethod->getReturnType().getDescriptor() + 
-                ", Defined: " + returnType.getDescriptor());
+                "Declared: " + existingMethod->getReturnType().toString() + 
+                ", Defined: " + returnType.toString());
         }
         
         // Проверяем, что метод еще не определен
@@ -2290,7 +2289,7 @@ void MethodDefNode::checkMethodReturnStatements(MethodInfo* method, SemanticCont
         if (returnStmts.empty()) {
             throw semantic_exception("Method '" + method->name + "' must return a value",
                 "MethodDefNode::checkMethodReturnStatements", -1, -1,
-                "Return type: " + returnType.getDescriptor());
+                "Return type: " + returnType.toString());
         }
         
         // Проверяем, что все return statement имеют совместимые типы
@@ -2298,7 +2297,7 @@ void MethodDefNode::checkMethodReturnStatements(MethodInfo* method, SemanticCont
             if (stmt->getExpr() == nullptr) {
                 throw semantic_exception("Method '" + method->name + "' must return a value, not void",
                     "MethodDefNode::checkMethodReturnStatements", -1, -1,
-                    "Return type: " + returnType.getDescriptor());
+                    "Return type: " + returnType.toString());
             }
             
             // Получаем тип возвращаемого выражения
@@ -2309,8 +2308,8 @@ void MethodDefNode::checkMethodReturnStatements(MethodInfo* method, SemanticCont
             if (!context.isAssignable(exprType, returnType)) {
                 throw semantic_exception("Method '" + method->name + "' return type mismatch",
                     "MethodDefNode::checkMethodReturnStatements", -1, -1,
-                    "Expected: " + returnType.getDescriptor() +
-                    ", Got: " + exprType.getDescriptor());
+                    "Expected: " + returnType.toString() +
+                    ", Got: " + exprType.toString());
             }
         }
     }
@@ -2474,8 +2473,8 @@ void MethodDeclNode::analyzeSemantics(SemanticContext& context) {
         if (!returnType.equal(&existingMethod->getReturnType())) {
             throw semantic_exception("Method '" + methodName + "' already declared with different return type",
                 "MethodDeclNode::analyzeSemantics", -1, -1,
-                "Existing: " + existingMethod->getReturnType().getDescriptor() + 
-                ", New: " + returnType.getDescriptor());
+                "Existing: " + existingMethod->getReturnType().toString() + 
+                ", New: " + returnType.toString());
         }
         
         // Проверяем, совпадают ли типы параметров
@@ -2706,7 +2705,7 @@ void DeclaratorNode::analyzeSemantics(SemanticContext& context) {
                 if (!sizeExpr->getExprType() || !sizeExpr->getExprType()->equal(&intType)) {
                     throw semantic_exception("Array size must be integer",
                         "DeclaratorNode::analyzeSemantics", -1, -1,
-                        "Got type: " + sizeExpr->getExprType()->getDescriptor());
+                        "Got type: " + sizeExpr->getExprType()->toString());
                 }
                 
                 // TODO: Проверить, что размер массива - положительная константа
@@ -2875,8 +2874,8 @@ void ImplementationNode::processProperties(SemanticContext& context) {
                 throw semantic_exception("Property type mismatch between interface and implementation",
                     "ImplementationNode::processProperties", -1, -1,
                     "Property: " + propertyName + 
-                    ", Interface type: " + interfaceType.getDescriptor() +
-                    ", Implementation type: " + propertyType.getDescriptor());
+                    ", Interface type: " + interfaceType.toString() +
+                    ", Implementation type: " + propertyType.toString());
             }
             
             // Проверяем совместимость атрибутов readonly
@@ -2907,8 +2906,8 @@ void ImplementationNode::processProperties(SemanticContext& context) {
                 throw semantic_exception("Property type does not match existing ivar type",
                     "ImplementationNode::processProperties", -1, -1,
                     "Property: " + propertyName + 
-                    ", Property type: " + propertyType.getDescriptor() +
-                    ", IVar type: " + ivar->type.getDescriptor());
+                    ", Property type: " + propertyType.toString() +
+                    ", IVar type: " + ivar->type.toString());
             }
         } else {
             // Создаем новую ivar
@@ -2932,8 +2931,8 @@ void ImplementationNode::processProperties(SemanticContext& context) {
                 throw semantic_exception("Getter return type does not match property type",
                     "ImplementationNode::processProperties", -1, -1,
                     "Property: " + propertyName + 
-                    ", Property type: " + propertyType.getDescriptor() +
-                    ", Getter return type: " + getter->getReturnType().getDescriptor());
+                    ", Property type: " + propertyType.toString() +
+                    ", Getter return type: " + getter->getReturnType().toString());
             }
             
             if (getter->getParameterCount() > 0) {
@@ -2974,8 +2973,8 @@ void ImplementationNode::processProperties(SemanticContext& context) {
                     throw semantic_exception("Setter parameter type does not match property type",
                         "ImplementationNode::processProperties", -1, -1,
                         "Property: " + propertyName + 
-                        ", Property type: " + propertyType.getDescriptor() +
-                        ", Setter parameter type: " + param->type.getDescriptor());
+                        ", Property type: " + propertyType.toString() +
+                        ", Setter parameter type: " + param->type.toString());
                 }
             } else {
                 // Создаем сеттер
