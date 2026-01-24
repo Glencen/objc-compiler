@@ -35,6 +35,7 @@ public:
     bool isPrimitive() const;
     bool isNumeric() const;
     bool isArray() const;
+    string toString() const;
 };
 
 class SymbolInfo {

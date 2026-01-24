@@ -526,7 +526,7 @@ void ExprNode::analyzeUnaryMinusSemantics(SemanticContext& context) {
     if (!operand->getExprType() || !operand->getExprType()->isNumeric()) {
         throw semantic_exception("Unary minus operand must be numeric",
             "ExprNode::analyzeUnaryMinusSemantics", -1, -1,
-            "Got type: " + operand->getExprType()->getDescriptor());
+            "Got type: " + operand->getExprType()->toString());
     }
     
     exprType = new Type(*operand->getExprType());
@@ -545,7 +545,7 @@ void ExprNode::analyzeNotSemantics(SemanticContext& context) {
     if (!operand->getExprType() || !operand->getExprType()->equal(&boolType)) {
         throw semantic_exception("Not operator operand must be boolean",
             "ExprNode::analyzeNotSemantics", -1, -1,
-            "Got type: " + operand->getExprType()->getDescriptor());
+            "Got type: " + operand->getExprType()->toString());
     }
     
     exprType = new Type(TypeKind::BOOL);
@@ -563,7 +563,7 @@ void ExprNode::analyzePostIncSemantics(SemanticContext& context) {
     if (!operand->getExprType() || !operand->getExprType()->isNumeric()) {
         throw semantic_exception("Post-increment operand must be numeric",
             "ExprNode::analyzePostIncSemantics", -1, -1,
-            "Got type: " + operand->getExprType()->getDescriptor());
+            "Got type: " + operand->getExprType()->toString());
     }
     
     // TODO: Проверить, что операнд является l-value
@@ -583,7 +583,7 @@ void ExprNode::analyzePostDecSemantics(SemanticContext& context) {
     if (!operand->getExprType() || !operand->getExprType()->isNumeric()) {
         throw semantic_exception("Post-decrement operand must be numeric",
             "ExprNode::analyzePostDecSemantics", -1, -1,
-            "Got type: " + operand->getExprType()->getDescriptor());
+            "Got type: " + operand->getExprType()->toString());
     }
     
     // TODO: Проверить, что операнд является l-value
@@ -604,13 +604,13 @@ void ExprNode::analyzeAdditionSemantics(SemanticContext& context) {
     if (!left->getExprType() || !left->getExprType()->isNumeric()) {
         throw semantic_exception("Left operand of addition must be numeric",
             "ExprNode::analyzeAdditionSemantics", -1, -1,
-            "Got type: " + left->getExprType()->getDescriptor());
+            "Got type: " + left->getExprType()->toString());
     }
     
     if (!right->getExprType() || !right->getExprType()->isNumeric()) {
         throw semantic_exception("Right operand of addition must be numeric",
             "ExprNode::analyzeAdditionSemantics", -1, -1,
-            "Got type: " + right->getExprType()->getDescriptor());
+            "Got type: " + right->getExprType()->toString());
     }
     
     // Определяем общий тип для числовой операции
@@ -618,8 +618,8 @@ void ExprNode::analyzeAdditionSemantics(SemanticContext& context) {
     if (!commonType) {
         throw semantic_exception("Incompatible types in addition",
             "ExprNode::analyzeAdditionSemantics", -1, -1,
-            "Left: " + left->getExprType()->getDescriptor() + 
-            ", Right: " + right->getExprType()->getDescriptor());
+            "Left: " + left->getExprType()->toString() + 
+            ", Right: " + right->getExprType()->toString());
     }
     
     exprType = new Type(*commonType);
@@ -638,13 +638,13 @@ void ExprNode::analyzeSubtractionSemantics(SemanticContext& context) {
     if (!left->getExprType() || !left->getExprType()->isNumeric()) {
         throw semantic_exception("Left operand of subtraction must be numeric",
             "ExprNode::analyzeSubtractionSemantics", -1, -1,
-            "Got type: " + left->getExprType()->getDescriptor());
+            "Got type: " + left->getExprType()->toString());
     }
     
     if (!right->getExprType() || !right->getExprType()->isNumeric()) {
         throw semantic_exception("Right operand of subtraction must be numeric",
             "ExprNode::analyzeSubtractionSemantics", -1, -1,
-            "Got type: " + right->getExprType()->getDescriptor());
+            "Got type: " + right->getExprType()->toString());
     }
     
     // Определяем общий тип для числовой операции
@@ -652,8 +652,8 @@ void ExprNode::analyzeSubtractionSemantics(SemanticContext& context) {
     if (!commonType) {
         throw semantic_exception("Incompatible types in subtraction",
             "ExprNode::analyzeSubtractionSemantics", -1, -1,
-            "Left: " + left->getExprType()->getDescriptor() + 
-            ", Right: " + right->getExprType()->getDescriptor());
+            "Left: " + left->getExprType()->toString() + 
+            ", Right: " + right->getExprType()->toString());
     }
     
     exprType = new Type(*commonType);
@@ -672,13 +672,13 @@ void ExprNode::analyzeMultiplicationSemantics(SemanticContext& context) {
     if (!left->getExprType() || !left->getExprType()->isNumeric()) {
         throw semantic_exception("Left operand of multiplication must be numeric",
             "ExprNode::analyzeMultiplicationSemantics", -1, -1,
-            "Got type: " + left->getExprType()->getDescriptor());
+            "Got type: " + left->getExprType()->toString());
     }
     
     if (!right->getExprType() || !right->getExprType()->isNumeric()) {
         throw semantic_exception("Right operand of multiplication must be numeric",
             "ExprNode::analyzeMultiplicationSemantics", -1, -1,
-            "Got type: " + right->getExprType()->getDescriptor());
+            "Got type: " + right->getExprType()->toString());
     }
     
     // Определяем общий тип для числовой операции
@@ -686,8 +686,8 @@ void ExprNode::analyzeMultiplicationSemantics(SemanticContext& context) {
     if (!commonType) {
         throw semantic_exception("Incompatible types in multiplication",
             "ExprNode::analyzeMultiplicationSemantics", -1, -1,
-            "Left: " + left->getExprType()->getDescriptor() + 
-            ", Right: " + right->getExprType()->getDescriptor());
+            "Left: " + left->getExprType()->toString() + 
+            ", Right: " + right->getExprType()->toString());
     }
     
     exprType = new Type(*commonType);
@@ -706,13 +706,13 @@ void ExprNode::analyzeDivisionSemantics(SemanticContext& context) {
     if (!left->getExprType() || !left->getExprType()->isNumeric()) {
         throw semantic_exception("Left operand of division must be numeric",
             "ExprNode::analyzeDivisionSemantics", -1, -1,
-            "Got type: " + left->getExprType()->getDescriptor());
+            "Got type: " + left->getExprType()->toString());
     }
     
     if (!right->getExprType() || !right->getExprType()->isNumeric()) {
         throw semantic_exception("Right operand of division must be numeric",
             "ExprNode::analyzeDivisionSemantics", -1, -1,
-            "Got type: " + right->getExprType()->getDescriptor());
+            "Got type: " + right->getExprType()->toString());
     }
     
     // Определяем общий тип для числовой операции
@@ -720,8 +720,8 @@ void ExprNode::analyzeDivisionSemantics(SemanticContext& context) {
     if (!commonType) {
         throw semantic_exception("Incompatible types in division",
             "ExprNode::analyzeDivisionSemantics", -1, -1,
-            "Left: " + left->getExprType()->getDescriptor() + 
-            ", Right: " + right->getExprType()->getDescriptor());
+            "Left: " + left->getExprType()->toString() + 
+            ", Right: " + right->getExprType()->toString());
     }
     
     exprType = new Type(*commonType);
@@ -741,8 +741,8 @@ void ExprNode::analyzeEqualSemantics(SemanticContext& context) {
         !context.isConvertible(*right->getExprType(), *left->getExprType())) {
         throw semantic_exception("Incompatible types in equality comparison",
             "ExprNode::analyzeEqualSemantics", -1, -1,
-            "Left: " + left->getExprType()->getDescriptor() + 
-            ", Right: " + right->getExprType()->getDescriptor());
+            "Left: " + left->getExprType()->toString() + 
+            ", Right: " + right->getExprType()->toString());
     }
     
     exprType = new Type(TypeKind::BOOL);
@@ -762,8 +762,8 @@ void ExprNode::analyzeNotEqualSemantics(SemanticContext& context) {
         !context.isConvertible(*right->getExprType(), *left->getExprType())) {
         throw semantic_exception("Incompatible types in inequality comparison",
             "ExprNode::analyzeNotEqualSemantics", -1, -1,
-            "Left: " + left->getExprType()->getDescriptor() + 
-            ", Right: " + right->getExprType()->getDescriptor());
+            "Left: " + left->getExprType()->toString() + 
+            ", Right: " + right->getExprType()->toString());
     }
     
     exprType = new Type(TypeKind::BOOL);
@@ -782,13 +782,13 @@ void ExprNode::analyzeGreaterSemantics(SemanticContext& context) {
     if (!left->getExprType() || !left->getExprType()->isNumeric()) {
         throw semantic_exception("Left operand of greater than comparison must be numeric",
             "ExprNode::analyzeGreaterSemantics", -1, -1,
-            "Got type: " + left->getExprType()->getDescriptor());
+            "Got type: " + left->getExprType()->toString());
     }
     
     if (!right->getExprType() || !right->getExprType()->isNumeric()) {
         throw semantic_exception("Right operand of greater than comparison must be numeric",
             "ExprNode::analyzeGreaterSemantics", -1, -1,
-            "Got type: " + right->getExprType()->getDescriptor());
+            "Got type: " + right->getExprType()->toString());
     }
     
     exprType = new Type(TypeKind::BOOL);
@@ -807,13 +807,13 @@ void ExprNode::analyzeLessSemantics(SemanticContext& context) {
     if (!left->getExprType() || !left->getExprType()->isNumeric()) {
         throw semantic_exception("Left operand of less than comparison must be numeric",
             "ExprNode::analyzeLessSemantics", -1, -1,
-            "Got type: " + left->getExprType()->getDescriptor());
+            "Got type: " + left->getExprType()->toString());
     }
     
     if (!right->getExprType() || !right->getExprType()->isNumeric()) {
         throw semantic_exception("Right operand of less than comparison must be numeric",
             "ExprNode::analyzeLessSemantics", -1, -1,
-            "Got type: " + right->getExprType()->getDescriptor());
+            "Got type: " + right->getExprType()->toString());
     }
     
     exprType = new Type(TypeKind::BOOL);
@@ -832,13 +832,13 @@ void ExprNode::analyzeLessOrEqualSemantics(SemanticContext& context) {
     if (!left->getExprType() || !left->getExprType()->isNumeric()) {
         throw semantic_exception("Left operand of less than or equal comparison must be numeric",
             "ExprNode::analyzeLessOrEqualSemantics", -1, -1,
-            "Got type: " + left->getExprType()->getDescriptor());
+            "Got type: " + left->getExprType()->toString());
     }
     
     if (!right->getExprType() || !right->getExprType()->isNumeric()) {
         throw semantic_exception("Right operand of less than or equal comparison must be numeric",
             "ExprNode::analyzeLessOrEqualSemantics", -1, -1,
-            "Got type: " + right->getExprType()->getDescriptor());
+            "Got type: " + right->getExprType()->toString());
     }
     
     exprType = new Type(TypeKind::BOOL);
@@ -857,13 +857,13 @@ void ExprNode::analyzeGreaterOrEqualSemantics(SemanticContext& context) {
     if (!left->getExprType() || !left->getExprType()->isNumeric()) {
         throw semantic_exception("Left operand of greater than or equal comparison must be numeric",
             "ExprNode::analyzeGreaterOrEqualSemantics", -1, -1,
-            "Got type: " + left->getExprType()->getDescriptor());
+            "Got type: " + left->getExprType()->toString());
     }
     
     if (!right->getExprType() || !right->getExprType()->isNumeric()) {
         throw semantic_exception("Right operand of greater than or equal comparison must be numeric",
             "ExprNode::analyzeGreaterOrEqualSemantics", -1, -1,
-            "Got type: " + right->getExprType()->getDescriptor());
+            "Got type: " + right->getExprType()->toString());
     }
     
     exprType = new Type(TypeKind::BOOL);
@@ -883,13 +883,13 @@ void ExprNode::analyzeAndSemantics(SemanticContext& context) {
     if (!left->getExprType() || !left->getExprType()->equal(&boolType)) {
         throw semantic_exception("Left operand of logical AND must be boolean",
             "ExprNode::analyzeAndSemantics", -1, -1,
-            "Got type: " + left->getExprType()->getDescriptor());
+            "Got type: " + left->getExprType()->toString());
     }
     
     if (!right->getExprType() || !right->getExprType()->equal(&boolType)) {
         throw semantic_exception("Right operand of logical AND must be boolean",
             "ExprNode::analyzeAndSemantics", -1, -1,
-            "Got type: " + right->getExprType()->getDescriptor());
+            "Got type: " + right->getExprType()->toString());
     }
     
     exprType = new Type(TypeKind::BOOL);
@@ -909,13 +909,13 @@ void ExprNode::analyzeOrSemantics(SemanticContext& context) {
     if (!left->getExprType() || !left->getExprType()->equal(&boolType)) {
         throw semantic_exception("Left operand of logical OR must be boolean",
             "ExprNode::analyzeOrSemantics", -1, -1,
-            "Got type: " + left->getExprType()->getDescriptor());
+            "Got type: " + left->getExprType()->toString());
     }
     
     if (!right->getExprType() || !right->getExprType()->equal(&boolType)) {
         throw semantic_exception("Right operand of logical OR must be boolean",
             "ExprNode::analyzeOrSemantics", -1, -1,
-            "Got type: " + right->getExprType()->getDescriptor());
+            "Got type: " + right->getExprType()->toString());
     }
     
     exprType = new Type(TypeKind::BOOL);
@@ -937,8 +937,8 @@ void ExprNode::analyzeAssignSemantics(SemanticContext& context) {
     if (!context.isAssignable(*right->getExprType(), *left->getExprType())) {
         throw semantic_exception("Type mismatch in assignment",
             "ExprNode::analyzeAssignSemantics", -1, -1,
-            "Left: " + left->getExprType()->getDescriptor() + 
-            ", Right: " + right->getExprType()->getDescriptor());
+            "Left: " + left->getExprType()->toString() + 
+            ", Right: " + right->getExprType()->toString());
     }
     
     exprType = new Type(*left->getExprType());

@@ -130,6 +130,19 @@ bool Type::isArray() const {
     return !arraySizes.empty() && arrayDimension > 0;
 }
 
+string Type::toString() const {
+    switch (dataType) {
+        case TypeKind::INT:         return "int";
+        case TypeKind::FLOAT:       return "float";
+        case TypeKind::BOOL:        return "bool";
+        case TypeKind::CHAR:        return "char";
+        case TypeKind::TYPE_ID:     return "id";
+        case TypeKind::CLASS_NAME:  return className;
+        case TypeKind::VOID:        return "void";
+        default:                    return "undefined type";
+    }
+}
+
 //--------------------------------------------------------------SymbolInfo--------------------------------------------------------------
 
 SymbolInfo::SymbolInfo(SymbolKind kind, const string& name, const Type& type)
