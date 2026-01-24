@@ -12,6 +12,7 @@ class ConstantsTable;
 class LocalVariablesTable;
 class ClassesTableElement;
 class SemanticContext;
+class FunctionInfo;
 
 using namespace std;
 
@@ -389,7 +390,27 @@ public:
     static StmtNode* createDeclaration(DeclNode *decl);
 
     StmtKind getKind() const;
+    ExprNode* getCondition() const;
+    StmtNode* getThenBranch() const;
+    StmtNode* getElseBranch() const;
+    ExprNode* getPost() const;
+    ValueNode* getForInId() const;
+    TypeNode* getForInType() const;
+    ExprNode* getCollection() const;
+    StmtNode* getBody() const;
     StmtListNode* getCompound() const;
+    DeclNode* getDecl() const;
+
+    Type getExpressionType(ExprNode* expr, SemanticContext& context);
+    void analyzeCompoundSemantics(SemanticContext& context);
+    void analyzeDoWhileSemantics(SemanticContext& context);
+    void analyzeWhileSemantics(SemanticContext& context);
+    void analyzeForInSemantics(SemanticContext& context);
+    void analyzeForSemantics(SemanticContext& context);
+    void analyzeIfElseSemantics(SemanticContext& context);
+    void analyzeDoWhileSemantics(SemanticContext& context);
+    void analyzeIfSemantics(SemanticContext& context);
+    void StmtNode::analyzeReturnSemantics(SemanticContext& context);
 
     void analyzeSemantics(SemanticContext& context) override;
 
@@ -487,6 +508,11 @@ public:
     ValueNode* getIdentifier() const;
     ParamListNode* getParamList() const;
     StmtNode* getCompoundStmt() const;
+
+    void checkReturnStatements(FunctionInfo* func, SemanticContext& context);
+    void collectReturnStatements(StmtNode* stmt, vector<StmtNode*>& returnStmts);
+    bool hasReturnExpression(StmtNode* stmt);
+    bool checkReturnExpressionType(StmtNode* stmt, const Type& expectedType, SemanticContext& context);
 
     void analyzeSemantics(SemanticContext& context) override;
 

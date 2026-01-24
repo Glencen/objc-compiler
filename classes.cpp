@@ -1175,9 +1175,47 @@ StmtKind StmtNode::getKind() const {
     return kind;
 }
 
+ExprNode* StmtNode::getCondition() const {
+    return condition;
+}
+
+StmtNode* StmtNode::getThenBranch() const {
+    return thenBranch;
+}
+
+StmtNode* StmtNode::getElseBranch() const {
+    return elseBranch;
+}
+
+ExprNode* StmtNode::getPost() const {
+    return post;
+}
+
+ValueNode* StmtNode::getForInId() const {
+    return forInId;
+}
+
+TypeNode* StmtNode::getForInType() const {
+    return forInType;
+}
+
+ExprNode* StmtNode::getCollection() const {
+    return collection;
+}
+
+StmtNode* StmtNode::getBody() const {
+    return body;
+}
+
+
 StmtListNode* StmtNode::getCompound() const {
     return compound;
 }
+
+DeclNode* StmtNode::getDecl() const {
+    return decl;
+}
+
 
 string StmtNode::getDotLabel() const {
     switch (kind) {
