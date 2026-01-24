@@ -94,6 +94,14 @@ bool Type::isCastableTo(const Type* other) const {
         || this->dataType == TypeKind::INT && other->dataType == TypeKind::BOOL) {
         return true;
     }
+    if (this->dataType == TypeKind::CHAR && other->dataType == TypeKind::FLOAT
+        || this->dataType == TypeKind::FLOAT && other->dataType == TypeKind::CHAR) {
+        return true;
+    }
+    if (this->dataType == TypeKind::BOOL && other->dataType == TypeKind::CHAR
+        || this->dataType == TypeKind::CHAR && other->dataType == TypeKind::BOOL) {
+        return true;
+    }
     if (dataType == TypeKind::CLASS_NAME &&
         other->dataType == TypeKind::CLASS_NAME) {
 
@@ -106,12 +114,11 @@ bool Type::isCastableTo(const Type* other) const {
             return false;
         }
 
-        // upcast или downcast
         return thisClass->isSubclassOf(otherClass) ||
                otherClass->isSubclassOf(thisClass);
     }
     
-    return false; //TODO: Сделать проверку на каст объекта родительского класса в объект класса-наследника
+    return false; //TODO: сделать проверку nil
 }
 
 bool Type::isPrimitive() const {
@@ -869,15 +876,30 @@ bool SemanticContext::isReservedName(const string& name) const {
     return reservedNames.find(name) != reservedNames.end();
 }
 
-bool SemanticContext::isAssignable(const Type& from, const Type& to) const {
+bool SemanticContext::isAssignable(const Type& from, const Type& to) const { //TODO: проверить касты массивов и nil
     if (from.equal(&to)) return true;
     
-    if (from.isNumeric() && to.isNumeric()) {
+    // NONE подразумевает nil
+    if (from.dataType == TypeKind::NONE && 
+        (to.dataType == TypeKind::CLASS_NAME)) {
         return true;
     }
     
-    if (from.dataType == TypeKind::NONE && 
-        (to.dataType == TypeKind::CLASS_NAME)) {
+    // автоматические числовые преобразования (расширяющие)
+    if (from.isNumeric() && to.isNumeric()) {
+        return true;
+    }
+
+    if (from.dataType == TypeKind::INT && to.dataType == TypeKind::CHAR 
+        || from.dataType == TypeKind::CHAR && to.dataType == TypeKind::INT) {
+        return true;
+    }
+    if (from.dataType == TypeKind::FLOAT && to.dataType == TypeKind::CHAR 
+        || from.dataType == TypeKind::CHAR && to.dataType == TypeKind::FLOAT) {
+        return true;
+    }
+    if (from.dataType == TypeKind::BOOL && to.dataType == TypeKind::CHAR 
+        || from.dataType == TypeKind::CHAR && to.dataType == TypeKind::BOOL) {
         return true;
     }
     
@@ -886,94 +908,87 @@ bool SemanticContext::isAssignable(const Type& from, const Type& to) const {
         auto toClass = lookupClass(to.className);
         
         if (fromClass && toClass) {
-            return fromClass->isSubclassOf(toClass);
+            return fromClass->isSubclassOf(toClass); // Только вверх по иерархии
         }
     }
     
     if (from.isArray() && to.isArray()) {
         if (from.arrayDimension != to.arrayDimension) return false;
         
+        // Для массивов - ковариантность (только вверх по иерархии)
         Type fromElem(from.dataType, from.className);
         Type toElem(to.dataType, to.className);
         return isAssignable(fromElem, toElem);
     }
     
-    if ((from.dataType == TypeKind::INT && to.dataType == TypeKind::CHAR) ||
-        (from.dataType == TypeKind::CHAR && to.dataType == TypeKind::INT)) {
-        return true;
-    }
-    
     return false;
 }
 
-bool SemanticContext::isConvertible(const Type& from, const Type& to) const {
+bool SemanticContext::isConvertible(const Type& from, const Type& to) const { //TODO: делать проверки каста массивов[] в тип элемента
     if (isAssignable(from, to)) return true;
     
     if (from.isNumeric() && to.isNumeric()) {
         return true;
     }
     
-    // 1. bool <-> int
-    if ((from.dataType == TypeKind::BOOL && to.dataType == TypeKind::INT) ||
-        (from.dataType == TypeKind::INT && to.dataType == TypeKind::BOOL)) {
-        return true;
-    }
+    // Дополнительные явные преобразования:
     
-    // 2. bool <-> float
-    if ((from.dataType == TypeKind::BOOL && to.dataType == TypeKind::FLOAT) ||
-        (from.dataType == TypeKind::FLOAT && to.dataType == TypeKind::BOOL)) {
-        return true;
-    }
-    
-    // 3. char <-> int (в обе стороны)
+    // char <-> int (уже в числовых, но для ясности)
     if ((from.dataType == TypeKind::CHAR && to.dataType == TypeKind::INT) ||
         (from.dataType == TypeKind::INT && to.dataType == TypeKind::CHAR)) {
         return true;
     }
     
-    // 4. char -> float
+    // TYPE_ID <-> CLASS_NAME
+    if ((from.dataType == TypeKind::TYPE_ID && to.dataType == TypeKind::CLASS_NAME) ||
+        (from.dataType == TypeKind::CLASS_NAME && to.dataType == TypeKind::TYPE_ID)) {
+        return true;
+    }
+    
+    // bool <-> char
+    if ((from.dataType == TypeKind::BOOL && to.dataType == TypeKind::CHAR) ||
+        (from.dataType == TypeKind::CHAR && to.dataType == TypeKind::BOOL)) {
+        return true;
+    }
+    
+    // char -> float (уже в числовых, но для ясности)
     if (from.dataType == TypeKind::CHAR && to.dataType == TypeKind::FLOAT) {
         return true;
     }
     
-    // 5. String -> char[] или char -> char[]
+    // char[] из String или char (для строковых преобразований)
     if (from.dataType == TypeKind::CHAR && to.isArray() && 
         to.dataType == TypeKind::CHAR) {
         return true;
     }
     
-    if (from.dataType == TypeKind::CLASS_NAME && 
-        to.dataType == TypeKind::CLASS_NAME && 
-        to.className == "rtl/NSObject") {
-        return true;
-    }
-    
+    // Явные преобразования по иерархии классов (вверх и вниз)
     if (from.dataType == TypeKind::CLASS_NAME && 
         to.dataType == TypeKind::CLASS_NAME) {
         auto fromClass = lookupClass(from.className);
         auto toClass = lookupClass(to.className);
         
         if (fromClass && toClass) {
+            // Явное преобразование разрешено в обе стороны
             return fromClass->isSubclassOf(toClass) || 
-                   toClass->isSubclassOf(fromClass);
+                   toClass->isSubclassOf(fromClass) ||
+                   fromClass == toClass;
         }
     }
     
+    // Явные преобразования массивов
     if (from.isArray() && to.isArray()) {
         if (from.arrayDimension != to.arrayDimension) return false;
         
         Type fromElem(from.dataType, from.className);
         Type toElem(to.dataType, to.className);
         
+        // для массивов при явном преобразовании разрешены более широкие преобразования
         return isConvertible(fromElem, toElem);
     }
     
-    if ((from.dataType == TypeKind::TYPE_ID && to.dataType == TypeKind::CLASS_NAME) ||
-        (from.dataType == TypeKind::CLASS_NAME && to.dataType == TypeKind::TYPE_ID)) {
-        return true;
-    }
-    
-    if (from.dataType == TypeKind::NONE && // TODO: добавить обработку nil
+    // NONE подразумевает nil
+    if (from.dataType == TypeKind::NONE && 
         (to.dataType == TypeKind::CLASS_NAME)) {
         return true;
     }
