@@ -670,11 +670,14 @@ protected:
 
 class ImplementationDefListNode : public AstNode {
 public:
+    static ImplementationDefListNode* createImplementationDefListWithProperty(PropertyNode *property);
     static ImplementationDefListNode* createImplementationDefListWithClassMethod(MethodDefNode *classMethodDef);
     static ImplementationDefListNode* createImplementationDefListWithInstMethod(MethodDefNode *instanceMethodDef);
+    static ImplementationDefListNode* addProperty(ImplementationDefListNode *implementationDefList, PropertyNode* property);
     static ImplementationDefListNode* addClassMethodDef(ImplementationDefListNode *implementationDefList, MethodDefNode *classMethodDef);
     static ImplementationDefListNode* addInstanceMethodDef(ImplementationDefListNode *implementationDefList, MethodDefNode *instanceMethodDef);
 
+    list<PropertyNode*>* getproperties() const;
     list<MethodDefNode*>* getClassMethodDefs() const;
     list<MethodDefNode*>* getInstanceMethodDefs() const;
 
@@ -684,6 +687,7 @@ public:
     string toDot() const override;
 
 protected:
+    list<PropertyNode*> *properties;
     list<MethodDefNode*> *classMethodDefs;
     list<MethodDefNode*> *instanceMethodDefs;
     
@@ -938,6 +942,7 @@ public:
     void setClassName(string className);
     void setSuperClassName(string superClassName);
 
+    void processProperties(SemanticContext& context);
     void checkAllMethodsImplemented(ClassInfo* cls, SemanticContext& context);
 
     void analyzeSemantics(SemanticContext& context) override;

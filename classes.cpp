@@ -1824,8 +1824,17 @@ ImplementationDefListNode::ImplementationDefListNode() : AstNode() {
     instanceMethodDefs = nullptr;
 }
 
+ImplementationDefListNode* ImplementationDefListNode::createImplementationDefListWithProperty(PropertyNode *property) {
+    ImplementationDefListNode *node = new ImplementationDefListNode();
+    node->properties = new list<PropertyNode*>{property};
+    node->classMethodDefs = new list<MethodDefNode*>();
+    node->instanceMethodDefs = new list<MethodDefNode*>();
+    return node;
+}
+
 ImplementationDefListNode* ImplementationDefListNode::createImplementationDefListWithClassMethod(MethodDefNode *classMethodDef) {
     ImplementationDefListNode *node = new ImplementationDefListNode();
+    node->properties = new list<PropertyNode*>();
     node->classMethodDefs = new list<MethodDefNode*>{classMethodDef};
     node->instanceMethodDefs = new list<MethodDefNode*>();
     return node;
@@ -1833,9 +1842,18 @@ ImplementationDefListNode* ImplementationDefListNode::createImplementationDefLis
 
 ImplementationDefListNode* ImplementationDefListNode::createImplementationDefListWithInstMethod(MethodDefNode *instanceMethodDef) {
     ImplementationDefListNode *node = new ImplementationDefListNode();
+    node->properties = new list<PropertyNode*>();
     node->classMethodDefs = new list<MethodDefNode*>();
     node->instanceMethodDefs = new list<MethodDefNode*>{instanceMethodDef};
     return node;
+}
+
+ImplementationDefListNode* ImplementationDefListNode::addProperty(ImplementationDefListNode *implementationDefList, PropertyNode* property) {
+    if (!implementationDefList->properties) {
+        implementationDefList->properties = new std::list<PropertyNode*>();
+    }
+    implementationDefList->properties->push_back(property);
+    return implementationDefList;
 }
 
 ImplementationDefListNode* ImplementationDefListNode::addClassMethodDef(ImplementationDefListNode *implementationDefList, MethodDefNode *classMethodDef) {
@@ -1852,6 +1870,10 @@ ImplementationDefListNode* ImplementationDefListNode::addInstanceMethodDef(Imple
     }
     implementationDefList->instanceMethodDefs->push_back(instanceMethodDef);
     return implementationDefList;
+}
+
+list<PropertyNode*>* ImplementationDefListNode::getproperties() const {
+    return properties;
 }
 
 list<MethodDefNode*>* ImplementationDefListNode::getClassMethodDefs() const {

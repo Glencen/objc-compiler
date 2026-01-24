@@ -283,8 +283,10 @@ impl_def_list_e
             ;
 
 impl_def_list
-            :   class_method_def                                {$$=ImplementationDefListNode::createImplementationDefListWithClassMethod($1);}
+            :   property                                        {$$=ImplementationDefListNode::createImplementationDefListWithProperty($1);}
+            |   class_method_def                                {$$=ImplementationDefListNode::createImplementationDefListWithClassMethod($1);}
             |   instance_method_def                             {$$=ImplementationDefListNode::createImplementationDefListWithInstMethod($1);}
+            |   impl_def_list property                          {$$=ImplementationDefListNode::addProperty($1, $2);}
             |   impl_def_list class_method_def                  {$$=ImplementationDefListNode::addClassMethodDef($1, $2);}
             |   impl_def_list instance_method_def               {$$=ImplementationDefListNode::addInstanceMethodDef($1, $2);}
             ;
