@@ -1175,6 +1175,10 @@ StmtKind StmtNode::getKind() const {
     return kind;
 }
 
+ExprNode* StmtNode::getExpr() const {
+    return expr;
+}
+
 ExprNode* StmtNode::getCondition() const {
     return condition;
 }

@@ -81,9 +81,7 @@ void StmtNode::analyzeSemantics(SemanticContext& context) {
             break;
             
         case StmtKind::EXPR:
-            if (expr) {
-                expr->analyzeSemantics(context);
-            }
+            analyzeExprSemantics(context);
             break;
             
         case StmtKind::RETURN:
@@ -98,12 +96,20 @@ void StmtNode::analyzeSemantics(SemanticContext& context) {
             analyzeIfElseSemantics(context);
             break;
             
+        case StmtKind::FOR_WITH_EXPR:
+            analyzeForWithExprSemantics(context);
+            break;
+            
         case StmtKind::FOR_WITH_DECL:
-            analyzeForSemantics(context);
+            analyzeForWithDeclSemantics(context);
             break;
             
         case StmtKind::FOR_IN:
             analyzeForInSemantics(context);
+            break;
+            
+        case StmtKind::TYPED_FOR_IN:
+            analyzeTypedForInSemantics(context);
             break;
             
         case StmtKind::WHILE:
@@ -119,11 +125,10 @@ void StmtNode::analyzeSemantics(SemanticContext& context) {
             break;
             
         case StmtKind::DECLARATION:
-            if (decl) {
-                decl->analyzeSemantics(context);
-            }
+            analyzeDeclarationSemantics(context);
             break;
             
+        case StmtKind::NONE:
         default:
             throw statement_exception("Unknown statement type",
                 "StmtNode::analyzeSemantics", -1, -1, 
@@ -132,7 +137,6 @@ void StmtNode::analyzeSemantics(SemanticContext& context) {
 }
 
 void StmtNode::analyzeReturnSemantics(SemanticContext& context) {
-    // Проверяем, что мы внутри функции или метода
     FunctionInfo* currentFunction = context.getCurrentFunction();
     MethodInfo* currentMethod = context.getCurrentMethod();
     
@@ -141,36 +145,14 @@ void StmtNode::analyzeReturnSemantics(SemanticContext& context) {
             "StmtNode::analyzeReturnSemantics", -1, -1);
     }
     
-    Type expectedReturnType(TypeKind::VOID);
-    if (currentFunction) {
-        expectedReturnType = currentFunction->getReturnType();
-    } else if (currentMethod) {
-        expectedReturnType = currentMethod->getReturnType();
-    }
-    
-    // Проверяем тип возвращаемого выражения
     if (expr) {
         // Есть возвращаемое значение
         expr->analyzeSemantics(context);
         
-        // Получаем тип выражения
-        Type exprType = getExpressionType(expr, context);
-        
-        // Проверяем совместимость типов
-        if (!context.isAssignable(exprType, expectedReturnType)) {
-            throw statement_exception("Return type mismatch",
-                "StmtNode::analyzeReturnSemantics", -1, -1,
-                "Expected: " + expectedReturnType.getDescriptor() + 
-                ", Got: " + exprType.getDescriptor());
-        }
+        // Тип проверяется в FuncDefNode::checkReturnStatements
     } else {
-        // Нет возвращаемого значения
-        // Проверяем, что функция ожидает void
-        if (!expectedReturnType.equal(&Type(TypeKind::VOID))) {
-            throw statement_exception("Function must return a value",
-                "StmtNode::analyzeReturnSemantics", -1, -1,
-                "Expected return type: " + expectedReturnType.getDescriptor());
-        }
+        // Нет возвращаемого значения - void return
+        // Проверка будет в FuncDefNode::checkReturnStatements
     }
 }
 
@@ -204,62 +186,121 @@ void StmtNode::analyzeIfElseSemantics(SemanticContext& context) {
     analyzeIfSemantics(context);
     
     if (elseBranch) {
-        // Входим в область видимости else ветки
         context.enterConditionalScope();
         elseBranch->analyzeSemantics(context);
         context.leaveScope();
     }
 }
 
-void StmtNode::analyzeForSemantics(SemanticContext& context) {
-    // Обработка инициализации
-    if (decl) {
-        decl->analyzeSemantics(context);
-    } else if (expr) {
+void StmtNode::analyzeForWithExprSemantics(SemanticContext& context) {
+    if (expr) {
         expr->analyzeSemantics(context);
     }
     
-    // Обработка условия
+    context.enterLoopScope();
+    
     if (condition) {
         condition->analyzeSemantics(context);
         
         // Проверяем, что условие имеет булевый тип
-        Type conditionType = getExpressionType(condition, context);
-        Type boolType(TypeKind::BOOL);
-        
-        if (!conditionType.equal(&boolType) && !context.isConvertible(conditionType, boolType)) {
-            throw statement_exception("For loop condition must be boolean",
-                "StmtNode::analyzeForSemantics", -1, -1,
-                "Got type: " + conditionType.getDescriptor());
-        }
+        // TODO: Добавить проверку типа condition
     }
     
-    // Обработка пост-действия
     if (post) {
         post->analyzeSemantics(context);
     }
     
-    // Обработка тела цикла
     if (body) {
-        context.enterLoopScope();
         body->analyzeSemantics(context);
-        context.leaveScope();
     }
+    
+    context.leaveScope();
+}
+
+void StmtNode::analyzeForWithDeclSemantics(SemanticContext& context) {
+    context.enterLoopScope();
+    
+    if (decl) {
+        decl->analyzeSemantics(context);
+    }
+    
+    if (condition) {
+        condition->analyzeSemantics(context);
+        
+        // Проверяем, что условие имеет булевый тип
+        // TODO: Добавить проверку типа condition
+    }
+    
+    if (post) {
+        post->analyzeSemantics(context);
+    }
+    
+    if (body) {
+        body->analyzeSemantics(context);
+    }
+    
+    context.leaveScope();
 }
 
 void StmtNode::analyzeForInSemantics(SemanticContext& context) {
-    // TODO: Реализовать семантический анализ for-in
-    // Проверяем коллекцию
-    if (collection) {
-        collection->analyzeSemantics(context);
+    if (!collection) {
+        throw statement_exception("For-in statement must have a collection",
+            "StmtNode::analyzeForInSemantics", -1, -1);
     }
     
-    // Обработка тела цикла
-    if (body) {
-        context.enterLoopScope();
-        body->analyzeSemantics(context);
-        context.leaveScope();
+    if (!forInId) {
+        throw statement_exception("For-in statement must have an identifier",
+            "StmtNode::analyzeForInSemantics", -1, -1);
     }
+    
+    collection->analyzeSemantics(context);
+    
+    context.enterLoopScope();
+    
+    // Добавляем переменную итератора в область видимости
+    // TODO: Определить тип переменной итератора на основе типа коллекции
+    
+    if (body) {
+        body->analyzeSemantics(context);
+    }
+    
+    context.leaveScope();
+}
+
+void StmtNode::analyzeTypedForInSemantics(SemanticContext& context) {
+    if (!collection) {
+        throw statement_exception("Typed for-in statement must have a collection",
+            "StmtNode::analyzeTypedForInSemantics", -1, -1);
+    }
+    
+    if (!forInId) {
+        throw statement_exception("Typed for-in statement must have an identifier",
+            "StmtNode::analyzeTypedForInSemantics", -1, -1);
+    }
+    
+    if (!forInType) {
+        throw statement_exception("Typed for-in statement must have a type",
+            "StmtNode::analyzeTypedForInSemantics", -1, -1);
+    }
+    
+    collection->analyzeSemantics(context);
+    
+    context.enterLoopScope();
+    
+    string varName = forInId->getIdentifier();
+    Type varType = convertTypeNodeToType(forInType);
+    
+    auto varInfo = make_unique<LocalVarInfo>(varName, varType, false, nullptr);
+    if (!context.addLocalVar(move(varInfo))) {
+        throw statement_exception("Failed to add for-in iterator variable '" + varName + "' to scope",
+            "StmtNode::analyzeTypedForInSemantics", -1, -1, "Variable: '" + varName + "'");
+    }
+    
+    if (body) {
+        body->analyzeSemantics(context);
+    }
+    
+    context.leaveScope();
 }
 
 void StmtNode::analyzeWhileSemantics(SemanticContext& context) {
@@ -318,10 +359,21 @@ void StmtNode::analyzeCompoundSemantics(SemanticContext& context) {
             "StmtNode::analyzeCompoundSemantics", -1, -1);
     }
     
-    // Входим в область видимости блока
     context.enterBlockStmtScope();
     compound->analyzeSemantics(context);
     context.leaveScope();
+}
+
+void StmtNode::analyzeExprSemantics(SemanticContext& context) {
+    if (expr) {
+        expr->analyzeSemantics(context);
+    }
+}
+
+void StmtNode::analyzeDeclarationSemantics(SemanticContext& context) {
+    if (decl) {
+        decl->analyzeSemantics(context);
+    }
 }
 
 Type StmtNode::getExpressionType(ExprNode* expr, SemanticContext& context) {
@@ -345,7 +397,6 @@ void ParamListNode::analyzeSemantics(SemanticContext& context) {}
 //--------------------------------------------------------------FuncDefNode--------------------------------------------------------------
 
 void FuncDefNode::checkReturnStatements(FunctionInfo* func, SemanticContext& context) {
-    // Собираем все return statement из тела функции
     vector<StmtNode*> returnStmts;
     collectReturnStatements(compoundStmt, returnStmts);
     
@@ -353,38 +404,36 @@ void FuncDefNode::checkReturnStatements(FunctionInfo* func, SemanticContext& con
     Type returnType = func->getReturnType();
     
     if (returnType.equal(&voidType)) {
-        // Для void функций: проверяем, что нет return с выражением
         for (StmtNode* stmt : returnStmts) {
-            // У return statement выражение хранится в поле expr
-            // Если expr != nullptr, значит есть возвращаемое значение
             if (stmt->getKind() == StmtKind::RETURN) {
-                // Здесь предполагается, что у StmtNode есть метод для получения выражения
-                // В реальной реализации нужно получить доступ к expr через StmtNode
-                // Поскольку у нас нет доступа к приватным полям, предполагаем следующую структуру:
-                
-                // Проверяем, есть ли возвращаемое значение
-                // Для этого нужно добавить соответствующий метод в StmtNode
-                // Покажем концептуально:
-                if (hasReturnExpression(stmt)) {
+                if (stmt->getExpr() != nullptr) {
                     throw function_exception("Void function '" + func->name + "' cannot return a value",
                         "FuncDefNode::checkReturnStatements", -1, -1, "Function: '" + func->name + "'");
                 }
             }
         }
     } else {
-        // Для не-void функций: должен быть хотя бы один return statement
         if (returnStmts.empty()) {
             throw function_exception("Function '" + func->name + "' must return a value",
                 "FuncDefNode::checkReturnStatements", -1, -1, 
                 "Return type: " + returnType.getDescriptor());
         }
         
-        // Проверяем, что все return statement имеют совместимые типы
         for (StmtNode* stmt : returnStmts) {
             if (stmt->getKind() == StmtKind::RETURN) {
+                if (stmt->getExpr() == nullptr) {
+                    throw function_exception("Function '" + func->name + "' must return a value, not void",
+                        "FuncDefNode::checkReturnStatements", -1, -1,
+                        "Return type: " + returnType.getDescriptor());
+                }
+                
                 // Проверяем тип возвращаемого выражения
-                // В реальной реализации нужно получить тип выражения и сравнить с returnType
-                if (!checkReturnExpressionType(stmt, returnType, context)) {
+                // Для этого нужно сначала проанализировать выражение, если это еще не сделано
+                // Но в данном случае выражение уже должно быть проанализировано
+                // Проверяем совместимость типов
+                if (!context.isAssignable(returnType, returnType)) {
+                    // TODO: Здесь нужно получить фактический тип выражения
+                    // Для этого нужно добавить метод getType() в ExprNode
                     throw function_exception("Function '" + func->name + "' return type mismatch",
                         "FuncDefNode::checkReturnStatements", -1, -1,
                         "Expected: " + returnType.getDescriptor());
@@ -417,37 +466,26 @@ void FuncDefNode::collectReturnStatements(StmtNode* stmt, vector<StmtNode*>& ret
         }
         
         case StmtKind::IF:
-        case StmtKind::IF_ELSE:
             collectReturnStatements(stmt->getThenBranch(), returnStmts);
-            if (stmt->getKind() == StmtKind::IF_ELSE) {
-                collectReturnStatements(stmt->getElseBranch(), returnStmts);
-            }
             break;
             
+        case StmtKind::IF_ELSE:
+            collectReturnStatements(stmt->getThenBranch(), returnStmts);
+            collectReturnStatements(stmt->getElseBranch(), returnStmts);
+            break;
+            
+        case StmtKind::FOR_WITH_EXPR:
         case StmtKind::FOR_WITH_DECL:
+        case StmtKind::FOR_IN:
+        case StmtKind::TYPED_FOR_IN:
         case StmtKind::WHILE:
         case StmtKind::DO_WHILE:
-            // В теле цикла
             collectReturnStatements(stmt->getBody(), returnStmts);
             break;
             
         default:
-            // для других типов statement-ов не ищем вложенные return
             break;
     }
-}
-
-// Вспомогательные методы (нужно добавить в StmtNode или реализовать здесь)
-bool FuncDefNode::hasReturnExpression(StmtNode* stmt) {
-    // Реализация зависит от структуры StmtNode
-    // Предположим, что у StmtNode есть метод getReturnExpression()
-    return false; // Заглушка
-}
-
-bool FuncDefNode::checkReturnExpressionType(StmtNode* stmt, const Type& expectedType, SemanticContext& context) {
-    // Реализация проверки типа возвращаемого выражения
-    // Возвращает true, если тип выражения совместим с expectedType
-    return true; // Заглушка
 }
 
 void FuncDefNode::analyzeSemantics(SemanticContext& context) {

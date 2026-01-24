@@ -390,6 +390,7 @@ public:
     static StmtNode* createDeclaration(DeclNode *decl);
 
     StmtKind getKind() const;
+    ExprNode* getExpr() const;
     ExprNode* getCondition() const;
     StmtNode* getThenBranch() const;
     StmtNode* getElseBranch() const;
@@ -402,15 +403,19 @@ public:
     DeclNode* getDecl() const;
 
     Type getExpressionType(ExprNode* expr, SemanticContext& context);
+    void analyzeExprSemantics(SemanticContext& context);
     void analyzeCompoundSemantics(SemanticContext& context);
     void analyzeDoWhileSemantics(SemanticContext& context);
     void analyzeWhileSemantics(SemanticContext& context);
+    void analyzeForWithExprSemantics(SemanticContext& context);
+    void analyzeForWithDeclSemantics(SemanticContext& context);
     void analyzeForInSemantics(SemanticContext& context);
-    void analyzeForSemantics(SemanticContext& context);
+    void analyzeTypedForInSemantics(SemanticContext& context);
     void analyzeIfElseSemantics(SemanticContext& context);
     void analyzeDoWhileSemantics(SemanticContext& context);
     void analyzeIfSemantics(SemanticContext& context);
-    void StmtNode::analyzeReturnSemantics(SemanticContext& context);
+    void analyzeReturnSemantics(SemanticContext& context);
+    void analyzeDeclarationSemantics(SemanticContext& context);
 
     void analyzeSemantics(SemanticContext& context) override;
 
