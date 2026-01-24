@@ -308,6 +308,7 @@ private:
     
     void initReservedNames();
     void initNSObjectClass();
+    void initNSStringClass();
 };
 
 #endif

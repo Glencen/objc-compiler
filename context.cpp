@@ -82,7 +82,20 @@ bool Type::isCastableTo(const Type* other) const {
         || this->dataType == TypeKind::CLASS_NAME && other->dataType == TypeKind::TYPE_ID) {
         return true;
     }
-    return false; //TODO: Сделать проверку на каст с float и int, bool и float, bool и int, на каст объекта родительского класса в объект класса-наследника
+    if (this->dataType == TypeKind::FLOAT && other->dataType == TypeKind::INT
+        || this->dataType == TypeKind::INT && other->dataType == TypeKind::FLOAT) {
+        return true;
+    }
+    if (this->dataType == TypeKind::BOOL && other->dataType == TypeKind::FLOAT
+        || this->dataType == TypeKind::FLOAT && other->dataType == TypeKind::BOOL) {
+        return true;
+    }
+    if (this->dataType == TypeKind::BOOL && other->dataType == TypeKind::INT
+        || this->dataType == TypeKind::INT && other->dataType == TypeKind::BOOL) {
+        return true;
+    }
+    
+    return false; //TODO: Сделать проверку на каст объекта родительского класса в объект класса-наследника
 }
 
 bool Type::isPrimitive() const {
@@ -1205,6 +1218,7 @@ void SemanticContext::dumpCurrentScope() const {
 void SemanticContext::initSemanticContext() {
     initReservedNames();
     initNSObjectClass();
+    initNSStringClass();
 
     enterScope();
 }
@@ -1442,5 +1456,184 @@ void SemanticContext::initNSObjectClass() { // TODO: пересмотреть н
     auto javaObject = lookupClass("java/lang/Object");
     if (nsObject && javaObject) {
         nsObject->setSuperclass(javaObject);
+    }
+}
+
+void SemanticContext::initNSStringClass() {
+    if (lookupClass("rtl/NSString")) {
+        return;
+    }
+
+    auto nsStringClass = make_unique<ClassInfo>("rtl/NSString", nullptr);
+    nsStringClass->markAsImplementation();
+
+    // ===============================
+    // Статические методы
+    // ===============================
+
+    // + (id)string
+    {
+        auto method = make_unique<MethodInfo>(
+            "stringStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            true,
+            nsStringClass.get()
+        );
+        method->selector = "stringStatic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // + (id)stringWithCString:(const char*)cstr
+    {
+        auto method = make_unique<MethodInfo>(
+            "stringWithCStringStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            true,
+            nsStringClass.get()
+        );
+        method->selector = "stringWithCStringStatic";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CHAR, "", 1) }; // char[]
+        nsStringClass->addMethod(move(method));
+    }
+
+    // + (id)stringWithString:(NSString*)str
+    {
+        auto method = make_unique<MethodInfo>(
+            "stringWithStringStatic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            true,
+            nsStringClass.get()
+        );
+        method->selector = "stringWithStringStatic";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
+        nsStringClass->addMethod(move(method));
+    }
+
+    // ===============================
+    // Динамические методы
+    // ===============================
+
+    // - (const char*)cString
+    {
+        auto method = make_unique<MethodInfo>(
+            "cStringDynamic",
+            Type(TypeKind::CHAR, "", 1),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "cStringDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (NSString*)capitalizeString
+    {
+        auto method = make_unique<MethodInfo>(
+            "capitalizeStringDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "capitalizeStringDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (int)length
+    {
+        auto method = make_unique<MethodInfo>(
+            "lengthDynamic",
+            Type(TypeKind::INT),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "lengthDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (NSString*)uppercaseString
+    {
+        auto method = make_unique<MethodInfo>(
+            "uppercaseStringDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "uppercaseStringDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (NSString*)lowercaseString
+    {
+        auto method = make_unique<MethodInfo>(
+            "lowercaseStringDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "lowercaseStringDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (int)isEqual:(NSObject*)other
+    {
+        auto method = make_unique<MethodInfo>(
+            "isEqualDynamic",
+            Type(TypeKind::INT),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "isEqualDynamic";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSObject") };
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (NSString*)description
+    {
+        auto method = make_unique<MethodInfo>(
+            "descriptionDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "descriptionDynamic";
+        method->keywords = {};
+        method->parameterTypes = {};
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (NSString*)stringByAppendingString:(NSString*)other
+    {
+        auto method = make_unique<MethodInfo>(
+            "stringByAppendingStringDynamic",
+            Type(TypeKind::CLASS_NAME, "rtl/NSString"),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "stringByAppendingStringDynamic";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
+        nsStringClass->addMethod(move(method));
+    }
+
+    addClass(move(nsStringClass));
+
+    auto nsString = lookupClass("rtl/NSString");
+    auto nsObject = lookupClass("rtl/NSObject");
+    if (nsString && nsObject) {
+        nsString->setSuperclass(nsObject);
     }
 }
