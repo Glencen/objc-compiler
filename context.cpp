@@ -298,6 +298,9 @@ void ClassInfo::markAsImplementation() {
 }
 
 bool ClassInfo::isComplete() const {
+    if (name.find("java/lang/") == 0 || name.find("rtl/") == 0) {
+        return true;
+    }
     return hasInterface && hasImplementation;
 }
 
