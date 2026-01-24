@@ -1460,6 +1460,10 @@ void SemanticContext::initNSObjectClass() { // TODO: пересмотреть н
     if (nsObject && javaObject) {
         nsObject->setSuperclass(javaObject);
     }
+
+    if (nsObject) {
+        initNSObjectClassInfo(nsObject); // Устанавливаем s_classInfo
+    }
 }
 
 void SemanticContext::initNSStringClass() {
