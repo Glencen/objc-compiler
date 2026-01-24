@@ -2316,32 +2316,35 @@ void InstanceVarDeclNode::analyzeSemantics(SemanticContext& context) {
     string varName = identifier->getIdentifier();
     
     // Проверяем, что поле с таким именем еще не объявлено в текущем классе
-    if (currentClass->lookupField(varName, false)) {
-        throw semantic_exception("Instance variable '" + varName + "' already declared in class '" + 
-            currentClass->name + "'", "InstanceVarDeclNode::analyzeSemantics", -1, -1);
+    FieldInfo* existingField = currentClass->lookupField(varName, false);
+    if (existingField) {
+        // Если класс уже имеет реализацию, то мы в реализации
+        if (currentClass->hasImplementation) {
+            // В реализации всегда устанавливаем private
+            existingField->setAccessModifier(AccessModifier::PRIVATE);
+            return; // Не создаем новое поле
+        } else {
+            // В интерфейсе - ошибка дублирования
+            throw semantic_exception("Instance variable '" + varName + "' already declared in class '" + 
+                currentClass->name + "'", "InstanceVarDeclNode::analyzeSemantics", -1, -1);
+        }
     }
     
-    // Проверяем, что имя не конфликтует с именем метода
-    // (в Objective-C поля и методы имеют разные пространства имен, но лучше проверить)
+    AccessModifier access = AccessModifier::PROTECTED; // по умолчанию для интерфейса
     
-    // Создаем информацию о поле
-    auto field = make_unique<FieldInfo>(varName, varType, true, currentClass);
-    
-    // Обрабатываем модификатор доступа (если есть)
-    if (accessModifier) {
-        // TODO: Сохранить модификатор доступа в FieldInfo
-        // В текущей реализации FieldInfo не хранит модификатор доступа
-        // Нужно расширить класс или использовать attribute поле
+    if (currentClass->hasImplementation) {
+        access = AccessModifier::PRIVATE;
+    } else if (accessModifier) {
+        access = accessModifier->getAccessType();
     }
+    
+    auto field = make_unique<FieldInfo>(varName, varType, true, currentClass, access);
     
     // Обрабатываем инициализатор (если есть)
     if (initDecl->getInitializer()) {
         // TODO: Проверить совместимость типа инициализатора с типом поля
         // field->initialValue = ...; // Сохранить инициализатор для генерации кода
     }
-    
-    // Проверяем специфичные для Objective-C атрибуты
-    // (например, IBOutlet, IBAction и т.д.)
     
     // Добавляем поле в класс
     currentClass->addField(move(field));
@@ -2372,6 +2375,41 @@ void InstanceVarsNode::analyzeSemantics(SemanticContext& context) {
 
 //--------------------------------------------------------------ImplementationNode--------------------------------------------------------------
 
+void ImplementationNode::processProperties(SemanticContext& context) {
+    ClassInfo* cls = context.getCurrentClass();
+    if (!cls) return;
+    
+    // Пока что используем свойства из интерфейса
+    list<PropertyNode*> properties = *interfaceDeclList->getProperties();
+    
+    for (auto* property : properties) {
+        string propertyName = property->getName()->getIdentifier();
+        Type propertyType = convertTypeNodeToType(property->getType());
+        bool isReadonly = property->getAttribute() == Attribute::READONLY;
+        
+        // Получаем имя ivar из маппинга или генерируем
+        string ivarName = cls->getIvarForProperty(propertyName);
+        if (ivarName.empty()) {
+            ivarName = "_" + propertyName;
+        }
+        
+        // Проверяем, существует ли ivar
+        FieldInfo* ivar = cls->lookupField(ivarName, false);
+        
+        if (ivar) {
+            // В реализации всегда устанавливаем private для ivar
+            ivar->setAccessModifier(AccessModifier::PRIVATE);
+        } else {
+            // Создаем ivar с модификатором private
+            auto newIvar = make_unique<FieldInfo>(ivarName, propertyType, true, cls, AccessModifier::PRIVATE);
+            cls->addField(move(newIvar));
+        }
+        
+        // Проверяем существование геттера и сеттера
+        // (они уже должны быть созданы в интерфейсе)
+    }
+}
+
 void ImplementationNode::analyzeSemantics(SemanticContext& context) {
     string classNameStr = className->getIdentifier();
     string superclassNameStr = superClassName ? superClassName->getIdentifier() : "";
@@ -2379,7 +2417,6 @@ void ImplementationNode::analyzeSemantics(SemanticContext& context) {
     // Находим класс
     ClassInfo* cls = context.lookupClass(classNameStr);
     if (!cls) {
-        // Класс должен быть объявлен в интерфейсе
         throw class_exception("Class '" + classNameStr + "' not declared in interface",
             "ImplementationNode::analyzeSemantics", -1, -1);
     }
@@ -2395,7 +2432,6 @@ void ImplementationNode::analyzeSemantics(SemanticContext& context) {
                 "Class: " + classNameStr);
         }
         
-        // Проверяем совместимость с объявлением в интерфейсе
         if (cls->superclass && cls->superclass->name != superclassNameStr) {
             throw class_exception("Superclass mismatch in implementation",
                 "ImplementationNode::analyzeSemantics", -1, -1,
@@ -2408,17 +2444,16 @@ void ImplementationNode::analyzeSemantics(SemanticContext& context) {
     context.enterClassScope(cls);
     
     try {
-        // Анализируем переменные экземпляра
         if (instanceVars) {
             instanceVars->analyzeSemantics(context);
         }
         
-        // Анализируем определения методов
         if (implDefList) {
             implDefList->analyzeSemantics(context);
         }
         
-        // Проверяем, что все методы, объявленные в интерфейсе, определены
+        processProperties(context);
+        
         checkAllMethodsImplemented(cls, context);
         
         context.leaveScope();
@@ -2454,31 +2489,19 @@ void InterfaceNode::processProperties(SemanticContext& context) {
         Type propertyType = convertTypeNodeToType(property->getType());
         bool isReadonly = property->getAttribute() == Attribute::READONLY;
         
-        // Проверяем, есть ли уже поле с именем свойства
-        if (cls->lookupField(propertyName, false)) {
-            // Поле уже существует, возможно, это ivar
-            // В Objective-C свойство может использовать существующее поле
-            continue;
-        }
-        
-        // Создаем ivar для свойства (если его еще нет)
         string ivarName = "_" + propertyName;
 
         if (!cls->lookupField(ivarName, false)) {
-            auto ivar = make_unique<FieldInfo>(ivarName, propertyType, true, cls);
+            AccessModifier ivarAccess = AccessModifier::PROTECTED;
+            auto ivar = make_unique<FieldInfo>(ivarName, propertyType, true, cls, ivarAccess);
             cls->addField(move(ivar));
         }
         
-        // Добавляем маппинг свойства на ivar
         cls->addPropertyMapping(propertyName, ivarName);
         
-        // Создаем геттер
         string getterName = context.generateGetterName(propertyName);
         if (!cls->lookupMethod(getterName)) {
             auto getter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
-            // TODO: Установить selector и keywords для Objective-C
-            // getter->selector = propertyName;
-            // getter->keywords = {""};
             cls->addMethod(move(getter));
         }
         
