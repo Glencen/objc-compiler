@@ -247,18 +247,32 @@ string MethodInfo::toString() const {
 }
 
 bool MethodInfo::matchesSignature(const vector<const Type*>& argTypes, const vector<string>& keywords) const {
-    if (argTypes.size() != parameterTypes.size() || keywords.size() != this->keywords.size()) {
+    if (argTypes.size() != parameterTypes.size()) {
         return false;
     }
     
-    for (size_t i = 0; i < argTypes.size(); ++i) {
-        if (!parameterTypes[i]->equal(argTypes[i])) {
-            return false;
-        }
+    if (keywords.size() != this->keywords.size()) {
+        return false;
+    }
+    
+    for (size_t i = 0; i < keywords.size(); i++) {
         if (keywords[i] != this->keywords[i]) {
             return false;
         }
     }
+    
+    // Проверяем типы параметров
+    for (size_t i = 0; i < argTypes.size(); i++) {
+        if (parameterTypes[i] && argTypes[i]) {
+            if (!parameterTypes[i]->equal(argTypes[i])) {
+                return false;
+            }
+        } else {
+            // Один из типов отсутствует
+            return false;
+        }
+    }
+    
     return true;
 }
 
@@ -392,7 +406,7 @@ const FieldInfo* ClassInfo::lookupField(const string& name, bool includeSuper) c
 MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*>& argTypes, const vector<string>& keywords, bool includeSuper) {
     auto it = methods.find(name);
     if (it != methods.end()) {
-        for (const auto& method : it->second) {
+        for (auto& method : it->second) {
             if (method->matchesSignature(argTypes, keywords)) {
                 return method.get();
             }
@@ -409,7 +423,7 @@ MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*
 const MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*>& argTypes, const vector<string>& keywords, bool includeSuper) const {
     auto it = methods.find(name);
     if (it != methods.end()) {
-        for (const auto& method : it->second) {
+        for (auto& method : it->second) {
             if (method->matchesSignature(argTypes, keywords)) {
                 return method.get();
             }
@@ -431,10 +445,31 @@ void ClassInfo::addField(unique_ptr<FieldInfo> field) {
 }
 
 void ClassInfo::addMethod(unique_ptr<MethodInfo> method) {
-    if (method) {
-        method->declaringClass = this;
-        methods[method->name].push_back(move(method));
+    if (!method) return;
+    
+    // Проверяем, не переопределяет ли метод метод суперкласса
+    if (superclass) {
+        MethodInfo* superMethod = superclass->lookupMethod(method->name, method->parameterTypes, method->keywords, true);
+        if (superMethod) {
+            // Проверяем совместимость сигнатур
+            if (!method->getReturnType().equal(&superMethod->getReturnType())) {
+                throw semantic_exception("Method '" + method->name + "' return type mismatch with overridden method",
+                    "ClassInfo::addMethod", -1, -1);
+            }
+        }
     }
+    
+    // Проверяем, нет ли уже метода с такой же сигнатурой в текущем классе
+    auto& methodList = methods[method->name];
+    for (auto& existingMethod : methodList) {
+        if (existingMethod->matchesSignature(method->parameterTypes, method->keywords)) {
+            throw semantic_exception("Method with same signature already exists",
+                "ClassInfo::addMethod", -1, -1);
+        }
+    }
+    
+    method->declaringClass = this;
+    methodList.push_back(move(method));
 }
 
 void ClassInfo::addPropertyMapping(const string& property, const string& ivar) {
@@ -704,8 +739,8 @@ SymbolInfo* SemanticContext::lookup(const string& name) const {
         return var;
     }
     
-    if (currentClass && currentScope && currentScope->kind == Scope::CLASS_SCOPE) {
-        if (auto field = currentClass->lookupField(name, false)) {
+    if (currentClass) {
+        if (auto field = currentClass->lookupField(name, true)) {
             return field;
         }
     }
@@ -716,12 +751,6 @@ SymbolInfo* SemanticContext::lookup(const string& name) const {
     
     if (auto func = lookupFunction(name)) {
         return func;
-    }
-    
-    if (currentClass && currentScope && currentScope->kind == Scope::CLASS_SCOPE) {
-        if (auto field = currentClass->lookupField(name, true)) {
-            return field;
-        }
     }
     
     return nullptr;
@@ -1351,15 +1380,13 @@ void SemanticContext::initSemanticContext() {
 
 void SemanticContext::resolveInheritance() {
     for (auto& [name, cls] : classes) {
-        if (cls->superclass && !cls->superclass->name.empty()) {
-            auto super = lookupClass(cls->superclass->name);
-            if (super) {
-                cls->superclass = super;
+        if (cls->superclass && cls->superclass->name != name) {
+            ClassInfo* realSuperclass = lookupClass(cls->superclass->name);
+            if (realSuperclass) {
+                cls->setSuperclass(realSuperclass);
             } else {
-                cerr << "Warning: Class " << name 
-                         << " inherits from undefined class " 
-                         << cls->superclass->name << endl;
-                cls->superclass = nullptr;
+                cerr << "Warning: Superclass '" << cls->superclass->name 
+                     << "' not found for class '" << name << "'" << endl;
             }
         }
     }
