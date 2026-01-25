@@ -1,6 +1,42 @@
 #include "context.h"
 #include <unordered_map>
 
+static bool canAccessField(const SemanticContext& context, const FieldInfo* field) {
+    if (!field) return false;
+    if (!field->declaringClass) return true;
+
+    ClassInfo* currentClass = context.getCurrentClass();
+    switch (field->accessModifier) {
+        case AccessModifier::PUBLIC:
+            return true;
+        case AccessModifier::PRIVATE:
+            return currentClass && currentClass == field->declaringClass;
+        case AccessModifier::PROTECTED:
+            return currentClass && (currentClass == field->declaringClass ||
+                                    currentClass->isSubclassOf(field->declaringClass));
+        default:
+            return true;
+    }
+}
+
+static bool canAccessMethod(const SemanticContext& context, const MethodInfo* method) {
+    if (!method) return false;
+    if (!method->declaringClass) return true;
+
+    ClassInfo* currentClass = context.getCurrentClass();
+    switch (method->accessModifier) {
+        case AccessModifier::PUBLIC:
+            return true;
+        case AccessModifier::PRIVATE:
+            return currentClass && currentClass == method->declaringClass;
+        case AccessModifier::PROTECTED:
+            return currentClass && (currentClass == method->declaringClass ||
+                                    currentClass->isSubclassOf(method->declaringClass));
+        default:
+            return true;
+    }
+}
+
 Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) { // TODO: куда впихнуть TYPE_ID ???
     if (!typeNode) return Type(TypeKind::NONE);
     
@@ -24,6 +60,11 @@ Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) { //
         } else {
             return Type(TypeKind::CLASS_NAME, className);
         }
+    } else if (typeKind == TypeKind::TYPE_ID) {
+        if (!arraySizes.empty()) {
+            return Type(TypeKind::TYPE_ID, arraySizes);
+        }
+        return Type(TypeKind::TYPE_ID);
     } else if (!arraySizes.empty()) {
         return Type(typeKind, arraySizes);
     }
@@ -392,9 +433,14 @@ void ExprNode::analyzeIdentifierSemantics(SemanticContext& context) {
         return;
     }
     
-    // 2) поля класса (включая суперклассы)
-    if (ClassInfo* currentClass = context.getCurrentClass()) {
-        if (FieldInfo* field = currentClass->lookupField(idName, true)) {
+    ClassInfo* currentClass = context.getCurrentClass();
+    if (currentClass) {
+        FieldInfo* field = currentClass->lookupField(idName, true);
+        if (field) {
+            if (!canAccessField(context, field)) {
+                throw semantic_exception("Field '" + idName + "' is not accessible",
+                    "ExprNode::analyzeIdentifierSemantics", -1, -1);
+            }
             exprType = new Type(field->type);
             isFieldAccess = true;
             className = field->declaringClass->name;
@@ -636,6 +682,10 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
     }
     
     if (method) {
+        if (!canAccessMethod(context, method)) {
+            throw semantic_exception("Method '" + selectorStr + "' is not accessible",
+                "ExprNode::analyzeMessageSemantics", -1, -1);
+        }
         exprType = new Type(method->getReturnType());
         isMethodCall = true;
         className = method->declaringClass->name;
@@ -1153,12 +1203,23 @@ void ExprNode::analyzeArrayAccessSemantics(SemanticContext& context) {
             "Got type: " + index->getExprType()->toString());
     }
     
-    // Тип результата - тип элемента массива или NSObject для NSArray
+    // Тип результата - элемент массива или подмассив для многомерных массивов
     if (isNsArray) {
         exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
     } else {
-        Type elemType(operand->getExprType()->dataType, operand->getExprType()->className);
-        exprType = new Type(elemType);
+        const Type* opType = operand->getExprType();
+        if (opType && opType->isArray() && opType->arrayDimension > 1) {
+            std::vector<int> subSizes;
+            if (!opType->arraySizes.empty() && opType->arraySizes.size() > 1) {
+                subSizes.assign(opType->arraySizes.begin() + 1, opType->arraySizes.end());
+            } else {
+                subSizes.assign(opType->arrayDimension - 1, 0);
+            }
+            exprType = new Type(opType->dataType, opType->className, subSizes);
+        } else {
+            Type elemType(operand->getExprType()->dataType, operand->getExprType()->className);
+            exprType = new Type(elemType);
+        }
     }
 }
 
@@ -1245,6 +1306,10 @@ void ExprNode::analyzeDotSemantics(SemanticContext& context) {
             cls->name + "' or its ancestors",
             "ExprNode::analyzeDotSemantics", -1, -1);
     }
+    if (!canAccessField(context, field)) {
+        throw semantic_exception("Field '" + fieldName + "' is not accessible",
+            "ExprNode::analyzeDotSemantics", -1, -1);
+    }
 
     exprType = new Type(field->type);
     isFieldAccess = true;
@@ -1287,6 +1352,10 @@ void ExprNode::analyzeArrowSemantics(SemanticContext& context) {
     if (!field) {
         throw semantic_exception("Ivar '" + ivarName + "' not found in class '" + 
             cls->name + "' or its ancestors",
+            "ExprNode::analyzeArrowSemantics", -1, -1);
+    }
+    if (!canAccessField(context, field)) {
+        throw semantic_exception("Field '" + ivarName + "' is not accessible",
             "ExprNode::analyzeArrowSemantics", -1, -1);
     }
     
@@ -1644,8 +1713,11 @@ void StmtNode::analyzeForInSemantics(SemanticContext& context) {
     
     context.enterLoopScope();
     
-    // Добавляем переменную итератора в область видимости
-    // TODO: Определить тип переменной итератора на основе типа коллекции
+    // Добавляем переменную итератора в область видимости (тип id по умолчанию)
+    string varName = forInId->getIdentifier();
+    Type varType(TypeKind::TYPE_ID);
+    auto varInfo = make_unique<LocalVarInfo>(varName, varType, false, nullptr);
+    context.addLocalVar(move(varInfo));
     
     if (body) {
         body->analyzeSemantics(context);
@@ -2313,6 +2385,7 @@ void MethodDefNode::analyzeSemantics(SemanticContext& context) {
     }
     
     Type returnType = convertTypeNodeToType(type);
+    AccessModifier access = getAccessModifier();
     
     // Определяем имя метода и селектор
     string methodName;
@@ -2428,12 +2501,18 @@ void MethodDefNode::analyzeSemantics(SemanticContext& context) {
         
         // Обновляем тело метода
         existingMethod->body = compoundStmt;
+        if (access != AccessModifier::NONE) {
+            existingMethod->accessModifier = access;
+        }
     } else {
         // Создаем новый метод (если не было объявления)
         auto method = make_unique<MethodInfo>(methodName, returnType, isClassMethod(), currentClass);
         method->selector = selector;
         method->keywords = keywords;
         method->body = compoundStmt;
+        if (access != AccessModifier::NONE) {
+            method->accessModifier = access;
+        }
         
         // Копируем типы параметров
         for (const Type* paramType : paramTypes) {
@@ -2741,6 +2820,10 @@ void MethodDeclNode::analyzeSemantics(SemanticContext& context) {
     
     // Создаем информацию о методе
     auto method = make_unique<MethodInfo>(methodName, returnType, isClassMethod(), currentClass);
+    AccessModifier access = getAccessModifier();
+    if (access != AccessModifier::NONE) {
+        method->accessModifier = access;
+    }
     method->selector = selector;
     method->keywords = keywords;
     
@@ -3067,7 +3150,8 @@ void ImplementationNode::processProperties(SemanticContext& context) {
         
         string propertyName = property->getName()->getIdentifier();
         Type propertyType = convertTypeNodeToType(property->getType());
-        bool isReadonly = property->getAttribute() == Attribute::READONLY;
+        bool isClassProperty = property->getAttribute() == Attribute::CLASS;
+        bool isReadonly = !isClassProperty && property->getAttribute() == Attribute::READONLY;
         
         PropertyNode* interfaceProperty = nullptr;
         auto it = interfacePropertyMap.find(propertyName);
@@ -3085,7 +3169,13 @@ void ImplementationNode::processProperties(SemanticContext& context) {
             }
             
             // Проверяем совместимость атрибутов readonly
-            bool interfaceReadonly = interfaceProperty->getAttribute() == Attribute::READONLY;
+            bool interfaceIsClass = interfaceProperty->getAttribute() == Attribute::CLASS;
+            if (interfaceIsClass != isClassProperty) {
+                throw semantic_exception("Class/instance property mismatch between interface and implementation",
+                    "ImplementationNode::processProperties", -1, -1,
+                    "Property: " + propertyName);
+            }
+            bool interfaceReadonly = !isClassProperty && interfaceProperty->getAttribute() == Attribute::READONLY;
             if (interfaceReadonly && !isReadonly) {
                 throw semantic_exception("Cannot make readonly property writable in implementation",
                     "ImplementationNode::processProperties", -1, -1,
@@ -3094,8 +3184,8 @@ void ImplementationNode::processProperties(SemanticContext& context) {
         }
         
         // Получаем имя ivar из маппинга или генерируем
-        string ivarName = cls->getIvarForProperty(propertyName);
-        if (ivarName.empty()) {
+        string ivarName = isClassProperty ? "__class_" + propertyName : cls->getIvarForProperty(propertyName);
+        if (!isClassProperty && ivarName.empty()) {
             ivarName = "_" + propertyName;
         }
         
@@ -3119,17 +3209,19 @@ void ImplementationNode::processProperties(SemanticContext& context) {
             // Создаем новую ivar
             // В реализации всегда private
             AccessModifier ivarAccess = AccessModifier::PRIVATE;
-            auto newIvar = make_unique<FieldInfo>(ivarName, propertyType, true, cls, ivarAccess);
+            auto newIvar = make_unique<FieldInfo>(ivarName, propertyType, !isClassProperty, cls, ivarAccess);
             ivar = newIvar.get();
             cls->addField(move(newIvar));
             
-            // Добавляем маппинг свойства к ivar
-            cls->addPropertyMapping(propertyName, ivarName);
+            if (!isClassProperty) {
+                // Добавляем маппинг свойства к ivar
+                cls->addPropertyMapping(propertyName, ivarName);
+            }
         }
         
         // Проверяем/создаем геттер
         string getterName = context.generateGetterName(propertyName);
-        MethodInfo* getter = cls->lookupMethod(getterName, {}, {}, false, false);
+        MethodInfo* getter = cls->lookupMethod(getterName, {}, {}, false, isClassProperty);
         
         if (getter) {
             // Геттер уже существует, проверяем совместимость
@@ -3148,7 +3240,7 @@ void ImplementationNode::processProperties(SemanticContext& context) {
             }
         } else {
             // Создаем геттер
-            auto newGetter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
+            auto newGetter = make_unique<MethodInfo>(getterName, propertyType, isClassProperty, cls);
             newGetter->selector = getterName;
             newGetter->keywords.clear();
             cls->addMethod(move(newGetter));
@@ -3157,7 +3249,9 @@ void ImplementationNode::processProperties(SemanticContext& context) {
         // Проверяем/создаем сеттер (если свойство не readonly)
         if (!isReadonly) {
             string setterName = context.generateSetterName(propertyName);
-            MethodInfo* setter = cls->lookupMethod(setterName, {}, {}, false, false);
+            vector<const Type*> argTypes = {&propertyType};
+            vector<string> keywords = {setterName};
+            MethodInfo* setter = cls->lookupMethod(setterName, argTypes, keywords, false, isClassProperty);
             
             if (setter) {
                 // Сеттер уже существует, проверяем совместимость
@@ -3185,11 +3279,12 @@ void ImplementationNode::processProperties(SemanticContext& context) {
             } else {
                 // Создаем сеттер
                 Type voidType(TypeKind::VOID);
-                auto newSetter = make_unique<MethodInfo>(setterName, voidType, false, cls);
+                auto newSetter = make_unique<MethodInfo>(setterName, voidType, isClassProperty, cls);
+                newSetter->keywords = {setterName};
                 
                 // Добавляем параметр
                 auto param = make_unique<LocalVarInfo>("value", propertyType, true, newSetter.get());
-                newSetter->parameterTypes.push_back(new Type(propertyType));
+                newSetter->parameterTypes.push_back(&param->type);
                 newSetter->addParameter(move(param));
                 
                 newSetter->selector = setterName;
@@ -3199,7 +3294,7 @@ void ImplementationNode::processProperties(SemanticContext& context) {
         }
         
         // Если свойство также существует в интерфейсе, убедимся, что оно связано с теми же методами
-        if (interfaceProperty) {
+        if (interfaceProperty && !isClassProperty) {
             // Проверяем, что маппинг совпадает
             string interfaceIvarName = cls->getIvarForProperty(propertyName);
             if (!interfaceIvarName.empty() && interfaceIvarName != ivarName) {
@@ -3290,37 +3385,41 @@ void InterfaceNode::processProperties(SemanticContext& context) {
     for (auto* property : properties) {
         string propertyName = property->getName()->getIdentifier();
         Type propertyType = convertTypeNodeToType(property->getType());
-        bool isReadonly = property->getAttribute() == Attribute::READONLY;
+        bool isClassProperty = property->getAttribute() == Attribute::CLASS;
+        bool isReadonly = !isClassProperty && property->getAttribute() == Attribute::READONLY;
         
-        string ivarName = "_" + propertyName;
+        string ivarName = isClassProperty ? "__class_" + propertyName : "_" + propertyName;
 
         if (!cls->lookupField(ivarName, false)) {
             AccessModifier ivarAccess = AccessModifier::PROTECTED;
-            auto ivar = make_unique<FieldInfo>(ivarName, propertyType, true, cls, ivarAccess);
+            auto ivar = make_unique<FieldInfo>(ivarName, propertyType, !isClassProperty, cls, ivarAccess);
             cls->addField(move(ivar));
         }
         
-        cls->addPropertyMapping(propertyName, ivarName);
+        if (!isClassProperty) {
+            cls->addPropertyMapping(propertyName, ivarName);
+        }
         
         string getterName = context.generateGetterName(propertyName);
-        if (!cls->lookupMethod(getterName, {}, {}, false, false)) {
-            auto getter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
-            getter->selector = getterName;
-            getter->keywords = {};
+        if (!cls->lookupMethod(getterName, {}, {}, false, isClassProperty)) {
+            auto getter = make_unique<MethodInfo>(getterName, propertyType, isClassProperty, cls);
             cls->addMethod(move(getter));
         }
         
         // Создаем сеттер для не-readonly свойств
         if (!isReadonly) {
             string setterName = context.generateSetterName(propertyName);
-            if (!cls->lookupMethod(setterName, {}, {}, false, false)) {
+            vector<const Type*> argTypes = {&propertyType};
+            vector<string> keywords = {setterName};
+            if (!cls->lookupMethod(setterName, argTypes, keywords, false, isClassProperty)) {
                 Type voidType(TypeKind::VOID);
-                auto setter = make_unique<MethodInfo>(setterName, voidType, false, cls);
+                auto setter = make_unique<MethodInfo>(setterName, voidType, isClassProperty, cls);
                 
                 // Устанавливаем параметр для сеттера
                 auto param = make_unique<LocalVarInfo>("value", propertyType, true, setter.get());
-                setter->parameterTypes.push_back(new Type(propertyType));
+                setter->parameterTypes.push_back(&param->type);
                 setter->addParameter(move(param));
+                setter->keywords = {setterName};
                 
                 setter->selector = setterName;
                 setter->keywords = {setterName};

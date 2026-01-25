@@ -1794,6 +1794,14 @@ bool MethodDefNode::isClassMethod() const {
     return !isInstanceMethodFlag;
 }
 
+AccessModifier MethodDefNode::getAccessModifier() const {
+    return accessModifier;
+}
+
+void MethodDefNode::setAccessModifier(AccessModifier access) {
+    accessModifier = access;
+}
+
 string MethodDefNode::getDotLabel() const {
     if (isInstanceMethodFlag) {
         switch (kind) {
@@ -1982,6 +1990,14 @@ bool MethodDeclNode::isClassMethod() const {
     return !isInstanceMethodFlag;
 }
 
+AccessModifier MethodDeclNode::getAccessModifier() const {
+    return accessModifier;
+}
+
+void MethodDeclNode::setAccessModifier(AccessModifier access) {
+    accessModifier = access;
+}
+
 string MethodDeclNode::getDotLabel() const {
     if (isInstanceMethodFlag) {
         switch (kind) {
@@ -2047,6 +2063,7 @@ string PropertyNode::getDotLabel() const {
     switch (attribute) {
         case Attribute::READONLY:   return "READONLY_PROPERTY";
         case Attribute::READWRITE:  return "READWRITE_PROPERTY";
+        case Attribute::CLASS:      return "CLASS_PROPERTY";
         default:                    return "NO_ATTR_PROPERTY";
     }
 }

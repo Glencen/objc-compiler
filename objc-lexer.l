@@ -125,6 +125,13 @@ OCT      [0-7]
     return STRING_LIT;
 }
 
+0[xX]{HEX}+         { 
+    long value = std::strtol(yytext, NULL, 16);
+    TokenOutput::getInstance().addTokenInt(TOK_INTEGER, value);
+    set_token_int(value);
+    return INT_LIT;
+}
+
 [1-9]{DIGIT}*            { 
     long value = std::strtol(yytext, NULL, 10);
     TokenOutput::getInstance().addTokenInt(TOK_INTEGER, value);
@@ -134,13 +141,6 @@ OCT      [0-7]
 
 0{OCT}*             { 
     long value = std::strtol(yytext, NULL, 8);
-    TokenOutput::getInstance().addTokenInt(TOK_INTEGER, value);
-    set_token_int(value);
-    return INT_LIT;
-}
-
-0[xX]{HEX}+         { 
-    long value = std::strtol(yytext, NULL, 16);
     TokenOutput::getInstance().addTokenInt(TOK_INTEGER, value);
     set_token_int(value);
     return INT_LIT;
@@ -344,6 +344,7 @@ OCT      [0-7]
 "nil"               { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return NIL; }
 "readonly"          { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return READONLY; }
 "readwrite"         { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return READWRITE; }
+"class"             { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return CLASS; }
 
 "bool"              { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return BOOL; }
 "int"               { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return INT; }

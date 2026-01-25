@@ -49,5 +49,11 @@ int main() {
     }
     [InOutFuncs printChar: '\n'];
 
+    NSArray *arr = @[@1, @2, @3];
+    for (id v in arr) {
+        [InOutFuncs printNSObject: v];
+    }
+    [InOutFuncs printChar: '\n'];
+
     return 0;
 }

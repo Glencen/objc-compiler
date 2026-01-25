@@ -68,6 +68,35 @@ uint16_t mapAccessToFlags(AccessModifier access) {
     }
 }
 
+Type mapRuntimeType(const Type& type) {
+    Type mapped = type;
+    if (mapped.dataType == TypeKind::CLASS_NAME) {
+        mapped.className = mapRuntimeClassName(mapped.className);
+    }
+    return mapped;
+}
+
+std::string buildMethodNameFromDef(MethodDefNode* methodDef) {
+    if (!methodDef) return "";
+    if (methodDef->getIdentifier()) {
+        return methodDef->getIdentifier()->getIdentifier();
+    }
+    MethodSelNode* sel = methodDef->getMethodSel();
+    if (!sel || !sel->getMethodParamList()) return "";
+    std::string methodName;
+    auto* list = sel->getMethodParamList();
+    for (auto* param : *list) {
+        if (!param || !param->getSelectorIdentifier()) continue;
+        methodName += param->getSelectorIdentifier()->getIdentifier();
+        methodName += ":";
+    }
+    if (!methodName.empty() && methodName.back() == ':') {
+        methodName.pop_back();
+        methodName += ":";
+    }
+    return methodName;
+}
+
 std::string mangleJvmMethodName(const std::string& name) {
     std::string result = name;
     for (auto& ch : result) {
@@ -210,6 +239,12 @@ Type convertTypeNodeToType(TypeNode* typeNode, const std::vector<int>& arraySize
             return Type(TypeKind::CLASS_NAME, className, arraySizes);
         }
         return Type(TypeKind::CLASS_NAME, className);
+    }
+    if (typeKind == TypeKind::TYPE_ID) {
+        if (!arraySizes.empty()) {
+            return Type(TypeKind::TYPE_ID, arraySizes);
+        }
+        return Type(TypeKind::TYPE_ID);
     }
     if (!arraySizes.empty()) {
         return Type(typeKind, arraySizes);
@@ -606,7 +641,8 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                     const Type* arrType = arr->getExprType();
                     if (arrType && arrType->isArray()) {
                         context.emitDupX2();
-                        context.emitArrayStore(arrType->dataType);
+                        TypeKind storeKind = arrType->arrayDimension > 1 ? TypeKind::CLASS_NAME : arrType->dataType;
+                        context.emitArrayStore(storeKind);
                     }
                 }
                 break;
@@ -636,7 +672,18 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                 context.emitInvokeVirtual("rtl/NSArray", "objectAtIndexDynamic", "(I)Lrtl/NSObject;");
                 exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
             } else if (opType && opType->isArray()) {
-                context.emitArrayLoad(opType->dataType);
+                if (opType->arrayDimension > 1) {
+                    context.emitArrayLoad(TypeKind::CLASS_NAME);
+                    std::vector<int> subSizes;
+                    if (!opType->arraySizes.empty() && opType->arraySizes.size() > 1) {
+                        subSizes.assign(opType->arraySizes.begin() + 1, opType->arraySizes.end());
+                    } else {
+                        subSizes.assign(opType->arrayDimension - 1, 0);
+                    }
+                    exprType = new Type(opType->dataType, opType->className, subSizes);
+                } else {
+                    context.emitArrayLoad(opType->dataType);
+                }
             }
             break;
         }
@@ -741,6 +788,23 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
             Type returnType(TypeKind::TYPE_ID);
             if (method) {
                 finalArgTypes = method->parameterTypes;
+                bool needsFallback = finalArgTypes.empty();
+                for (const auto* t : finalArgTypes) {
+                    if (!t) {
+                        needsFallback = true;
+                        break;
+                    }
+                }
+                if (needsFallback) {
+                    finalArgTypes.clear();
+                    for (size_t i = 0; i < method->getParameterCount(); ++i) {
+                        const LocalVarInfo* param = method->getParameter(i);
+                        if (param) finalArgTypes.push_back(&param->type);
+                    }
+                    if (finalArgTypes.empty() && !argTypes.empty()) {
+                        finalArgTypes = argTypes;
+                    }
+                }
                 returnType = method->getReturnType();
                 exprType = new Type(returnType);
             } else {
@@ -773,7 +837,18 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                 }
             }
 
-            std::string descriptor = buildMethodDescriptor(finalArgTypes, returnType);
+            std::vector<Type> mappedArgs;
+            std::vector<const Type*> mappedArgPtrs;
+            mappedArgs.reserve(finalArgTypes.size());
+            mappedArgPtrs.reserve(finalArgTypes.size());
+            for (const auto* t : finalArgTypes) {
+                if (t) {
+                    mappedArgs.push_back(mapRuntimeType(*t));
+                    mappedArgPtrs.push_back(&mappedArgs.back());
+                }
+            }
+            Type mappedReturn = mapRuntimeType(returnType);
+            std::string descriptor = buildMethodDescriptor(mappedArgPtrs, mappedReturn);
             std::string jvmMethodName = mangleJvmMethodName(methodName);
             if (owner.rfind("rtl/", 0) == 0 && method) {
                 jvmMethodName = mapRtlMethodName(owner, jvmMethodName, isStaticCall);
@@ -840,22 +915,37 @@ void DeclNode::emitBytecode(BytecodeContext& context) {
             int localIndex = context.defineLocal(name, varType);
             InitializerNode* init = initDecl->getInitializer();
             if (varType.isArray() && (!init || init->getKind() != InitializerKind::EXPR || !init->getExpr())) {
-                ExprNode* sizeExpr = nullptr;
+                std::vector<ExprNode*> dimExprs;
                 if (auto* arraySizes = decl->getArraySizes()) {
-                    if (!arraySizes->empty()) sizeExpr = arraySizes->front();
+                    for (auto* sizeExpr : *arraySizes) {
+                        if (sizeExpr) dimExprs.push_back(sizeExpr);
+                    }
                 }
-                if (sizeExpr) {
-                    sizeExpr->emitBytecode(context);
+                if (dimExprs.size() > 1) {
+                    for (auto* sizeExpr : dimExprs) {
+                        if (sizeExpr) {
+                            sizeExpr->emitBytecode(context);
+                        } else {
+                            context.emitIConst(0);
+                        }
+                    }
+                    context.emitMultiANewArray(varType.getDescriptor(), static_cast<uint8_t>(dimExprs.size()));
                 } else {
-                    context.emitIConst(0);
-                }
-                if (varType.dataType == TypeKind::CLASS_NAME) {
-                    std::string elemClass = mapRuntimeClassName(varType.className);
-                    context.emitANewArray(elemClass);
-                } else if (varType.dataType == TypeKind::TYPE_ID) {
-                    context.emitANewArray("java/lang/Object");
-                } else {
-                    context.emitNewArray(varType.dataType);
+                    ExprNode* sizeExpr = nullptr;
+                    if (!dimExprs.empty()) sizeExpr = dimExprs.front();
+                    if (sizeExpr) {
+                        sizeExpr->emitBytecode(context);
+                    } else {
+                        context.emitIConst(0);
+                    }
+                    if (varType.dataType == TypeKind::CLASS_NAME) {
+                        std::string elemClass = mapRuntimeClassName(varType.className);
+                        context.emitANewArray(elemClass);
+                    } else if (varType.dataType == TypeKind::TYPE_ID) {
+                        context.emitANewArray("java/lang/Object");
+                    } else {
+                        context.emitNewArray(varType.dataType);
+                    }
                 }
                 context.emitStore(varType, localIndex);
             } else if (init && init->getKind() == InitializerKind::EXPR && init->getExpr()) {
@@ -974,6 +1064,60 @@ void StmtNode::emitBytecode(BytecodeContext& context) {
                     }
                 }
             }
+            context.emitJump(0xa7, labelStart);
+            context.markLabel(labelEnd);
+            break;
+        }
+        case StmtKind::FOR_IN:
+        case StmtKind::TYPED_FOR_IN: {
+            if (!collection || !body || !forInId) break;
+            Type collType(TypeKind::CLASS_NAME, "rtl/NSArray");
+            if (collection->getExprType() && collection->getExprType()->dataType == TypeKind::CLASS_NAME) {
+                collType = Type(TypeKind::CLASS_NAME, mapRuntimeClassName(collection->getExprType()->className));
+            }
+            std::string collTmp = "__forin_coll_" + std::to_string(getId());
+            int collIndex = context.defineLocal(collTmp, collType);
+            collection->emitBytecode(context);
+            context.emitStore(collType, collIndex);
+
+            std::string countTmp = "__forin_count_" + std::to_string(getId());
+            int countIndex = context.defineLocal(countTmp, Type(TypeKind::INT));
+            context.emitLoad(collType, collIndex);
+            context.emitInvokeVirtual("rtl/NSArray", "countDynamic", "()I");
+            context.emitStore(Type(TypeKind::INT), countIndex);
+
+            std::string idxTmp = "__forin_idx_" + std::to_string(getId());
+            int idxIndex = context.defineLocal(idxTmp, Type(TypeKind::INT));
+            context.emitIConst(0);
+            context.emitStore(Type(TypeKind::INT), idxIndex);
+
+            Type iterType(TypeKind::TYPE_ID);
+            if (kind == StmtKind::TYPED_FOR_IN && forInType) {
+                iterType = convertTypeNodeToType(forInType);
+                iterType = mapRuntimeType(iterType);
+            }
+            std::string iterName = forInId->getIdentifier();
+            int iterIndex = -1;
+            if (const auto* local = context.getLocal(iterName)) {
+                iterIndex = local->index;
+            } else {
+                iterIndex = context.defineLocal(iterName, iterType);
+            }
+
+            auto* labelStart = context.createLabel();
+            auto* labelEnd = context.createLabel();
+            context.markLabel(labelStart);
+            context.emitLoad(Type(TypeKind::INT), idxIndex);
+            context.emitLoad(Type(TypeKind::INT), countIndex);
+            context.emitJump(0xa2, labelEnd); // if_icmpge
+
+            context.emitLoad(collType, collIndex);
+            context.emitLoad(Type(TypeKind::INT), idxIndex);
+            context.emitInvokeVirtual("rtl/NSArray", "objectAtIndexDynamic", "(I)Lrtl/NSObject;");
+            context.emitStore(iterType, iterIndex);
+
+            body->emitBytecode(context);
+            context.emitIInc(idxIndex, 1);
             context.emitJump(0xa7, labelStart);
             context.markLabel(labelEnd);
             break;
@@ -1120,7 +1264,11 @@ void MethodDefNode::emitBytecode(BytecodeContext& context) {
     descriptor += ")";
     descriptor += returnType.getDescriptor();
 
-    uint16_t accessFlags = 0x0001;
+    AccessModifier access = getAccessModifier();
+    if (access == AccessModifier::NONE) {
+        access = AccessModifier::PUBLIC;
+    }
+    uint16_t accessFlags = mapAccessToFlags(access);
     if (isClassMethod()) {
         accessFlags |= 0x0008;
     }
@@ -1233,15 +1381,128 @@ void ImplementationNode::emitBytecode(BytecodeContext& context) {
     if (cls) {
         for (const auto& [fieldName, field] : cls->fields) {
             if (!field) continue;
-            Type fieldType = field->type;
-            if (fieldType.dataType == TypeKind::CLASS_NAME) {
-                fieldType.className = mapRuntimeClassName(fieldType.className);
-            }
+            Type fieldType = mapRuntimeType(field->type);
             uint16_t flags = mapAccessToFlags(field->accessModifier);
             if (!field->isInstance) {
                 flags |= 0x0008;
             }
             context.addField(fieldName, fieldType.getDescriptor(), flags);
+        }
+    }
+
+    std::unordered_set<std::string> implementedInstanceMethods;
+    std::unordered_set<std::string> implementedClassMethods;
+    if (implDefList && implDefList->getInstanceMethodDefs()) {
+        for (auto* methodDef : *implDefList->getInstanceMethodDefs()) {
+            implementedInstanceMethods.insert(buildMethodNameFromDef(methodDef));
+        }
+    }
+    if (implDefList && implDefList->getClassMethodDefs()) {
+        for (auto* methodDef : *implDefList->getClassMethodDefs()) {
+            implementedClassMethods.insert(buildMethodNameFromDef(methodDef));
+        }
+    }
+
+    if (cls) {
+        std::unordered_map<std::string, std::pair<Type, bool>> propertyMeta;
+        std::unordered_map<std::string, std::pair<Type, bool>> classPropertyMeta;
+
+        if (cls->interface && cls->interface->getInterfaceDeclList()) {
+            auto* props = cls->interface->getInterfaceDeclList()->getProperties();
+            if (props) {
+                for (auto* prop : *props) {
+                    if (!prop || !prop->getName() || !prop->getType()) continue;
+                    std::string name = prop->getName()->getIdentifier();
+                    Type t = mapRuntimeType(convertTypeNodeToType(prop->getType()));
+                    bool isClassProperty = prop->getAttribute() == Attribute::CLASS;
+                    bool readonly = !isClassProperty && prop->getAttribute() == Attribute::READONLY;
+                    if (isClassProperty) {
+                        classPropertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+                    } else {
+                        propertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+                    }
+                }
+            }
+        }
+
+        if (implDefList && implDefList->getproperties()) {
+            for (auto* prop : *implDefList->getproperties()) {
+                if (!prop || !prop->getName() || !prop->getType()) continue;
+                std::string name = prop->getName()->getIdentifier();
+                Type t = mapRuntimeType(convertTypeNodeToType(prop->getType()));
+                bool isClassProperty = prop->getAttribute() == Attribute::CLASS;
+                bool readonly = !isClassProperty && prop->getAttribute() == Attribute::READONLY;
+                if (isClassProperty) {
+                    classPropertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+                } else {
+                    propertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+                }
+            }
+        }
+
+        if (!cls->propertyIvarMapping.empty()) {
+            for (const auto& [propName, ivarName] : cls->propertyIvarMapping) {
+                auto metaIt = propertyMeta.find(propName);
+                if (metaIt == propertyMeta.end()) continue;
+                const Type propType = metaIt->second.first;
+                const bool isReadonly = metaIt->second.second;
+
+                std::string getterName = semCtx.generateGetterName(propName);
+                if (implementedInstanceMethods.find(getterName) == implementedInstanceMethods.end()) {
+                    std::string desc = "()" + propType.getDescriptor();
+                    context.beginMethod(mangleJvmMethodName(getterName), desc, 0x0001);
+                    context.setCurrentMethodInfo(nullptr, false);
+                    context.emitLoad(Type(TypeKind::CLASS_NAME, classNameStr), 0);
+                    context.emitGetField(classNameStr, ivarName, propType.getDescriptor());
+                    context.emitReturn(propType);
+                    context.endMethod();
+                }
+
+                if (!isReadonly) {
+                    std::string setterName = semCtx.generateSetterName(propName);
+                    if (implementedInstanceMethods.find(setterName) == implementedInstanceMethods.end()) {
+                        std::string desc = "(" + propType.getDescriptor() + ")V";
+                        context.beginMethod(mangleJvmMethodName(setterName), desc, 0x0001);
+                        context.setCurrentMethodInfo(nullptr, false);
+                        context.defineLocal("value", propType);
+                        context.emitLoad(Type(TypeKind::CLASS_NAME, classNameStr), 0);
+                        context.emitLoad(propType, 1);
+                        context.emitPutField(classNameStr, ivarName, propType.getDescriptor());
+                        context.emitReturn(Type(TypeKind::VOID));
+                        context.endMethod();
+                    }
+                }
+            }
+        }
+
+        for (const auto& [propName, meta] : classPropertyMeta) {
+            const Type propType = meta.first;
+            const bool isReadonly = meta.second;
+            std::string fieldName = "__class_" + propName;
+
+            std::string getterName = semCtx.generateGetterName(propName);
+            if (implementedClassMethods.find(getterName) == implementedClassMethods.end()) {
+                std::string desc = "()" + propType.getDescriptor();
+                context.beginMethod(mangleJvmMethodName(getterName), desc, 0x0001 | 0x0008);
+                context.setCurrentMethodInfo(nullptr, true);
+                context.emitGetStatic(classNameStr, fieldName, propType.getDescriptor());
+                context.emitReturn(propType);
+                context.endMethod();
+            }
+
+            if (!isReadonly) {
+                std::string setterName = semCtx.generateSetterName(propName);
+                if (implementedClassMethods.find(setterName) == implementedClassMethods.end()) {
+                    std::string desc = "(" + propType.getDescriptor() + ")V";
+                    context.beginMethod(mangleJvmMethodName(setterName), desc, 0x0001 | 0x0008);
+                    context.setCurrentMethodInfo(nullptr, true);
+                    context.defineLocal("value", propType);
+                    context.emitLoad(propType, 0);
+                    context.emitPutStatic(classNameStr, fieldName, propType.getDescriptor());
+                    context.emitReturn(Type(TypeKind::VOID));
+                    context.endMethod();
+                }
+            }
         }
     }
 

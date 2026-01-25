@@ -58,7 +58,9 @@ public class InOutFuncs {
     }
 
     public static float readFloat() {
-        return scanner.nextFloat();
+        String token = scanner.next();
+        token = token.replace(',', '.');
+        return Float.parseFloat(token);
     }
 
     public static char readChar() {
@@ -77,7 +79,9 @@ public class InOutFuncs {
     }
 
     public static NSNumber readNSNumberFloat() {
-        float value = scanner.nextFloat();
+        String token = scanner.next();
+        token = token.replace(',', '.');
+        float value = Float.parseFloat(token);
         return new NSNumber(value);
     }
 

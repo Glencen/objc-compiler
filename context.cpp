@@ -245,7 +245,8 @@ void FieldInfo::setAccessModifier(AccessModifier access) {
 MethodInfo::MethodInfo(const string& name, const Type& returnType, bool isClassMethod, ClassInfo* declaringClass)
     : SymbolInfo(SymbolKind::METHOD, name, returnType),
       declaringClass(declaringClass),
-      isClassMethod(isClassMethod) {}
+      isClassMethod(isClassMethod),
+      accessModifier(AccessModifier::PUBLIC) {}
 
 string MethodInfo::toString() const {
     string base = SymbolInfo::toString();
@@ -1257,13 +1258,12 @@ string SemanticContext::generateGetterName(const string& fieldName) const {
 }
 
 string SemanticContext::generateSetterName(const string& fieldName) const {
-    // Преобразуем "fieldName" в "setFieldName:"
+    // Преобразуем "fieldName" в "setFieldName"
     string setter = "set";
     if (!fieldName.empty()) {
         setter += static_cast<char>(toupper(fieldName[0]));
         setter += fieldName.substr(1);
     }
-    setter += ":";
     return setter;
 }
 

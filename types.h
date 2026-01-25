@@ -122,7 +122,8 @@ enum class MethodDeclKind {
 enum class Attribute {
     NONE,
     READONLY,
-    READWRITE
+    READWRITE,
+    CLASS
 };
 
 enum class InitializerKind {
