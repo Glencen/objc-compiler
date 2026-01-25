@@ -1302,6 +1302,23 @@ void DeclNode::analyzeSemantics(SemanticContext& context) {
                 if (declarator && declarator->getIdentifier()) {
                     string varName = declarator->getIdentifier()->getIdentifier();
                     
+                    // Запрещаем объявлять локальную переменную с именем параметра метода/функции
+                    if (auto currentMethod = context.getCurrentMethod()) {
+                        for (const auto& param : currentMethod->parameters) {
+                            if (param && param->name == varName) {
+                                throw semantic_exception("Local variable '" + varName + "' conflicts with method parameter",
+                                    "DeclNode::analyzeSemantics", -1, -1);
+                            }
+                        }
+                    } else if (auto currentFunction = context.getCurrentFunction()) {
+                        for (const auto& param : currentFunction->parameters) {
+                            if (param && param->name == varName) {
+                                throw semantic_exception("Local variable '" + varName + "' conflicts with function parameter",
+                                    "DeclNode::analyzeSemantics", -1, -1);
+                            }
+                        }
+                    }
+
                     // Определяем тип переменной с учетом массива
                     Type varType = baseType;
                     
