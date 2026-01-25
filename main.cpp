@@ -55,8 +55,6 @@ int main(int argc, char* argv[])
         TokenOutput::getInstance().close();
     });
 
-    DebugLogger::getInstance().initialize("semantic_debug.log");
-    
     if (argc != 2)
     {
         std::cerr << "Usage: " << argv[0] << " <file_path>" << std::endl;
@@ -64,31 +62,39 @@ int main(int argc, char* argv[])
     }
 
     std::string inputFile = safeString(argv[1]);
+    fs::path inputPath(inputFile);
+    std::string base_name = inputPath.stem().string();
+    fs::path outputDir = inputPath.parent_path() / (base_name + "_out");
+    fs::path tablesDir = outputDir / "tables";
     
-    std::string base_name = inputFile;
-    size_t dot_pos = base_name.find_last_of('.');
-    if (dot_pos != std::string::npos) {
-        base_name = base_name.substr(0, dot_pos);
-    }
-    
-    std::string token_file = base_name + "_tokens.txt";
-    std::string ast_before_file = base_name + "_ast_before.dot";
-    std::string ast_after_file = base_name + "_ast_after.dot";
-    std::string tables_dir = base_name + "_tables/";
+    std::string token_file = (outputDir / (base_name + "_tokens.txt")).string();
+    std::string ast_before_file = (outputDir / (base_name + "_ast_before.dot")).string();
+    std::string ast_after_file = (outputDir / (base_name + "_ast_after.dot")).string();
+    std::string tables_dir = tablesDir.string() + std::string(1, fs::path::preferred_separator);
+    std::string debug_log = (outputDir / "semantic_debug.log").string();
 
     std::cout << "Input file: " << inputFile << std::endl;
     std::cout << "Token output: " << token_file << std::endl;
     std::cout << "AST before semantics: " << ast_before_file << std::endl;
     std::cout << "AST after semantics: " << ast_after_file << std::endl;
     std::cout << "Tables output directory: " << tables_dir << std::endl;
+    std::cout << "Debug log: " << debug_log << std::endl;
 
     try {
-        if (!fs::exists(tables_dir)) {
-            if (!fs::create_directory(tables_dir)) {
-                std::cerr << "Could not create directory for tables: '" + tables_dir + "'" << std::endl;
+        if (!fs::exists(outputDir)) {
+            if (!fs::create_directories(outputDir)) {
+                std::cerr << "Could not create output directory: '" + outputDir.string() + "'" << std::endl;
                 safeExit(1);
             }
         }
+        if (!fs::exists(tablesDir)) {
+            if (!fs::create_directories(tablesDir)) {
+                std::cerr << "Could not create directory for tables: '" + tablesDir.string() + "'" << std::endl;
+                safeExit(1);
+            }
+        }
+
+        DebugLogger::getInstance().initialize(debug_log);
 
         TokenOutput::getInstance().initialize(token_file);
 
@@ -155,9 +161,8 @@ int main(int argc, char* argv[])
             
             std::cout << "\nAST after semantics written to: " << ast_after_file << std::endl;
 
-            fs::path inputPath(inputFile);
-            std::string className = inputPath.stem().string();
-            std::string class_file = (inputPath.parent_path() / (className + ".class")).string();
+            std::string className = base_name;
+            std::string class_file = (outputDir / (className + ".class")).string();
             try {
                 BytecodeContext bytecodeContext(className, class_file);
                 root->emitBytecode(bytecodeContext);
