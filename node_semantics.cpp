@@ -208,15 +208,99 @@ void ExprListNode::analyzeSemantics(SemanticContext& context) {
 //--------------------------------------------------------------ExprNode--------------------------------------------------------------
 
 void ExprNode::analyzeSemantics(SemanticContext& context) {
-    switch (kind) {
-        case ExprKind::IDENTIFIER:
-            analyzeIdentifierSemantics(context);
-            break;
+    switch (kind) { 
+        case ExprKind::LITERAL: {
+            if (!literalValue) {
+                throw semantic_exception("Literal expression must have a value",
+                    "ExprNode::analyzeSemantics", -1, -1);
+            }
             
-        case ExprKind::LITERAL:
-            analyzeLiteralSemantics(context);
-            break;
+            literalValue->analyzeSemantics(context);
             
+            // Определяем тип на основе вида литерала
+            switch (literalValue->getValueKind()) {
+                case ValueKind::INT_LIT:
+                    exprType = new Type(TypeKind::INT);
+                    break;
+                    
+                case ValueKind::FLOAT_LIT:
+                    exprType = new Type(TypeKind::FLOAT);
+                    break;
+                    
+                case ValueKind::CHAR_LIT:
+                    exprType = new Type(TypeKind::CHAR);
+                    break;
+                    
+                case ValueKind::OBJC_STRING_LIT: {
+                    // Для строк Objective-C создаем тип NSString
+                    exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
+                    break;
+                }
+                    
+                case ValueKind::BOOL_LIT:
+                    exprType = new Type(TypeKind::BOOL);
+                    break;
+                    
+                case ValueKind::NIL:
+                    exprType = new Type(TypeKind::TYPE_ID);
+                    break;
+                    
+                default:
+                    throw semantic_exception("Unsupported literal type",
+                        "ExprNode::analyzeSemantics", -1, -1);
+            }
+            break;
+        }
+        case ExprKind::IDENTIFIER: {
+            if (!identifier) {
+                throw semantic_exception("Identifier expression must have an identifier",
+                    "ExprNode::analyzeSemantics", -1, -1);
+            }
+            
+            identifier->analyzeSemantics(context);
+            
+            string idName = identifier->getIdentifier();
+            
+            ClassInfo* classInfo = context.lookupClass(idName);
+            if (classInfo) {
+                exprType = new Type(TypeKind::CLASS_NAME, idName);
+                break;
+            }
+
+            LocalVarInfo* var = context.lookupLocalVar(idName);
+            if (var) {
+                exprType = new Type(var->getType());
+                break;
+            }
+            
+            MethodInfo* currentMethod = context.getCurrentMethod();
+            if (currentMethod) {
+                for (const auto& param : currentMethod->parameters) {
+                    if (param->name == idName) {
+                        exprType = new Type(param->getType());
+                        break;
+                    }
+                }
+            }
+
+            if (context.getCurrentClass() && context.getCurrentMethod() && 
+                !context.getCurrentMethod()->isClassMethod) {
+                // Для экземплярных методов проверяем поля класса
+                ClassInfo* currentClass = context.getCurrentClass();
+                auto fieldIt = currentClass->fields.find(idName);
+                if (fieldIt != currentClass->fields.end()) {
+                    exprType = new Type(fieldIt->second->getType());
+                    break;
+                }
+            }
+            
+            // Если не нашли, это может быть ошибка
+            if (!exprType) {
+                throw semantic_exception("Undeclared identifier '" + idName + "'",
+                    "ExprNode::analyzeSemantics", -1, -1);
+            }
+            break;
+        }
         case ExprKind::OBJC_ARRAY_LITERAL:
             analyzeObjcArrayLiteralSemantics(context);
             break;
