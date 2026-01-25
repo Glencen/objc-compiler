@@ -2109,6 +2109,20 @@ void SemanticContext::initInOutFuncsClass() {
         ioClass->addMethod(move(method));
     }
 
+    // +printInt:withInt:
+    {
+        auto method = make_unique<MethodInfo>(
+            "printInt:withInt",
+            Type(TypeKind::VOID),
+            true,
+            ioClass.get()
+        );
+        method->selector = "printInt:withInt:";
+        method->keywords = {"printInt", "withInt"};
+        method->parameterTypes = { new Type(TypeKind::INT), new Type(TypeKind::INT) };
+        ioClass->addMethod(move(method));
+    }
+
     // ===============================
     // Read Methods
     // ===============================

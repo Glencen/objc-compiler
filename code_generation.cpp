@@ -30,6 +30,27 @@ std::string mapRuntimeClassName(const std::string& name) {
     return name;
 }
 
+std::string mangleJvmMethodName(const std::string& name) {
+    std::string result = name;
+    for (auto& ch : result) {
+        if (ch == ':') ch = '$';
+    }
+    return result;
+}
+
+std::string mapRtlMethodName(const std::string& owner, const std::string& name, bool isStatic) {
+    if (owner != "rtl/InOutFuncs") {
+        if (name.size() >= 7 && name.compare(name.size() - 7, 7, "Dynamic") == 0) {
+            return name;
+        }
+        if (name.size() >= 6 && name.compare(name.size() - 6, 6, "Static") == 0) {
+            return name;
+        }
+        return name + (isStatic ? "Static" : "Dynamic");
+    }
+    return name;
+}
+
 void emitConditionJumpFalse(BytecodeContext& context, ExprNode* condition, BytecodeContext::Label* falseLabel) {
     if (!condition || !falseLabel) return;
     ExprKind kind = condition->getKind();
@@ -39,12 +60,10 @@ void emitConditionJumpFalse(BytecodeContext& context, ExprNode* condition, Bytec
         return;
     }
     if (kind == ExprKind::AND && condition->getLeft() && condition->getRight()) {
-        auto* labelEnd = context.createLabel();
         condition->getLeft()->emitBytecode(context);
         context.emitJump(0x99, falseLabel); // left == 0
         condition->getRight()->emitBytecode(context);
         context.emitJump(0x99, falseLabel); // right == 0
-        context.markLabel(labelEnd);
         return;
     }
     if (kind == ExprKind::OR && condition->getLeft() && condition->getRight()) {
@@ -513,28 +532,30 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
 
             std::vector<std::string> keywords;
             std::vector<const Type*> argTypes;
+            std::vector<ExprNode*> argExprs;
             std::string methodName;
 
             if (selector->getKind() == MsgSelectorKind::SIMPLE_SEL) {
                 std::string idName = selector->getIdentifier()->getIdentifier();
                 methodName = idName;
-                keywords.push_back(idName);
             } else if (selector->getKind() == MsgSelectorKind::ARGUMENT_LIST) {
                 MsgArgListNode* argList = selector->getMsgArgList();
                 if (argList) {
                     auto args = argList->getMsgArgList();
                     if (args) {
-                        bool firstKeywordProcessed = false;
                         for (MsgArgNode* argNode : *args) {
                             if (!argNode || !argNode->getIdentifier() || !argNode->getArg()) continue;
                             std::string keyword = argNode->getIdentifier()->getIdentifier();
                             keywords.push_back(keyword);
-                            if (!firstKeywordProcessed) {
-                                methodName = keyword;
-                                firstKeywordProcessed = true;
-                            }
                             argTypes.push_back(argNode->getArg()->getExprType());
+                            argExprs.push_back(argNode->getArg());
                         }
+                    }
+                }
+                for (size_t i = 0; i < keywords.size(); i++) {
+                    methodName += keywords[i];
+                    if (i < keywords.size() - 1) {
+                        methodName += ":";
                     }
                 }
             }
@@ -582,24 +603,23 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                 }
             }
 
-            if (selector->getKind() == MsgSelectorKind::ARGUMENT_LIST) {
-                MsgArgListNode* argList = selector->getMsgArgList();
-                if (argList && argList->getMsgArgList()) {
-                    for (auto* argNode : *argList->getMsgArgList()) {
-                        if (argNode && argNode->getArg()) {
-                            argNode->getArg()->emitBytecode(context);
-                        }
-                    }
+            for (auto* argExpr : argExprs) {
+                if (argExpr) {
+                    argExpr->emitBytecode(context);
                 }
             }
 
             std::string descriptor = buildMethodDescriptor(finalArgTypes, returnType);
+            std::string jvmMethodName = mangleJvmMethodName(methodName);
+            if (owner.rfind("rtl/", 0) == 0 && method) {
+                jvmMethodName = mapRtlMethodName(owner, jvmMethodName, isStaticCall);
+            }
             if (isStaticCall) {
-                context.emitInvokeStatic(owner, methodName, descriptor);
+                context.emitInvokeStatic(owner, jvmMethodName, descriptor);
             } else if (isSuperCall) {
-                context.emitInvokeSpecial(owner, methodName, descriptor);
+                context.emitInvokeSpecial(owner, jvmMethodName, descriptor);
             } else {
-                context.emitInvokeVirtual(owner, methodName, descriptor);
+                context.emitInvokeVirtual(owner, jvmMethodName, descriptor);
             }
             break;
         }
