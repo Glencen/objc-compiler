@@ -1776,6 +1776,20 @@ void SemanticContext::initNSStringClass() {
         nsStringClass->addMethod(move(method));
     }
 
+    // - (bool)isEqualToString:(NSString*)other
+    {
+        auto method = make_unique<MethodInfo>(
+            "isEqualToString",
+            Type(TypeKind::BOOL),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "isEqualToString";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
+        nsStringClass->addMethod(move(method));
+    }
+
     addClass(move(nsStringClass));
 
     auto nsString = lookupClass("rtl/NSString");

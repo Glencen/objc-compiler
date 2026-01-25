@@ -469,10 +469,13 @@ void ExprNode::analyzeBoxedExprSemantics(SemanticContext& context) {
     }
     
     boxedExpr->analyzeSemantics(context);
-    
-    // Тип коробочного выражения зависит от типа внутреннего выражения
-    // TODO: Реализовать правильное определение типа
-    exprType = new Type(TypeKind::CLASS_NAME, "java/lang/Object");
+
+    // Обычные скобки не меняют тип выражения.
+    if (boxedExpr->getExprType()) {
+        exprType = new Type(*boxedExpr->getExprType());
+    } else {
+        exprType = new Type(TypeKind::NONE);
+    }
 }
 
 void ExprNode::analyzeMessageSemantics(SemanticContext& context) {

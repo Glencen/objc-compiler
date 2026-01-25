@@ -428,8 +428,19 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
             context.emitInvokeStatic("rtl/NSArray", "arrayWithObjectsStatic", "([Lrtl/NSObject;)Lrtl/NSArray;");
             break;
         }
+        case ExprKind::OBJC_BOXED_EXPR: {
+            if (!boxedExpr) break;
+            boxedExpr->emitBytecode(context);
+            emitBoxIfNeeded(context, boxedExpr->getExprType());
+            break;
+        }
         case ExprKind::NIL:
             context.emitAConstNull();
+            break;
+        case ExprKind::BOXED_EXPR:
+            if (boxedExpr) {
+                boxedExpr->emitBytecode(context);
+            }
             break;
         case ExprKind::SELF:
             context.emitLoad(Type(TypeKind::CLASS_NAME, context.getClassName()), 0);
