@@ -1583,8 +1583,11 @@ void StmtNode::analyzeForInSemantics(SemanticContext& context) {
     
     context.enterLoopScope();
     
-    // Добавляем переменную итератора в область видимости
-    // TODO: Определить тип переменной итератора на основе типа коллекции
+    // Добавляем переменную итератора в область видимости (тип id по умолчанию)
+    string varName = forInId->getIdentifier();
+    Type varType(TypeKind::TYPE_ID);
+    auto varInfo = make_unique<LocalVarInfo>(varName, varType, false, nullptr);
+    context.addLocalVar(move(varInfo));
     
     if (body) {
         body->analyzeSemantics(context);

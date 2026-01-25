@@ -54,6 +54,11 @@ public class NSNumber extends NSObject {
     }
 
     @Override
+    public String toString() {
+        return descriptionDynamic();
+    }
+
+    @Override
     public NSNumber initDynamic() {
         super.initDynamic();
         return this;

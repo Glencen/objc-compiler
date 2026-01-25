@@ -1041,6 +1041,60 @@ void StmtNode::emitBytecode(BytecodeContext& context) {
             context.markLabel(labelEnd);
             break;
         }
+        case StmtKind::FOR_IN:
+        case StmtKind::TYPED_FOR_IN: {
+            if (!collection || !body || !forInId) break;
+            Type collType(TypeKind::CLASS_NAME, "rtl/NSArray");
+            if (collection->getExprType() && collection->getExprType()->dataType == TypeKind::CLASS_NAME) {
+                collType = Type(TypeKind::CLASS_NAME, mapRuntimeClassName(collection->getExprType()->className));
+            }
+            std::string collTmp = "__forin_coll_" + std::to_string(getId());
+            int collIndex = context.defineLocal(collTmp, collType);
+            collection->emitBytecode(context);
+            context.emitStore(collType, collIndex);
+
+            std::string countTmp = "__forin_count_" + std::to_string(getId());
+            int countIndex = context.defineLocal(countTmp, Type(TypeKind::INT));
+            context.emitLoad(collType, collIndex);
+            context.emitInvokeVirtual("rtl/NSArray", "countDynamic", "()I");
+            context.emitStore(Type(TypeKind::INT), countIndex);
+
+            std::string idxTmp = "__forin_idx_" + std::to_string(getId());
+            int idxIndex = context.defineLocal(idxTmp, Type(TypeKind::INT));
+            context.emitIConst(0);
+            context.emitStore(Type(TypeKind::INT), idxIndex);
+
+            Type iterType(TypeKind::TYPE_ID);
+            if (kind == StmtKind::TYPED_FOR_IN && forInType) {
+                iterType = convertTypeNodeToType(forInType);
+                iterType = mapRuntimeType(iterType);
+            }
+            std::string iterName = forInId->getIdentifier();
+            int iterIndex = -1;
+            if (const auto* local = context.getLocal(iterName)) {
+                iterIndex = local->index;
+            } else {
+                iterIndex = context.defineLocal(iterName, iterType);
+            }
+
+            auto* labelStart = context.createLabel();
+            auto* labelEnd = context.createLabel();
+            context.markLabel(labelStart);
+            context.emitLoad(Type(TypeKind::INT), idxIndex);
+            context.emitLoad(Type(TypeKind::INT), countIndex);
+            context.emitJump(0xa2, labelEnd); // if_icmpge
+
+            context.emitLoad(collType, collIndex);
+            context.emitLoad(Type(TypeKind::INT), idxIndex);
+            context.emitInvokeVirtual("rtl/NSArray", "objectAtIndexDynamic", "(I)Lrtl/NSObject;");
+            context.emitStore(iterType, iterIndex);
+
+            body->emitBytecode(context);
+            context.emitIInc(idxIndex, 1);
+            context.emitJump(0xa7, labelStart);
+            context.markLabel(labelEnd);
+            break;
+        }
         case StmtKind::FOR_WITH_DECL: {
             auto* labelStart = context.createLabel();
             auto* labelEnd = context.createLabel();
