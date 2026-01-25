@@ -84,6 +84,8 @@ public:
     int getLocalVarId() const;
     void setIsLocalVar(bool val);
     bool getIsLocalVar() const;
+    bool isLiteral() const;
+    Type* getLiteralType() const;
 
     void analyzeSemantics(SemanticContext& context) override;
 

@@ -184,6 +184,10 @@ string LocalVarInfo::toString() const {
     return base;
 }
 
+Type LocalVarInfo::getType() const {
+    return type;
+}
+
 bool LocalVarInfo::isLocal() const {
     return !isParameter;
 }
@@ -210,6 +214,10 @@ string FieldInfo::toString() const {
         base += " [setter: " + setterName + "]";
     }
     return base;
+}
+
+Type FieldInfo::getType() const {
+    return type;
 }
 
 bool FieldInfo::hasGetter() const {

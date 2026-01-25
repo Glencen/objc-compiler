@@ -182,6 +182,10 @@ bool ValueNode::getIsLocalVar() const {
     return isLocalVar;
 }
 
+bool ValueNode::isLiteral() const {
+    return valueType != ValueKind::NONE && valueType != ValueKind::IDENTIFIER && valueType != ValueKind::CLASS_NAME;
+}
+
 string ValueNode::getDotLabel() const {
     auto escapeString = [](const string& src) {
         string out;

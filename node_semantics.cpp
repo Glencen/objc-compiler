@@ -26,6 +26,25 @@ Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) { //
 
 void ValueNode::analyzeSemantics(SemanticContext& context) {}
 
+Type* ValueNode::getLiteralType() const {
+    switch (valueType) {
+        case ValueKind::INT_LIT:
+            return new Type(TypeKind::INT);
+        case ValueKind::FLOAT_LIT:
+            return new Type(TypeKind::FLOAT);
+        case ValueKind::CHAR_LIT:
+            return new Type(TypeKind::CHAR);
+        case ValueKind::OBJC_STRING_LIT:
+            return new Type(TypeKind::CLASS_NAME, "rtl/NSString");
+        case ValueKind::BOOL_LIT:
+            return new Type(TypeKind::BOOL);
+        case ValueKind::NIL:
+            return new Type(TypeKind::TYPE_ID);
+        default:
+            return nullptr;
+    }
+}
+
 //--------------------------------------------------------------ReceiverNode--------------------------------------------------------------
 
 void ReceiverNode::analyzeSemantics(SemanticContext& context) {

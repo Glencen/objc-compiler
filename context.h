@@ -157,6 +157,7 @@ public:
     FieldInfo(const string& name, const Type& type, bool isInstance = true, ClassInfo* declaringClass = nullptr, AccessModifier access = AccessModifier::PROTECTED);
 
     string toString() const override;
+    Type getType() const;
     
     bool hasGetter() const;
     bool hasSetter() const;
@@ -174,6 +175,7 @@ public:
     LocalVarInfo(const string& name, const Type& type, bool isParameter = false, MethodInfo* enclosingMethod = nullptr);
 
     string toString() const override;
+    Type getType() const;
 
     bool isLocal() const;
     bool isParam() const;
