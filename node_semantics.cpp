@@ -1262,6 +1262,19 @@ void ExprNode::analyzeDotSemantics(SemanticContext& context) {
     }
     FieldInfo* field = cls->lookupField(fieldName, true);
     if (!field) {
+        // Try property getter (dot syntax for @property)
+        std::string getterName = context.generateGetterName(fieldName);
+        MethodInfo* getter = cls->lookupMethod(getterName, {}, {}, true, false);
+        if (getter) {
+            if (!canAccessMethod(context, getter)) {
+                throw semantic_exception("Property getter '" + getterName + "' is not accessible",
+                    "ExprNode::analyzeDotSemantics", -1, -1);
+            }
+            exprType = new Type(getter->getReturnType());
+            isMethodCall = true;
+            className = getter->declaringClass ? getter->declaringClass->name : cls->name;
+            return;
+        }
         throw semantic_exception("Ivar '" + fieldName + "' not found in class '" +
             cls->name + "' or its ancestors",
             "ExprNode::analyzeDotSemantics", -1, -1);

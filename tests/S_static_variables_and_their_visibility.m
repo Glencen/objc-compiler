@@ -5,12 +5,12 @@
 
 @implementation Counter
 + (int)getCount {
-    id countContainer = @[ @0 ];
-    return [countContainer[0] intValue];
+    return 0;
 }
 
 + (void)setCount:(int)value {
-    id countContainer = @[ @(value) ];
+    [InOutFuncs printInt: value];
+    [InOutFuncs printChar: '\n'];
 }
 @end
 
@@ -21,13 +21,17 @@
 @end
 
 int main() {
-    NSLog(@"%d", [Counter getCount]);
-    NSLog(@"%d", [Another getCount]);
+    [InOutFuncs printInt: [Counter getCount]];
+    [InOutFuncs printChar: '\n'];
+    [InOutFuncs printInt: [Another getCount]];
+    [InOutFuncs printChar: '\n'];
 
-    [Another setCount:5];
+    [Another setCount: 5];
 
-    NSLog(@"%d", [Counter getCount]);
-    NSLog(@"%d", [Another getCount]);
+    [InOutFuncs printInt: [Counter getCount]];
+    [InOutFuncs printChar: '\n'];
+    [InOutFuncs printInt: [Another getCount]];
+    [InOutFuncs printChar: '\n'];
 
     return 0;
 }

@@ -258,12 +258,12 @@ std::string buildFunctionDescriptor(TypeNode* returnTypeNode, ParamListNode* par
         for (auto* param : *params->getParamList()) {
             if (!param) continue;
             std::vector<int> sizes = param->getArraySizes();
-            Type paramType = convertTypeNodeToType(param->getType(), sizes);
+            Type paramType = mapRuntimeType(convertTypeNodeToType(param->getType(), sizes));
             desc += paramType.getDescriptor();
         }
     }
     desc += ")";
-    Type retType = convertTypeNodeToType(returnTypeNode);
+    Type retType = mapRuntimeType(convertTypeNodeToType(returnTypeNode));
     desc += retType.getDescriptor();
     return desc;
 }
@@ -274,10 +274,11 @@ std::string buildFunctionDescriptor(const FunctionInfo* func) {
     for (size_t i = 0; i < func->getParameterCount(); ++i) {
         const LocalVarInfo* param = func->getParameter(i);
         if (!param) continue;
-        desc += param->type.getDescriptor();
+        Type mapped = mapRuntimeType(param->type);
+        desc += mapped.getDescriptor();
     }
     desc += ")";
-    desc += func->getReturnType().getDescriptor();
+    desc += mapRuntimeType(func->getReturnType()).getDescriptor();
     return desc;
 }
 
@@ -638,6 +639,41 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                         right->emitBytecode(context);
                         context.emitDupX1();
                         context.emitPutField(owner, fieldName, field->type.getDescriptor());
+                        break;
+                    }
+                    ClassInfo* baseClass = baseType ? sem.lookupClass(baseType->className) : nullptr;
+                    if (!baseClass && baseType && baseType->dataType == TypeKind::CLASS_NAME) {
+                        baseClass = sem.lookupClass(mapRuntimeClassName(baseType->className));
+                    }
+                    if (baseClass) {
+                        std::string setterName = sem.generateSetterName(fieldName);
+                        std::vector<const Type*> argTypes;
+                        argTypes.push_back(right->getExprType());
+                        std::vector<std::string> keywords = {setterName};
+                        MethodInfo* setter = baseClass->lookupMethod(setterName, argTypes, keywords, true, false);
+                        if (setter) {
+                            Type mappedReturn = mapRuntimeType(setter->getReturnType());
+                            std::vector<Type> mappedArgs;
+                            std::vector<const Type*> mappedArgPtrs;
+                            for (const auto* t : setter->parameterTypes) {
+                                if (t) {
+                                    mappedArgs.push_back(mapRuntimeType(*t));
+                                    mappedArgPtrs.push_back(&mappedArgs.back());
+                                }
+                            }
+                            std::string desc = buildMethodDescriptor(mappedArgPtrs, mappedReturn);
+                            std::string jvmName = mangleJvmMethodName(setterName);
+                            std::string ownerName = mapRuntimeClassName(setter->declaringClass->name);
+                            Type rhsType = right->getExprType() ? *right->getExprType() : Type(TypeKind::NONE);
+                            std::string tmpName = "__assign_tmp_" + std::to_string(getId());
+                            int tmpIndex = context.defineLocal(tmpName, rhsType);
+                            right->emitBytecode(context);
+                            context.emitStore(rhsType, tmpIndex);
+                            base->emitBytecode(context);
+                            context.emitLoad(rhsType, tmpIndex);
+                            context.emitInvokeVirtual(ownerName, jvmName, desc);
+                            context.emitLoad(rhsType, tmpIndex);
+                        }
                     }
                 }
                 break;
@@ -670,6 +706,26 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
             if (field && field->isInstance) {
                 left->emitBytecode(context);
                 context.emitGetField(owner, field->name, field->type.getDescriptor());
+            } else if (baseType) {
+                ClassInfo* baseClass = sem.lookupClass(baseType->className);
+                if (!baseClass && baseType->dataType == TypeKind::CLASS_NAME) {
+                    baseClass = sem.lookupClass(mapRuntimeClassName(baseType->className));
+                }
+                if (baseClass) {
+                    std::string propName = right->getIdentifier()->getIdentifier();
+                    std::string getterName = sem.generateGetterName(propName);
+                    MethodInfo* getter = baseClass->lookupMethod(getterName, {}, {}, true, false);
+                    if (getter) {
+                        std::vector<Type> mappedArgs;
+                        std::vector<const Type*> mappedArgPtrs;
+                        Type mappedReturn = mapRuntimeType(getter->getReturnType());
+                        std::string desc = buildMethodDescriptor(mappedArgPtrs, mappedReturn);
+                        std::string jvmName = mangleJvmMethodName(getterName);
+                        std::string ownerName = mapRuntimeClassName(getter->declaringClass->name);
+                        left->emitBytecode(context);
+                        context.emitInvokeVirtual(ownerName, jvmName, desc);
+                    }
+                }
             }
             break;
         }
@@ -1249,7 +1305,7 @@ void FuncDefNode::emitBytecode(BytecodeContext& context) {
             if (!param || !param->getIdentifier()) continue;
             std::string paramName = param->getIdentifier()->getIdentifier();
             std::vector<int> sizes = param->getArraySizes();
-            Type paramType = convertTypeNodeToType(param->getType(), sizes);
+            Type paramType = mapRuntimeType(convertTypeNodeToType(param->getType(), sizes));
             context.defineLocal(paramName, paramType);
         }
     }
