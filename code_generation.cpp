@@ -1360,14 +1360,21 @@ void ImplementationNode::emitBytecode(BytecodeContext& context) {
     }
 
     std::unordered_set<std::string> implementedInstanceMethods;
+    std::unordered_set<std::string> implementedClassMethods;
     if (implDefList && implDefList->getInstanceMethodDefs()) {
         for (auto* methodDef : *implDefList->getInstanceMethodDefs()) {
             implementedInstanceMethods.insert(buildMethodNameFromDef(methodDef));
         }
     }
+    if (implDefList && implDefList->getClassMethodDefs()) {
+        for (auto* methodDef : *implDefList->getClassMethodDefs()) {
+            implementedClassMethods.insert(buildMethodNameFromDef(methodDef));
+        }
+    }
 
-    if (cls && !cls->propertyIvarMapping.empty()) {
+    if (cls) {
         std::unordered_map<std::string, std::pair<Type, bool>> propertyMeta;
+        std::unordered_map<std::string, std::pair<Type, bool>> classPropertyMeta;
 
         if (cls->interface && cls->interface->getInterfaceDeclList()) {
             auto* props = cls->interface->getInterfaceDeclList()->getProperties();
@@ -1376,8 +1383,13 @@ void ImplementationNode::emitBytecode(BytecodeContext& context) {
                     if (!prop || !prop->getName() || !prop->getType()) continue;
                     std::string name = prop->getName()->getIdentifier();
                     Type t = mapRuntimeType(convertTypeNodeToType(prop->getType()));
-                    bool readonly = prop->getAttribute() == Attribute::READONLY;
-                    propertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+                    bool isClassProperty = prop->getAttribute() == Attribute::CLASS;
+                    bool readonly = !isClassProperty && prop->getAttribute() == Attribute::READONLY;
+                    if (isClassProperty) {
+                        classPropertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+                    } else {
+                        propertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+                    }
                 }
             }
         }
@@ -1387,38 +1399,75 @@ void ImplementationNode::emitBytecode(BytecodeContext& context) {
                 if (!prop || !prop->getName() || !prop->getType()) continue;
                 std::string name = prop->getName()->getIdentifier();
                 Type t = mapRuntimeType(convertTypeNodeToType(prop->getType()));
-                bool readonly = prop->getAttribute() == Attribute::READONLY;
-                propertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+                bool isClassProperty = prop->getAttribute() == Attribute::CLASS;
+                bool readonly = !isClassProperty && prop->getAttribute() == Attribute::READONLY;
+                if (isClassProperty) {
+                    classPropertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+                } else {
+                    propertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+                }
             }
         }
 
-        for (const auto& [propName, ivarName] : cls->propertyIvarMapping) {
-            auto metaIt = propertyMeta.find(propName);
-            if (metaIt == propertyMeta.end()) continue;
-            const Type propType = metaIt->second.first;
-            const bool isReadonly = metaIt->second.second;
+        if (!cls->propertyIvarMapping.empty()) {
+            for (const auto& [propName, ivarName] : cls->propertyIvarMapping) {
+                auto metaIt = propertyMeta.find(propName);
+                if (metaIt == propertyMeta.end()) continue;
+                const Type propType = metaIt->second.first;
+                const bool isReadonly = metaIt->second.second;
+
+                std::string getterName = semCtx.generateGetterName(propName);
+                if (implementedInstanceMethods.find(getterName) == implementedInstanceMethods.end()) {
+                    std::string desc = "()" + propType.getDescriptor();
+                    context.beginMethod(mangleJvmMethodName(getterName), desc, 0x0001);
+                    context.setCurrentMethodInfo(nullptr, false);
+                    context.emitLoad(Type(TypeKind::CLASS_NAME, classNameStr), 0);
+                    context.emitGetField(classNameStr, ivarName, propType.getDescriptor());
+                    context.emitReturn(propType);
+                    context.endMethod();
+                }
+
+                if (!isReadonly) {
+                    std::string setterName = semCtx.generateSetterName(propName);
+                    if (implementedInstanceMethods.find(setterName) == implementedInstanceMethods.end()) {
+                        std::string desc = "(" + propType.getDescriptor() + ")V";
+                        context.beginMethod(mangleJvmMethodName(setterName), desc, 0x0001);
+                        context.setCurrentMethodInfo(nullptr, false);
+                        context.defineLocal("value", propType);
+                        context.emitLoad(Type(TypeKind::CLASS_NAME, classNameStr), 0);
+                        context.emitLoad(propType, 1);
+                        context.emitPutField(classNameStr, ivarName, propType.getDescriptor());
+                        context.emitReturn(Type(TypeKind::VOID));
+                        context.endMethod();
+                    }
+                }
+            }
+        }
+
+        for (const auto& [propName, meta] : classPropertyMeta) {
+            const Type propType = meta.first;
+            const bool isReadonly = meta.second;
+            std::string fieldName = "__class_" + propName;
 
             std::string getterName = semCtx.generateGetterName(propName);
-            if (implementedInstanceMethods.find(getterName) == implementedInstanceMethods.end()) {
+            if (implementedClassMethods.find(getterName) == implementedClassMethods.end()) {
                 std::string desc = "()" + propType.getDescriptor();
-                context.beginMethod(mangleJvmMethodName(getterName), desc, 0x0001);
-                context.setCurrentMethodInfo(nullptr, false);
-                context.emitLoad(Type(TypeKind::CLASS_NAME, classNameStr), 0);
-                context.emitGetField(classNameStr, ivarName, propType.getDescriptor());
+                context.beginMethod(mangleJvmMethodName(getterName), desc, 0x0001 | 0x0008);
+                context.setCurrentMethodInfo(nullptr, true);
+                context.emitGetStatic(classNameStr, fieldName, propType.getDescriptor());
                 context.emitReturn(propType);
                 context.endMethod();
             }
 
             if (!isReadonly) {
                 std::string setterName = semCtx.generateSetterName(propName);
-                if (implementedInstanceMethods.find(setterName) == implementedInstanceMethods.end()) {
+                if (implementedClassMethods.find(setterName) == implementedClassMethods.end()) {
                     std::string desc = "(" + propType.getDescriptor() + ")V";
-                    context.beginMethod(mangleJvmMethodName(setterName), desc, 0x0001);
-                    context.setCurrentMethodInfo(nullptr, false);
+                    context.beginMethod(mangleJvmMethodName(setterName), desc, 0x0001 | 0x0008);
+                    context.setCurrentMethodInfo(nullptr, true);
                     context.defineLocal("value", propType);
-                    context.emitLoad(Type(TypeKind::CLASS_NAME, classNameStr), 0);
-                    context.emitLoad(propType, 1);
-                    context.emitPutField(classNameStr, ivarName, propType.getDescriptor());
+                    context.emitLoad(propType, 0);
+                    context.emitPutStatic(classNameStr, fieldName, propType.getDescriptor());
                     context.emitReturn(Type(TypeKind::VOID));
                     context.endMethod();
                 }

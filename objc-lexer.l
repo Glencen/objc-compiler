@@ -344,6 +344,7 @@ OCT      [0-7]
 "nil"               { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return NIL; }
 "readonly"          { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return READONLY; }
 "readwrite"         { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return READWRITE; }
+"class"             { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return CLASS; }
 
 "bool"              { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return BOOL; }
 "int"               { TokenOutput::getInstance().addToken(TOK_KEYWORD, yytext); return INT; }

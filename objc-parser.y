@@ -22,7 +22,8 @@ ProgramNode* root = nullptr;
 
 enum PropertyAttr {
     PROP_READONLY,
-    PROP_READWRITE
+    PROP_READWRITE,
+    PROP_CLASS
 };
 
 Attribute convertAttr(int attribute);
@@ -238,6 +239,7 @@ property    :   PROPERTY '(' attribute ')' type ID ';'      {$$=PropertyNode::cr
 
 attribute   :   READONLY        {$$=PROP_READONLY;}
             |   READWRITE       {$$=PROP_READWRITE;}
+            |   CLASS           {$$=PROP_CLASS;}
             ;
 
 class_method_decl
@@ -477,7 +479,9 @@ array_size_spec
 %%
 
 Attribute convertAttr(int attribute) {
-    return (attribute == PROP_READONLY) ? Attribute::READONLY : Attribute::READWRITE;
+    if (attribute == PROP_READONLY) return Attribute::READONLY;
+    if (attribute == PROP_CLASS) return Attribute::CLASS;
+    return Attribute::READWRITE;
 }
 
 void yyerror(const char* s) {

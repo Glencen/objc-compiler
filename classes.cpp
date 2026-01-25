@@ -2043,6 +2043,7 @@ string PropertyNode::getDotLabel() const {
     switch (attribute) {
         case Attribute::READONLY:   return "READONLY_PROPERTY";
         case Attribute::READWRITE:  return "READWRITE_PROPERTY";
+        case Attribute::CLASS:      return "CLASS_PROPERTY";
         default:                    return "NO_ATTR_PROPERTY";
     }
 }
