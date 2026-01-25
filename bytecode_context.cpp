@@ -108,6 +108,7 @@ constexpr uint8_t OP_INVOKESTATIC = 0xb8;
 constexpr uint8_t OP_NEW = 0xbb;
 constexpr uint8_t OP_NEWARRAY = 0xbc;
 constexpr uint8_t OP_ANEWARRAY = 0xbd;
+constexpr uint8_t OP_MULTIANEWARRAY = 0xc5;
 
 constexpr uint8_t OP_IRETURN = 0xac;
 constexpr uint8_t OP_FRETURN = 0xae;
@@ -614,6 +615,14 @@ void BytecodeContext::emitANewArray(const std::string& className) {
     emitOpcode(OP_ANEWARRAY);
     emitU2(static_cast<uint16_t>(idx));
     updateStack(0);
+}
+
+void BytecodeContext::emitMultiANewArray(const std::string& descriptor, uint8_t dims) {
+    int idx = addClass(descriptor);
+    emitOpcode(OP_MULTIANEWARRAY);
+    emitU2(static_cast<uint16_t>(idx));
+    emitU1(dims);
+    updateStack(1 - static_cast<int>(dims));
 }
 
 void BytecodeContext::emitAAStore() {

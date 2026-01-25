@@ -641,7 +641,8 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                     const Type* arrType = arr->getExprType();
                     if (arrType && arrType->isArray()) {
                         context.emitDupX2();
-                        context.emitArrayStore(arrType->dataType);
+                        TypeKind storeKind = arrType->arrayDimension > 1 ? TypeKind::CLASS_NAME : arrType->dataType;
+                        context.emitArrayStore(storeKind);
                     }
                 }
                 break;
@@ -671,7 +672,18 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                 context.emitInvokeVirtual("rtl/NSArray", "objectAtIndexDynamic", "(I)Lrtl/NSObject;");
                 exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
             } else if (opType && opType->isArray()) {
-                context.emitArrayLoad(opType->dataType);
+                if (opType->arrayDimension > 1) {
+                    context.emitArrayLoad(TypeKind::CLASS_NAME);
+                    std::vector<int> subSizes;
+                    if (!opType->arraySizes.empty() && opType->arraySizes.size() > 1) {
+                        subSizes.assign(opType->arraySizes.begin() + 1, opType->arraySizes.end());
+                    } else {
+                        subSizes.assign(opType->arrayDimension - 1, 0);
+                    }
+                    exprType = new Type(opType->dataType, opType->className, subSizes);
+                } else {
+                    context.emitArrayLoad(opType->dataType);
+                }
             }
             break;
         }
@@ -903,22 +915,37 @@ void DeclNode::emitBytecode(BytecodeContext& context) {
             int localIndex = context.defineLocal(name, varType);
             InitializerNode* init = initDecl->getInitializer();
             if (varType.isArray() && (!init || init->getKind() != InitializerKind::EXPR || !init->getExpr())) {
-                ExprNode* sizeExpr = nullptr;
+                std::vector<ExprNode*> dimExprs;
                 if (auto* arraySizes = decl->getArraySizes()) {
-                    if (!arraySizes->empty()) sizeExpr = arraySizes->front();
+                    for (auto* sizeExpr : *arraySizes) {
+                        if (sizeExpr) dimExprs.push_back(sizeExpr);
+                    }
                 }
-                if (sizeExpr) {
-                    sizeExpr->emitBytecode(context);
+                if (dimExprs.size() > 1) {
+                    for (auto* sizeExpr : dimExprs) {
+                        if (sizeExpr) {
+                            sizeExpr->emitBytecode(context);
+                        } else {
+                            context.emitIConst(0);
+                        }
+                    }
+                    context.emitMultiANewArray(varType.getDescriptor(), static_cast<uint8_t>(dimExprs.size()));
                 } else {
-                    context.emitIConst(0);
-                }
-                if (varType.dataType == TypeKind::CLASS_NAME) {
-                    std::string elemClass = mapRuntimeClassName(varType.className);
-                    context.emitANewArray(elemClass);
-                } else if (varType.dataType == TypeKind::TYPE_ID) {
-                    context.emitANewArray("java/lang/Object");
-                } else {
-                    context.emitNewArray(varType.dataType);
+                    ExprNode* sizeExpr = nullptr;
+                    if (!dimExprs.empty()) sizeExpr = dimExprs.front();
+                    if (sizeExpr) {
+                        sizeExpr->emitBytecode(context);
+                    } else {
+                        context.emitIConst(0);
+                    }
+                    if (varType.dataType == TypeKind::CLASS_NAME) {
+                        std::string elemClass = mapRuntimeClassName(varType.className);
+                        context.emitANewArray(elemClass);
+                    } else if (varType.dataType == TypeKind::TYPE_ID) {
+                        context.emitANewArray("java/lang/Object");
+                    } else {
+                        context.emitNewArray(varType.dataType);
+                    }
                 }
                 context.emitStore(varType, localIndex);
             } else if (init && init->getKind() == InitializerKind::EXPR && init->getExpr()) {

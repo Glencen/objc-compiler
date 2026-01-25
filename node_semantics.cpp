@@ -1109,12 +1109,23 @@ void ExprNode::analyzeArrayAccessSemantics(SemanticContext& context) {
             "Got type: " + index->getExprType()->toString());
     }
     
-    // Тип результата - тип элемента массива или NSObject для NSArray
+    // Тип результата - элемент массива или подмассив для многомерных массивов
     if (isNsArray) {
         exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
     } else {
-        Type elemType(operand->getExprType()->dataType, operand->getExprType()->className);
-        exprType = new Type(elemType);
+        const Type* opType = operand->getExprType();
+        if (opType && opType->isArray() && opType->arrayDimension > 1) {
+            std::vector<int> subSizes;
+            if (!opType->arraySizes.empty() && opType->arraySizes.size() > 1) {
+                subSizes.assign(opType->arraySizes.begin() + 1, opType->arraySizes.end());
+            } else {
+                subSizes.assign(opType->arrayDimension - 1, 0);
+            }
+            exprType = new Type(opType->dataType, opType->className, subSizes);
+        } else {
+            Type elemType(operand->getExprType()->dataType, operand->getExprType()->className);
+            exprType = new Type(elemType);
+        }
     }
 }
 

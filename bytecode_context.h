@@ -101,6 +101,7 @@ public:
     void emitInvokeStatic(const std::string& owner, const std::string& name, const std::string& desc);
     void emitNewObject(const std::string& owner);
     void emitANewArray(const std::string& className);
+    void emitMultiANewArray(const std::string& descriptor, uint8_t dims);
     void emitAAStore();
     void emitNewArray(TypeKind elementKind);
     void emitArrayLoad(TypeKind elementKind);
