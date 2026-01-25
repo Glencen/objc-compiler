@@ -1166,17 +1166,40 @@ void ExprNode::analyzeFunctionCallSemantics(SemanticContext& context) {
 }
 
 void ExprNode::analyzeDotSemantics(SemanticContext& context) {
-    // TODO: Реализовать анализ операции доступа через точку (структуры/классы)
     if (!left || !right) {
         throw semantic_exception("Dot operator must have left and right operands",
             "ExprNode::analyzeDotSemantics", -1, -1);
     }
     
     left->analyzeSemantics(context);
-    right->analyzeSemantics(context);
-    
-    // Пока устанавливаем тип левого операнда
-    exprType = new Type(*left->getExprType());
+
+    Type* leftType = left->getExprType();
+    if (!leftType || leftType->dataType != TypeKind::CLASS_NAME) {
+        throw semantic_exception("Dot operator left operand must be an object",
+            "ExprNode::analyzeDotSemantics", -1, -1,
+            "Got type: " + (leftType ? leftType->toString() : "null"));
+    }
+    if (!right || right->getKind() != ExprKind::IDENTIFIER) {
+        throw semantic_exception("Dot operator right operand must be an identifier",
+            "ExprNode::analyzeDotSemantics", -1, -1);
+    }
+
+    string fieldName = right->getIdentifier()->getIdentifier();
+    ClassInfo* cls = context.lookupClass(leftType->className);
+    if (!cls) {
+        throw semantic_exception("Class '" + leftType->className + "' not found",
+            "ExprNode::analyzeDotSemantics", -1, -1);
+    }
+    FieldInfo* field = cls->lookupField(fieldName, true);
+    if (!field) {
+        throw semantic_exception("Ivar '" + fieldName + "' not found in class '" +
+            cls->name + "' or its ancestors",
+            "ExprNode::analyzeDotSemantics", -1, -1);
+    }
+
+    exprType = new Type(field->type);
+    isFieldAccess = true;
+    className = field->declaringClass->name;
 }
 
 void ExprNode::analyzeArrowSemantics(SemanticContext& context) {
@@ -2922,8 +2945,17 @@ void InstanceVarDeclNode::analyzeSemantics(SemanticContext& context) {
     
     // Обрабатываем инициализатор (если есть)
     if (initDecl->getInitializer()) {
-        // TODO: Проверить совместимость типа инициализатора с типом поля
-        // field->initialValue = ...; // Сохранить инициализатор для генерации кода
+        InitializerNode* initializer = initDecl->getInitializer();
+        if (initializer->getKind() == InitializerKind::EXPR && initializer->getExpr()) {
+            ExprNode* initExpr = initializer->getExpr();
+            if (initExpr->getExprType() && !context.isAssignable(*initExpr->getExprType(), varType)) {
+                throw semantic_exception("Instance variable initializer type mismatch",
+                    "InstanceVarDeclNode::analyzeSemantics", -1, -1,
+                    "Expected: " + varType.toString() +
+                    ", Got: " + initExpr->getExprType()->toString());
+            }
+            field->initialValue = initExpr;
+        }
     }
     
     // Добавляем поле в класс

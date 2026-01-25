@@ -128,6 +128,7 @@ void BytecodeContext::beginClass(const std::string& name) {
     currentClass.name = name;
     className = name;
     superClassName = "java/lang/Object";
+    currentClass.fields.clear();
     currentClass.methods.clear();
     currentMethod = nullptr;
     constantPool.clear();
@@ -179,6 +180,10 @@ void BytecodeContext::endMethod() {
         patchLabel(label);
     }
     currentMethod = nullptr;
+}
+
+void BytecodeContext::addField(const std::string& name, const std::string& descriptor, uint16_t accessFlags) {
+    currentClass.fields.push_back(FieldBuilder{name, descriptor, accessFlags});
 }
 
 const std::string& BytecodeContext::getClassName() const {
@@ -853,27 +858,45 @@ void BytecodeContext::writeClassFile() {
 
     std::vector<MethodBuilder> methods = currentClass.methods;
 
-    MethodBuilder initMethod;
-    initMethod.name = "<init>";
-    initMethod.descriptor = "()V";
-    initMethod.accessFlags = ACC_PUBLIC;
-    initMethod.code = {
-        OP_ALOAD_0,
-        OP_INVOKESPECIAL,
-        0x00, 0x00,
-        OP_RETURN
-    };
-    const std::string initOwner = superClassName.empty() ? "java/lang/Object" : superClassName;
-    int initMethodRef = addMethodRef(initOwner, "<init>", "()V");
-    initMethod.code[2] = static_cast<uint8_t>((initMethodRef >> 8) & 0xff);
-    initMethod.code[3] = static_cast<uint8_t>(initMethodRef & 0xff);
-    initMethod.maxStack = 1;
-    initMethod.maxLocals = 1;
-    methods.insert(methods.begin(), initMethod);
+    bool hasInit = false;
+    for (const auto& method : methods) {
+        if (method.name == "<init>") {
+            hasInit = true;
+            break;
+        }
+    }
+    if (!hasInit) {
+        MethodBuilder initMethod;
+        initMethod.name = "<init>";
+        initMethod.descriptor = "()V";
+        initMethod.accessFlags = ACC_PUBLIC;
+        initMethod.code = {
+            OP_ALOAD_0,
+            OP_INVOKESPECIAL,
+            0x00, 0x00,
+            OP_RETURN
+        };
+        const std::string initOwner = superClassName.empty() ? "java/lang/Object" : superClassName;
+        int initMethodRef = addMethodRef(initOwner, "<init>", "()V");
+        initMethod.code[2] = static_cast<uint8_t>((initMethodRef >> 8) & 0xff);
+        initMethod.code[3] = static_cast<uint8_t>(initMethodRef & 0xff);
+        initMethod.maxStack = 1;
+        initMethod.maxLocals = 1;
+        methods.insert(methods.begin(), initMethod);
+    }
 
     int thisClassIndex = addClass(currentClass.name);
     int superClassIndex = addClass(superClassName.empty() ? "java/lang/Object" : superClassName);
     int codeUtf8Index = addUtf8("Code");
+
+    std::vector<int> fieldNameIndices;
+    std::vector<int> fieldDescIndices;
+    fieldNameIndices.reserve(currentClass.fields.size());
+    fieldDescIndices.reserve(currentClass.fields.size());
+    for (const auto& field : currentClass.fields) {
+        fieldNameIndices.push_back(addUtf8(field.name));
+        fieldDescIndices.push_back(addUtf8(field.descriptor));
+    }
 
     std::vector<int> methodNameIndices;
     std::vector<int> methodDescIndices;
@@ -911,7 +934,14 @@ void BytecodeContext::writeClassFile() {
     writeU2(static_cast<uint16_t>(superClassIndex));
 
     writeU2(0);
-    writeU2(0);
+    writeU2(static_cast<uint16_t>(currentClass.fields.size()));
+    for (size_t i = 0; i < currentClass.fields.size(); ++i) {
+        const auto& field = currentClass.fields[i];
+        writeU2(field.accessFlags);
+        writeU2(static_cast<uint16_t>(fieldNameIndices[i]));
+        writeU2(static_cast<uint16_t>(fieldDescIndices[i]));
+        writeU2(0);
+    }
 
     writeU2(static_cast<uint16_t>(methods.size()));
     for (size_t i = 0; i < methods.size(); ++i) {

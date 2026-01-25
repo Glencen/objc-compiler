@@ -59,6 +59,15 @@ std::string mapRuntimeClassName(const std::string& name) {
     return name;
 }
 
+uint16_t mapAccessToFlags(AccessModifier access) {
+    switch (access) {
+        case AccessModifier::PUBLIC: return 0x0001;
+        case AccessModifier::PRIVATE: return 0x0002;
+        case AccessModifier::PROTECTED: return 0x0004;
+        default: return 0;
+    }
+}
+
 std::string mangleJvmMethodName(const std::string& name) {
     std::string result = name;
     for (auto& ch : result) {
@@ -570,6 +579,23 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                     }
                 }
             }
+            if (left->getKind() == ExprKind::DOT || left->getKind() == ExprKind::ARROW) {
+                ExprNode* base = left->getLeft();
+                ExprNode* member = left->getRight();
+                if (base && member && member->getKind() == ExprKind::IDENTIFIER) {
+                    std::string fieldName = member->getIdentifier()->getIdentifier();
+                    const Type* baseType = base->getExprType();
+                    std::string owner = baseType ? mapRuntimeClassName(baseType->className) : "";
+                    FieldInfo* field = sem.lookupField(owner, fieldName);
+                    if (field && field->isInstance) {
+                        base->emitBytecode(context);
+                        right->emitBytecode(context);
+                        context.emitDupX1();
+                        context.emitPutField(owner, fieldName, field->type.getDescriptor());
+                    }
+                }
+                break;
+            }
             if (left->getKind() == ExprKind::ARRAY_ACCESS) {
                 ExprNode* arr = left->getOperand();
                 ExprNode* idx = left->getIndex();
@@ -584,6 +610,19 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                     }
                 }
                 break;
+            }
+            break;
+        }
+        case ExprKind::DOT:
+        case ExprKind::ARROW: {
+            if (!left || !right) break;
+            if (right->getKind() != ExprKind::IDENTIFIER || !right->getIdentifier()) break;
+            const Type* baseType = left->getExprType();
+            std::string owner = baseType ? mapRuntimeClassName(baseType->className) : "";
+            FieldInfo* field = sem.lookupField(owner, right->getIdentifier()->getIdentifier());
+            if (field && field->isInstance) {
+                left->emitBytecode(context);
+                context.emitGetField(owner, field->name, field->type.getDescriptor());
             }
             break;
         }
@@ -1188,6 +1227,54 @@ void ImplementationNode::emitBytecode(BytecodeContext& context) {
     context.pushClassState();
     context.beginClass(classNameStr, context.makeClassOutputPath(classNameStr));
     context.setSuperClassName(mapRuntimeClassName(superName));
+
+    SemanticContext& semCtx = SemanticContext::getInstance();
+    ClassInfo* cls = semCtx.lookupClass(classNameStr);
+    if (cls) {
+        for (const auto& [fieldName, field] : cls->fields) {
+            if (!field) continue;
+            Type fieldType = field->type;
+            if (fieldType.dataType == TypeKind::CLASS_NAME) {
+                fieldType.className = mapRuntimeClassName(fieldType.className);
+            }
+            uint16_t flags = mapAccessToFlags(field->accessModifier);
+            if (!field->isInstance) {
+                flags |= 0x0008;
+            }
+            context.addField(fieldName, fieldType.getDescriptor(), flags);
+        }
+    }
+
+    bool hasFieldInit = false;
+    if (cls) {
+        for (const auto& [fieldName, field] : cls->fields) {
+            if (field && field->initialValue && field->isInstance) {
+                hasFieldInit = true;
+                break;
+            }
+        }
+    }
+
+    if (hasFieldInit) {
+        context.beginMethod("<init>", "()V", 0x0001);
+        context.setCurrentMethodInfo(nullptr, false);
+        const std::string superOwner = mapRuntimeClassName(superName);
+        context.emitLoad(Type(TypeKind::CLASS_NAME, classNameStr), 0);
+        context.emitInvokeSpecial(superOwner, "<init>", "()V");
+        for (const auto& [fieldName, field] : cls->fields) {
+            if (!field || !field->initialValue || !field->isInstance) continue;
+            if (field->declaringClass && field->declaringClass->name != classNameStr) continue;
+            Type fieldType = field->type;
+            if (fieldType.dataType == TypeKind::CLASS_NAME) {
+                fieldType.className = mapRuntimeClassName(fieldType.className);
+            }
+            context.emitLoad(Type(TypeKind::CLASS_NAME, classNameStr), 0);
+            field->initialValue->emitBytecode(context);
+            context.emitPutField(classNameStr, fieldName, fieldType.getDescriptor());
+        }
+        context.emitReturn(Type(TypeKind::VOID));
+        context.endMethod();
+    }
 
     if (implDefList) {
         implDefList->emitBytecode(context);

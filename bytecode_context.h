@@ -33,6 +33,12 @@ public:
         std::vector<Label*> labels;
     };
 
+    struct FieldBuilder {
+        std::string name;
+        std::string descriptor;
+        uint16_t accessFlags = 0;
+    };
+
     explicit BytecodeContext(const std::string& className, const std::string& outputPath);
 
     void beginClass(const std::string& className);
@@ -45,6 +51,7 @@ public:
 
     MethodBuilder* beginMethod(const std::string& name, const std::string& descriptor, uint16_t accessFlags);
     void endMethod();
+    void addField(const std::string& name, const std::string& descriptor, uint16_t accessFlags);
 
     void writeClassFile();
 
@@ -107,6 +114,7 @@ private:
 
     struct ClassBuilder {
         std::string name;
+        std::vector<FieldBuilder> fields;
         std::vector<MethodBuilder> methods;
     };
 
