@@ -243,17 +243,17 @@ attribute   :   READONLY        {$$=PROP_READONLY;}
             ;
 
 class_method_decl
-            :   '+' '(' type ')' ID ';'             {$$=MethodDeclNode::createClassMethodDecl($3, ValueNode::createIdentifier($5));}
-            |   '+' '(' VOID ')' ID ';'             {$$=MethodDeclNode::createClassMethodDecl(TypeNode::createVoid(), ValueNode::createIdentifier($5));}
-            |   '+' '(' type ')' method_sel ';'     {$$=MethodDeclNode::createClassMethodDecl($3, $5);}
-            |   '+' '(' VOID ')' method_sel ';'     {$$=MethodDeclNode::createClassMethodDecl(TypeNode::createVoid(), $5);}
+            :   access_modifier '+' '(' type ')' ID ';'             {auto* n=MethodDeclNode::createClassMethodDecl($4, ValueNode::createIdentifier($6)); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '+' '(' VOID ')' ID ';'             {auto* n=MethodDeclNode::createClassMethodDecl(TypeNode::createVoid(), ValueNode::createIdentifier($6)); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '+' '(' type ')' method_sel ';'     {auto* n=MethodDeclNode::createClassMethodDecl($4, $6); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '+' '(' VOID ')' method_sel ';'     {auto* n=MethodDeclNode::createClassMethodDecl(TypeNode::createVoid(), $6); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
             ;
 
 instance_method_decl
-            :   '-' '(' type ')' ID ';'             {$$=MethodDeclNode::createInstanceMethodDecl($3, ValueNode::createIdentifier($5));}
-            |   '-' '(' VOID ')' ID ';'             {$$=MethodDeclNode::createInstanceMethodDecl(TypeNode::createVoid(), ValueNode::createIdentifier($5));}
-            |   '-' '(' type ')' method_sel ';'     {$$=MethodDeclNode::createInstanceMethodDecl($3, $5);}
-            |   '-' '(' VOID ')' method_sel ';'     {$$=MethodDeclNode::createInstanceMethodDecl(TypeNode::createVoid(), $5);}
+            :   access_modifier '-' '(' type ')' ID ';'             {auto* n=MethodDeclNode::createInstanceMethodDecl($4, ValueNode::createIdentifier($6)); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '-' '(' VOID ')' ID ';'             {auto* n=MethodDeclNode::createInstanceMethodDecl(TypeNode::createVoid(), ValueNode::createIdentifier($6)); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '-' '(' type ')' method_sel ';'     {auto* n=MethodDeclNode::createInstanceMethodDecl($4, $6); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '-' '(' VOID ')' method_sel ';'     {auto* n=MethodDeclNode::createInstanceMethodDecl(TypeNode::createVoid(), $6); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
             ;
 
 method_sel  :   method_param                {$$=MethodSelNode::createMethodSel($1);}
@@ -294,17 +294,17 @@ impl_def_list
             ;
 
 class_method_def
-            :   '+' '(' type ')' ID compound_stmt               {$$=MethodDefNode::createClassMethodDef($3, ValueNode::createIdentifier($5), $6);}
-            |   '+' '(' VOID ')' ID compound_stmt               {$$=MethodDefNode::createClassMethodDef(TypeNode::createVoid(), ValueNode::createIdentifier($5), $6);}
-            |   '+' '(' type ')' method_sel compound_stmt       {$$=MethodDefNode::createClassMethodDef($3, $5, $6);}
-            |   '+' '(' VOID ')' method_sel compound_stmt       {$$=MethodDefNode::createClassMethodDef(TypeNode::createVoid(), $5, $6);}
+            :   access_modifier '+' '(' type ')' ID compound_stmt               {auto* n=MethodDefNode::createClassMethodDef($4, ValueNode::createIdentifier($6), $7); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '+' '(' VOID ')' ID compound_stmt               {auto* n=MethodDefNode::createClassMethodDef(TypeNode::createVoid(), ValueNode::createIdentifier($6), $7); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '+' '(' type ')' method_sel compound_stmt       {auto* n=MethodDefNode::createClassMethodDef($4, $6, $7); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '+' '(' VOID ')' method_sel compound_stmt       {auto* n=MethodDefNode::createClassMethodDef(TypeNode::createVoid(), $6, $7); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
             ;
 
 instance_method_def
-            :   '-' '(' type ')' ID compound_stmt               {$$=MethodDefNode::createInstanceMethodDef($3, ValueNode::createIdentifier($5), $6);}
-            |   '-' '(' VOID ')' ID compound_stmt               {$$=MethodDefNode::createInstanceMethodDef(TypeNode::createVoid(), ValueNode::createIdentifier($5), $6);}
-            |   '-' '(' type ')' method_sel compound_stmt       {$$=MethodDefNode::createInstanceMethodDef($3, $5, $6);}
-            |   '-' '(' VOID ')' method_sel compound_stmt       {$$=MethodDefNode::createInstanceMethodDef(TypeNode::createVoid(), $5, $6);}
+            :   access_modifier '-' '(' type ')' ID compound_stmt               {auto* n=MethodDefNode::createInstanceMethodDef($4, ValueNode::createIdentifier($6), $7); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '-' '(' VOID ')' ID compound_stmt               {auto* n=MethodDefNode::createInstanceMethodDef(TypeNode::createVoid(), ValueNode::createIdentifier($6), $7); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '-' '(' type ')' method_sel compound_stmt       {auto* n=MethodDefNode::createInstanceMethodDef($4, $6, $7); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
+            |   access_modifier '-' '(' VOID ')' method_sel compound_stmt       {auto* n=MethodDefNode::createInstanceMethodDef(TypeNode::createVoid(), $6, $7); if($1) n->setAccessModifier($1->getAccessType()); $$=n;}
             ;
 
 decl        :   type declarator_list    {$$=DeclNode::createDecl($1, $2);}

@@ -115,6 +115,7 @@ class MethodInfo : public SymbolInfo {
 public:
     ClassInfo* declaringClass = nullptr;
     bool isClassMethod;
+    AccessModifier accessModifier = AccessModifier::PUBLIC;
     
     vector<unique_ptr<LocalVarInfo>> parameters;
     map<string, unique_ptr<LocalVarInfo>> localVars;

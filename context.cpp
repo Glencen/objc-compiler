@@ -237,7 +237,8 @@ void FieldInfo::setAccessModifier(AccessModifier access) {
 MethodInfo::MethodInfo(const string& name, const Type& returnType, bool isClassMethod, ClassInfo* declaringClass)
     : SymbolInfo(SymbolKind::METHOD, name, returnType),
       declaringClass(declaringClass),
-      isClassMethod(isClassMethod) {}
+      isClassMethod(isClassMethod),
+      accessModifier(AccessModifier::PUBLIC) {}
 
 string MethodInfo::toString() const {
     string base = SymbolInfo::toString();

@@ -19,6 +19,24 @@ static bool canAccessField(const SemanticContext& context, const FieldInfo* fiel
     }
 }
 
+static bool canAccessMethod(const SemanticContext& context, const MethodInfo* method) {
+    if (!method) return false;
+    if (!method->declaringClass) return true;
+
+    ClassInfo* currentClass = context.getCurrentClass();
+    switch (method->accessModifier) {
+        case AccessModifier::PUBLIC:
+            return true;
+        case AccessModifier::PRIVATE:
+            return currentClass && currentClass == method->declaringClass;
+        case AccessModifier::PROTECTED:
+            return currentClass && (currentClass == method->declaringClass ||
+                                    currentClass->isSubclassOf(method->declaringClass));
+        default:
+            return true;
+    }
+}
+
 Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) { // TODO: куда впихнуть TYPE_ID ???
     if (!typeNode) return Type(TypeKind::NONE);
     
@@ -605,6 +623,10 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
     }
     
     if (method) {
+        if (!canAccessMethod(context, method)) {
+            throw semantic_exception("Method '" + selectorStr + "' is not accessible",
+                "ExprNode::analyzeMessageSemantics", -1, -1);
+        }
         exprType = new Type(method->getReturnType());
         isMethodCall = true;
         className = method->declaringClass->name;
@@ -2296,6 +2318,7 @@ void MethodDefNode::analyzeSemantics(SemanticContext& context) {
     }
     
     Type returnType = convertTypeNodeToType(type);
+    AccessModifier access = getAccessModifier();
     
     // Определяем имя метода и селектор
     string methodName;
@@ -2394,12 +2417,18 @@ void MethodDefNode::analyzeSemantics(SemanticContext& context) {
         
         // Обновляем тело метода
         existingMethod->body = compoundStmt;
+        if (access != AccessModifier::NONE) {
+            existingMethod->accessModifier = access;
+        }
     } else {
         // Создаем новый метод (если не было объявления)
         auto method = make_unique<MethodInfo>(methodName, returnType, isClassMethod(), currentClass);
         method->selector = selector;
         method->keywords = keywords;
         method->body = compoundStmt;
+        if (access != AccessModifier::NONE) {
+            method->accessModifier = access;
+        }
         
         // Копируем типы параметров
         for (const Type* paramType : paramTypes) {
@@ -2690,6 +2719,10 @@ void MethodDeclNode::analyzeSemantics(SemanticContext& context) {
     
     // Создаем информацию о методе
     auto method = make_unique<MethodInfo>(methodName, returnType, isClassMethod(), currentClass);
+    AccessModifier access = getAccessModifier();
+    if (access != AccessModifier::NONE) {
+        method->accessModifier = access;
+    }
     method->selector = selector;
     method->keywords = keywords;
     

@@ -688,6 +688,8 @@ public:
     StmtNode* getCompoundStmt() const;
     bool isInstanceMethod() const;
     bool isClassMethod() const;
+    AccessModifier getAccessModifier() const;
+    void setAccessModifier(AccessModifier access);
 
     void checkMethodReturnStatements(MethodInfo* method, SemanticContext& context, StmtNode* body);
     void collectReturnStatements(StmtNode* stmt, vector<StmtNode*>& returnStmts);
@@ -706,6 +708,7 @@ protected:
     MethodSelNode *methodSel;
     StmtNode *compoundStmt;
     bool isInstanceMethodFlag;
+    AccessModifier accessModifier = AccessModifier::NONE;
 
     MethodDefNode();
 };
@@ -751,6 +754,8 @@ public:
     MethodSelNode* getMethodSel() const;
     bool isInstanceMethod() const;
     bool isClassMethod() const;
+    AccessModifier getAccessModifier() const;
+    void setAccessModifier(AccessModifier access);
     
     void analyzeSemantics(SemanticContext& context) override;
 
@@ -765,6 +770,7 @@ protected:
     ValueNode *identifier;
     MethodSelNode *methodSel;
     bool isInstanceMethodFlag;
+    AccessModifier accessModifier = AccessModifier::NONE;
 
     MethodDeclNode();
 };

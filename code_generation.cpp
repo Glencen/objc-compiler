@@ -1264,7 +1264,11 @@ void MethodDefNode::emitBytecode(BytecodeContext& context) {
     descriptor += ")";
     descriptor += returnType.getDescriptor();
 
-    uint16_t accessFlags = 0x0001;
+    AccessModifier access = getAccessModifier();
+    if (access == AccessModifier::NONE) {
+        access = AccessModifier::PUBLIC;
+    }
+    uint16_t accessFlags = mapAccessToFlags(access);
     if (isClassMethod()) {
         accessFlags |= 0x0008;
     }
