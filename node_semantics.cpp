@@ -490,8 +490,7 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
     if (selector->getKind() == MsgSelectorKind::SIMPLE_SEL) {
         string idName = selector->getIdentifier()->getIdentifier();
         methodName = idName;
-        selectorStr = idName + ":";
-        keywords.push_back(idName);
+        selectorStr = idName;
     } else if (selector->getKind() == MsgSelectorKind::ARGUMENT_LIST) {
         MsgArgListNode* argList = selector->getMsgArgList();
         if (argList) {
@@ -555,10 +554,8 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
         // }
         
         if (isSuperCall) {
-            if (receiverClass->superclass) {
-                method = receiverClass->superclass->lookupMethod(
-                    methodName, argTypes, keywords, true, isStaticCall);
-            }
+            method = receiverClass->lookupMethod(
+                methodName, argTypes, keywords, true, isStaticCall);
         } else {
             method = receiverClass->lookupMethod(
                 methodName, argTypes, keywords, true, isStaticCall);
@@ -2200,7 +2197,7 @@ void MethodDefNode::analyzeSemantics(SemanticContext& context) {
         // Простой метод без параметров
         methodName = identifier->getIdentifier();
         selector = methodName;
-        keywords = {""};
+        keywords.clear();
     } else if (methodSel) {
         // Метод с селектором
         methodSel->analyzeSemantics(context);
@@ -2502,7 +2499,7 @@ void MethodDeclNode::analyzeSemantics(SemanticContext& context) {
         // Простой метод без параметров
         methodName = identifier->getIdentifier();
         selector = methodName;
-        keywords = {""}; // Пустое ключевое слово для метода без параметров
+        keywords.clear();
     } else if (methodSel) {
         // Метод с селектором
         methodSel->analyzeSemantics(context);
@@ -3036,7 +3033,7 @@ void ImplementationNode::processProperties(SemanticContext& context) {
             // Создаем геттер
             auto newGetter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
             newGetter->selector = getterName;
-            newGetter->keywords = {""};
+            newGetter->keywords.clear();
             cls->addMethod(move(newGetter));
         }
         

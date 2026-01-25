@@ -1031,7 +1031,18 @@ void InstanceVarsNode::emitBytecode(BytecodeContext& context) {}
 void ImplementationNode::emitBytecode(BytecodeContext& context) {
     if (!className) return;
     std::string classNameStr = className->getIdentifier();
-    std::string superName = superClassName ? superClassName->getIdentifier() : "rtl/NSObject";
+    std::string superName;
+    if (superClassName) {
+        superName = superClassName->getIdentifier();
+    } else {
+        SemanticContext& semCtx = SemanticContext::getInstance();
+        ClassInfo* cls = semCtx.lookupClass(classNameStr);
+        if (cls && cls->superclass) {
+            superName = cls->superclass->name;
+        } else {
+            superName = "rtl/NSObject";
+        }
+    }
     context.pushClassState();
     context.beginClass(classNameStr, context.makeClassOutputPath(classNameStr));
     context.setSuperClassName(mapRuntimeClassName(superName));
