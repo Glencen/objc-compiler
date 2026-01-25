@@ -463,14 +463,34 @@ void ClassInfo::addMethod(unique_ptr<MethodInfo> method) {
     
     auto& methodList = methods[method->name];
     for (auto& existingMethod : methodList) {
-        if (existingMethod->isClassMethod == method->isClassMethod &&
-            existingMethod->matchesSignature(method->parameterTypes, method->keywords)) {
+        if (existingMethod->isClassMethod != method->isClassMethod) {
+            continue;
+        }
+        if (existingMethod->keywords == method->keywords &&
+            !existingMethod->matchesSignature(method->parameterTypes, method->keywords)) {
+            throw semantic_exception("Method overloading is not supported for selector '" + method->name + "'",
+                "ClassInfo::addMethod", -1, -1);
+        }
+        if (existingMethod->matchesSignature(method->parameterTypes, method->keywords)) {
             throw semantic_exception("Method with same signature already exists: " + method->name,
                 "ClassInfo::addMethod", -1, -1);
         }
     }
     
     if (superclass) {
+        auto superIt = superclass->methods.find(method->name);
+        if (superIt != superclass->methods.end()) {
+            for (const auto& superMethod : superIt->second) {
+                if (superMethod->isClassMethod != method->isClassMethod) {
+                    continue;
+                }
+                if (superMethod->keywords == method->keywords &&
+                    !superMethod->matchesSignature(method->parameterTypes, method->keywords)) {
+                    throw semantic_exception("Method '" + method->name + "' overrides with a different signature",
+                        "ClassInfo::addMethod", -1, -1);
+                }
+            }
+        }
         MethodInfo* superMethod = superclass->lookupMethod(method->name, method->parameterTypes, method->keywords, true, method->isClassMethod);
         if (superMethod) {
             if (!method->getReturnType().equal(&superMethod->getReturnType())) {
@@ -823,12 +843,6 @@ LocalVarInfo* SemanticContext::lookupLocalVar(const string& name) const {
                 }
             }
         }
-        
-        if (scope->kind == Scope::FUNCTION_SCOPE ||
-            scope->kind == Scope::METHOD_SCOPE ||
-            scope->kind == Scope::CLASS_SCOPE) {
-            break;
-        }
     }
     
     return nullptr;
@@ -903,12 +917,6 @@ vector<LocalVarInfo*> SemanticContext::getVisibleLocalVars() const {
                 result.push_back(var.get());
                 seenNames.insert(name);
             }
-        }
-        
-        if (scope->kind == Scope::FUNCTION_SCOPE ||
-            scope->kind == Scope::METHOD_SCOPE ||
-            scope->kind == Scope::CLASS_SCOPE) {
-            break;
         }
     }
     

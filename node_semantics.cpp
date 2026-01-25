@@ -2299,7 +2299,24 @@ void MethodDefNode::analyzeSemantics(SemanticContext& context) {
         throw semantic_exception("Method must have either identifier or selector",
             "MethodDefNode::analyzeSemantics", -1, -1);
     }
-    
+
+    // Проверяем перегрузку методов: один и тот же selector с разными типами параметров запрещен
+    auto existingListIt = currentClass->methods.find(methodName);
+    if (existingListIt != currentClass->methods.end()) {
+        for (const auto& existing : existingListIt->second) {
+            if (existing->isClassMethod != isClassMethod()) {
+                continue;
+            }
+            if (existing->keywords != keywords) {
+                continue;
+            }
+            if (!existing->matchesSignature(paramTypes, keywords)) {
+                throw semantic_exception("Method overloading is not supported for selector '" + methodName + "'",
+                    "MethodDefNode::analyzeSemantics", -1, -1);
+            }
+        }
+    }
+
     // Ищем метод в текущем классе и его суперклассах
     MethodInfo* existingMethod = currentClass->lookupMethod(methodName, paramTypes, keywords, true, isClassMethod());
     
@@ -2607,7 +2624,24 @@ void MethodDeclNode::analyzeSemantics(SemanticContext& context) {
         throw semantic_exception("Method must have either identifier or selector",
             "MethodDeclNode::analyzeSemantics", -1, -1);
     }
-    
+
+    // Проверяем перегрузку методов: один и тот же selector с разными типами параметров запрещен
+    auto existingListIt = currentClass->methods.find(methodName);
+    if (existingListIt != currentClass->methods.end()) {
+        for (const auto& existing : existingListIt->second) {
+            if (existing->isClassMethod != isClassMethod()) {
+                continue;
+            }
+            if (existing->keywords != keywords) {
+                continue;
+            }
+            if (!existing->matchesSignature(paramTypes, keywords)) {
+                throw semantic_exception("Method overloading is not supported for selector '" + methodName + "'",
+                    "MethodDeclNode::analyzeSemantics", -1, -1);
+            }
+        }
+    }
+
     // Проверяем, что имя метода не зарезервировано
     if (context.isReservedName(methodName)) {
         throw semantic_exception("Method name '" + methodName + "' is a reserved keyword",
@@ -2726,60 +2760,6 @@ void InterfaceDeclListNode::analyzeSemantics(SemanticContext& context) {
                 if (!declaredNames.insert(propName).second) {
                     throw semantic_exception("Duplicate property name '" + propName + "' in interface",
                         "InterfaceDeclListNode::analyzeSemantics", -1, -1);
-                }
-            }
-        }
-    }
-    
-    // Собираем имена методов класса
-    if (classMethodDecls) {
-        for (MethodDeclNode* methodDecl : *classMethodDecls) {
-            if (methodDecl) {
-                // Получаем имя метода из идентификатора или селектора
-                string methodName;
-                if (methodDecl->getIdentifier()) {
-                    methodName = methodDecl->getIdentifier()->getIdentifier();
-                } else if (methodDecl->getMethodSel()) {
-                    // Для методов с селектором формируем имя из ключевых слов
-                    auto paramList = methodDecl->getMethodSel()->getMethodParamList();
-                    if (paramList) {
-                        for (MethodParamNode* param : *paramList) {
-                            if (param && param->getSelectorIdentifier()) {
-                                methodName += param->getSelectorIdentifier()->getIdentifier();
-                            }
-                        }
-                    }
-                }
-                
-                if (!methodName.empty() && !declaredNames.insert(methodName).second) {
-                    cerr << "Warning: Method '" << methodName << "' hides property with the same name" << endl;
-                }
-            }
-        }
-    }
-    
-    // Собираем имена методов экземпляра
-    if (instanceMethodDecls) {
-        for (MethodDeclNode* methodDecl : *instanceMethodDecls) {
-            if (methodDecl) {
-                // Получаем имя метода из идентификатора или селектора
-                string methodName;
-                if (methodDecl->getIdentifier()) {
-                    methodName = methodDecl->getIdentifier()->getIdentifier();
-                } else if (methodDecl->getMethodSel()) {
-                    // Для методов с селектором формируем имя из ключевых слов
-                    auto paramList = methodDecl->getMethodSel()->getMethodParamList();
-                    if (paramList) {
-                        for (MethodParamNode* param : *paramList) {
-                            if (param && param->getSelectorIdentifier()) {
-                                methodName += param->getSelectorIdentifier()->getIdentifier();
-                            }
-                        }
-                    }
-                }
-                
-                if (!methodName.empty() && !declaredNames.insert(methodName).second) {
-                    cerr << "Warning: Method '" << methodName << "' hides property with the same name" << endl;
                 }
             }
         }
@@ -3090,13 +3070,13 @@ void ImplementationNode::processProperties(SemanticContext& context) {
                     "ImplementationNode::processProperties", -1, -1,
                     "Property: " + propertyName);
             }
-        } else {
-            // Создаем геттер
-            auto newGetter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
-            newGetter->selector = getterName;
-            newGetter->keywords = {};
-            cls->addMethod(move(newGetter));
-        }
+            } else {
+                // Создаем геттер
+                auto newGetter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
+                newGetter->selector = getterName;
+                newGetter->keywords = {};
+                cls->addMethod(move(newGetter));
+            }
         
         // Проверяем/создаем сеттер (если свойство не readonly)
         if (!isReadonly) {
@@ -3130,13 +3110,14 @@ void ImplementationNode::processProperties(SemanticContext& context) {
                 // Создаем сеттер
                 Type voidType(TypeKind::VOID);
                 auto newSetter = make_unique<MethodInfo>(setterName, voidType, false, cls);
-                newSetter->keywords = {setterName.substr(3)}; // Убираем "set" и делаем lowercase
                 
                 // Добавляем параметр
                 auto param = make_unique<LocalVarInfo>("value", propertyType, true, newSetter.get());
-                newSetter->parameterTypes.push_back(&propertyType);
+                newSetter->parameterTypes.push_back(new Type(propertyType));
                 newSetter->addParameter(move(param));
                 
+                newSetter->selector = setterName;
+                newSetter->keywords = {setterName};
                 cls->addMethod(move(newSetter));
             }
         }
@@ -3248,6 +3229,8 @@ void InterfaceNode::processProperties(SemanticContext& context) {
         string getterName = context.generateGetterName(propertyName);
         if (!cls->lookupMethod(getterName, {}, {}, false, false)) {
             auto getter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
+            getter->selector = getterName;
+            getter->keywords = {};
             cls->addMethod(move(getter));
         }
         
@@ -3260,11 +3243,11 @@ void InterfaceNode::processProperties(SemanticContext& context) {
                 
                 // Устанавливаем параметр для сеттера
                 auto param = make_unique<LocalVarInfo>("value", propertyType, true, setter.get());
+                setter->parameterTypes.push_back(new Type(propertyType));
                 setter->addParameter(move(param));
                 
-                // TODO: Установить selector и keywords для Objective-C
-                // setter->selector = "set" + propertyName + ":";
-                // setter->keywords = {"set" + propertyName};
+                setter->selector = setterName;
+                setter->keywords = {setterName};
                 
                 cls->addMethod(move(setter));
             }
