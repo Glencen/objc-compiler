@@ -6,6 +6,12 @@ Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) { //
     
     TypeKind typeKind = typeNode->getKind();
     string className = typeKind == TypeKind::CLASS_NAME ? typeNode->getClassName()->getClassName() : "";
+    if (typeKind == TypeKind::CLASS_NAME && !className.empty()) {
+        auto& ctx = SemanticContext::getInstance();
+        if (auto cls = ctx.lookupClass(className)) {
+            className = cls->name;
+        }
+    }
     
     if (typeNode->isPrimitive()) {
         return Type(typeKind);
