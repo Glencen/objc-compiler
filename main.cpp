@@ -139,11 +139,6 @@ int main(int argc, char* argv[])
             SemanticContext& inst = SemanticContext::getInstance();
             inst.initSemanticContext();
             root->analyzeSemantics(inst);
-            //inst.dumpClassHierarchy();
-            //cout << "\n\n\n\n\n" << endl;
-            //inst.dumpCurrentScope();
-            //cout << "\n\n\n\n\n" << endl;
-            //inst.dumpSymbolTable();
             
             std::ofstream ast_after_out(ast_after_file);
             if (!ast_after_out.is_open()) {

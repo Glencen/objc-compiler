@@ -274,6 +274,7 @@ public:
     FieldInfo* lookupField(const string& className, const string& fieldName) const;
     LocalVarInfo* lookupLocalVar(const string& name) const;
     FunctionInfo* lookupFunction(const string& name) const;
+    vector<FunctionInfo*> getFunctionOverloads(const string& name) const;
 
     bool existsInCurrentScope(const string& name) const;
     bool existsInParentScopes(const string& name) const;

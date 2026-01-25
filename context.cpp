@@ -860,6 +860,21 @@ FunctionInfo* SemanticContext::lookupFunction(const string& name) const {
     return it->second.front().get();
 }
 
+vector<FunctionInfo*> SemanticContext::getFunctionOverloads(const string& name) const {
+    vector<FunctionInfo*> result;
+    auto it = functions.find(name);
+    if (it == functions.end()) {
+        return result;
+    }
+    result.reserve(it->second.size());
+    for (const auto& func : it->second) {
+        if (func) {
+            result.push_back(func.get());
+        }
+    }
+    return result;
+}
+
 bool SemanticContext::existsInCurrentScope(const string& name) const {
     if (!currentScope) return false;
     return currentScope->locals.find(name) != currentScope->locals.end();
