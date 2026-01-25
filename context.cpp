@@ -1374,7 +1374,9 @@ void SemanticContext::initSemanticContext() {
     initNSArrayClass();
     initNSNumberClass();
     initInOutFuncsClass();
+    dumpSymbolTable();
 
+    resolveInheritance();
     enterScope();
 }
 
@@ -1428,85 +1430,85 @@ void SemanticContext::initNSObjectClass() { // TODO: пересмотреть н
         nsObjectClass->addMethod(move(constructor));
     }
     
-    // allocStatic ()Lrtl/NSObject;
+    // alloc ()Lrtl/NSObject;
     {
         auto allocStatic = make_unique<MethodInfo>(
-            "allocStatic",
+            "alloc",
             Type(TypeKind::CLASS_NAME, "rtl/NSObject"),
             true,
             nsObjectClass.get()
         );
-        allocStatic->selector = "allocStatic";
+        allocStatic->selector = "alloc";
         allocStatic->keywords = {};
         allocStatic->parameterTypes = {};
         nsObjectClass->addMethod(move(allocStatic));
     }
     
-    // initDynamic ()Lrtl/NSObject;
+    // init ()Lrtl/NSObject;
     {
         auto initDynamic = make_unique<MethodInfo>(
-            "initDynamic",
+            "init",
             Type(TypeKind::CLASS_NAME, "rtl/NSObject"),
             false,
             nsObjectClass.get()
         );
-        initDynamic->selector = "initDynamic";
+        initDynamic->selector = "init";
         initDynamic->keywords = {};
         initDynamic->parameterTypes = {};
         nsObjectClass->addMethod(move(initDynamic));
     }
     
-    // newStatic ()Lrtl/NSObject;
+    // new ()Lrtl/NSObject;
     {
         auto newStatic = make_unique<MethodInfo>(
-            "newStatic",
+            "new",
             Type(TypeKind::CLASS_NAME, "rtl/NSObject"),
             true,
             nsObjectClass.get()
         );
-        newStatic->selector = "newStatic";
+        newStatic->selector = "new";
         newStatic->keywords = {};
         newStatic->parameterTypes = {};
         nsObjectClass->addMethod(move(newStatic));
     }
     
-    // getClassDynamic ()Ljava/lang/Class;
+    // getClass ()Ljava/lang/Class;
     {
         auto getClassDynamic = make_unique<MethodInfo>(
-            "getClassDynamic",
+            "getClass",
             Type(TypeKind::CLASS_NAME, "java/lang/Class"),
             false,
             nsObjectClass.get()
         );
-        getClassDynamic->selector = "getClassDynamic";
+        getClassDynamic->selector = "getClass";
         getClassDynamic->keywords = {};
         getClassDynamic->parameterTypes = {};
         nsObjectClass->addMethod(move(getClassDynamic));
     }
     
-    // getClassStatic ()Ljava/lang/Class;
+    // getClass ()Ljava/lang/Class;
     {
         auto getClassStatic = make_unique<MethodInfo>(
-            "getClassStatic",
+            "getClass",
             Type(TypeKind::CLASS_NAME, "java/lang/Class"),
             true,
             nsObjectClass.get()
         );
-        getClassStatic->selector = "getClassStatic";
+        getClassStatic->selector = "getClass";
         getClassStatic->keywords = {};
         getClassStatic->parameterTypes = {};
         nsObjectClass->addMethod(move(getClassStatic));
     }
     
-    // isSubclassOfClassStatic (Ljava/lang/Class;)I
+    // isSubclassOfClass (Ljava/lang/Class;)I
     {
         auto isSubclassOfClassStatic = make_unique<MethodInfo>(
-            "isSubclassOfClassStatic",
+            "isSubclassOfClass",
             Type(TypeKind::INT),
             true,
             nsObjectClass.get()
         );
-        isSubclassOfClassStatic->selector = "isSubclassOfClassStatic";
+        isSubclassOfClassStatic->selector = "isSubclassOfClass";
         isSubclassOfClassStatic->keywords = {""};
         isSubclassOfClassStatic->parameterTypes = {
             new Type(TypeKind::CLASS_NAME, "java/lang/Class")
@@ -1523,29 +1525,29 @@ void SemanticContext::initNSObjectClass() { // TODO: пересмотреть н
         nsObjectClass->addMethod(move(isSubclassOfClassStatic));
     }
     
-    // classNameDynamic ()Lrtl/NSString;
+    // className ()Lrtl/NSString;
     {
         auto classNameDynamic = make_unique<MethodInfo>(
-            "classNameDynamic",
+            "className",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             false,
             nsObjectClass.get()
         );
-        classNameDynamic->selector = "classNameDynamic";
+        classNameDynamic->selector = "className";
         classNameDynamic->keywords = {};
         classNameDynamic->parameterTypes = {};
         nsObjectClass->addMethod(move(classNameDynamic));
     }
     
-    // superclassDynamic ()Ljava/lang/Class;
+    // superclass ()Ljava/lang/Class;
     {
         auto superclassDynamic = make_unique<MethodInfo>(
-            "superclassDynamic",
+            "superclass",
             Type(TypeKind::CLASS_NAME, "java/lang/Class"),
             false,
             nsObjectClass.get()
         );
-        superclassDynamic->selector = "superclassDynamic";
+        superclassDynamic->selector = "superclass";
         superclassDynamic->keywords = {};
         superclassDynamic->parameterTypes = {};
         nsObjectClass->addMethod(move(superclassDynamic));
@@ -1554,12 +1556,12 @@ void SemanticContext::initNSObjectClass() { // TODO: пересмотреть н
     // descriptionDynamic ()Lrtl/NSString;
     {
         auto descriptionDynamic = make_unique<MethodInfo>(
-            "descriptionDynamic",
+            "description",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             false,
             nsObjectClass.get()
         );
-        descriptionDynamic->selector = "descriptionDynamic";
+        descriptionDynamic->selector = "description";
         descriptionDynamic->keywords = {};
         descriptionDynamic->parameterTypes = {};
         nsObjectClass->addMethod(move(descriptionDynamic));
@@ -1568,12 +1570,12 @@ void SemanticContext::initNSObjectClass() { // TODO: пересмотреть н
     // isEqualDynamic (Lrtl/NSObject;)I
     {
         auto isEqualDynamic = make_unique<MethodInfo>(
-            "isEqualDynamic",
+            "isEqual",
             Type(TypeKind::INT),
             false,
             nsObjectClass.get()
         );
-        isEqualDynamic->selector = "isEqualDynamic";
+        isEqualDynamic->selector = "isEqual";
         isEqualDynamic->keywords = {""};
         isEqualDynamic->parameterTypes = {
             new Type(TypeKind::CLASS_NAME, "rtl/NSObject")
@@ -1620,12 +1622,12 @@ void SemanticContext::initNSStringClass() {
     // + (id)string
     {
         auto method = make_unique<MethodInfo>(
-            "stringStatic",
+            "string",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             true,
             nsStringClass.get()
         );
-        method->selector = "stringStatic";
+        method->selector = "string";
         method->keywords = {};
         method->parameterTypes = {};
         nsStringClass->addMethod(move(method));
@@ -1634,12 +1636,12 @@ void SemanticContext::initNSStringClass() {
     // + (id)stringWithCString:(const char*)cstr
     {
         auto method = make_unique<MethodInfo>(
-            "stringWithCStringStatic",
+            "stringWithCString",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             true,
             nsStringClass.get()
         );
-        method->selector = "stringWithCStringStatic";
+        method->selector = "stringWithCString";
         method->keywords = {""};
         method->parameterTypes = { new Type(TypeKind::CHAR, "", 1) }; // char[]
         nsStringClass->addMethod(move(method));
@@ -1648,12 +1650,12 @@ void SemanticContext::initNSStringClass() {
     // + (id)stringWithString:(NSString*)str
     {
         auto method = make_unique<MethodInfo>(
-            "stringWithStringStatic",
+            "stringWithString",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             true,
             nsStringClass.get()
         );
-        method->selector = "stringWithStringStatic";
+        method->selector = "stringWithString";
         method->keywords = {""};
         method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
         nsStringClass->addMethod(move(method));
@@ -1666,12 +1668,12 @@ void SemanticContext::initNSStringClass() {
     // - (const char*)cString
     {
         auto method = make_unique<MethodInfo>(
-            "cStringDynamic",
+            "cString",
             Type(TypeKind::CHAR, "", 1),
             false,
             nsStringClass.get()
         );
-        method->selector = "cStringDynamic";
+        method->selector = "cString";
         method->keywords = {};
         method->parameterTypes = {};
         nsStringClass->addMethod(move(method));
@@ -1680,12 +1682,12 @@ void SemanticContext::initNSStringClass() {
     // - (NSString*)capitalizeString
     {
         auto method = make_unique<MethodInfo>(
-            "capitalizeStringDynamic",
+            "capitalizeString",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             false,
             nsStringClass.get()
         );
-        method->selector = "capitalizeStringDynamic";
+        method->selector = "capitalizeString";
         method->keywords = {};
         method->parameterTypes = {};
         nsStringClass->addMethod(move(method));
@@ -1694,12 +1696,12 @@ void SemanticContext::initNSStringClass() {
     // - (int)length
     {
         auto method = make_unique<MethodInfo>(
-            "lengthDynamic",
+            "length",
             Type(TypeKind::INT),
             false,
             nsStringClass.get()
         );
-        method->selector = "lengthDynamic";
+        method->selector = "length";
         method->keywords = {};
         method->parameterTypes = {};
         nsStringClass->addMethod(move(method));
@@ -1708,12 +1710,12 @@ void SemanticContext::initNSStringClass() {
     // - (NSString*)uppercaseString
     {
         auto method = make_unique<MethodInfo>(
-            "uppercaseStringDynamic",
+            "uppercaseString",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             false,
             nsStringClass.get()
         );
-        method->selector = "uppercaseStringDynamic";
+        method->selector = "uppercaseString";
         method->keywords = {};
         method->parameterTypes = {};
         nsStringClass->addMethod(move(method));
@@ -1722,12 +1724,12 @@ void SemanticContext::initNSStringClass() {
     // - (NSString*)lowercaseString
     {
         auto method = make_unique<MethodInfo>(
-            "lowercaseStringDynamic",
+            "lowercaseString",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             false,
             nsStringClass.get()
         );
-        method->selector = "lowercaseStringDynamic";
+        method->selector = "lowercaseString";
         method->keywords = {};
         method->parameterTypes = {};
         nsStringClass->addMethod(move(method));
@@ -1736,12 +1738,12 @@ void SemanticContext::initNSStringClass() {
     // - (int)isEqual:(NSObject*)other
     {
         auto method = make_unique<MethodInfo>(
-            "isEqualDynamic",
+            "isEqual",
             Type(TypeKind::INT),
             false,
             nsStringClass.get()
         );
-        method->selector = "isEqualDynamic";
+        method->selector = "isEqual";
         method->keywords = {""};
         method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSObject") };
         nsStringClass->addMethod(move(method));
@@ -1750,12 +1752,12 @@ void SemanticContext::initNSStringClass() {
     // - (NSString*)description
     {
         auto method = make_unique<MethodInfo>(
-            "descriptionDynamic",
+            "description",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             false,
             nsStringClass.get()
         );
-        method->selector = "descriptionDynamic";
+        method->selector = "description";
         method->keywords = {};
         method->parameterTypes = {};
         nsStringClass->addMethod(move(method));
@@ -1764,12 +1766,12 @@ void SemanticContext::initNSStringClass() {
     // - (NSString*)stringByAppendingString:(NSString*)other
     {
         auto method = make_unique<MethodInfo>(
-            "stringByAppendingStringDynamic",
+            "stringByAppendingString",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             false,
             nsStringClass.get()
         );
-        method->selector = "stringByAppendingStringDynamic";
+        method->selector = "stringByAppendingString";
         method->keywords = {""};
         method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
         nsStringClass->addMethod(move(method));
@@ -1803,29 +1805,29 @@ void SemanticContext::initNSArrayClass() {
         nsArrayClass->addMethod(move(constructor));
     }
 
-    // arrayStatic ()Lrtl/NSArray;
+    // array ()Lrtl/NSArray;
     {
         auto arrayStatic = make_unique<MethodInfo>(
-            "arrayStatic",
+            "array",
             Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
             true,
             nsArrayClass.get()
         );
-        arrayStatic->selector = "arrayStatic";
+        arrayStatic->selector = "array";
         arrayStatic->keywords = {};
         arrayStatic->parameterTypes = {};
         nsArrayClass->addMethod(move(arrayStatic));
     }
 
-    // arrayWithArrayStatic (Lrtl/NSArray;)Lrtl/NSArray;
+    // arrayWithArray (Lrtl/NSArray;)Lrtl/NSArray;
     {
         auto arrayWithArrayStatic = make_unique<MethodInfo>(
-            "arrayWithArrayStatic",
+            "arrayWithArray",
             Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
             true,
             nsArrayClass.get()
         );
-        arrayWithArrayStatic->selector = "arrayWithArrayStatic";
+        arrayWithArrayStatic->selector = "arrayWithArray";
         arrayWithArrayStatic->keywords = {};
         arrayWithArrayStatic->parameterTypes = {
             new Type(TypeKind::CLASS_NAME, "rtl/NSArray")
@@ -1833,15 +1835,15 @@ void SemanticContext::initNSArrayClass() {
         nsArrayClass->addMethod(move(arrayWithArrayStatic));
     }
 
-    // arrayWithObjectsStatic ([Lrtl/NSObject;)Lrtl/NSArray;
+    // arrayWithObjects ([Lrtl/NSObject;)Lrtl/NSArray;
     {
         auto arrayWithObjectsStatic = make_unique<MethodInfo>(
-            "arrayWithObjectsStatic",
+            "arrayWithObjects",
             Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
             true,
             nsArrayClass.get()
         );
-        arrayWithObjectsStatic->selector = "arrayWithObjectsStatic";
+        arrayWithObjectsStatic->selector = "arrayWithObjects";
         arrayWithObjectsStatic->keywords = {};
         arrayWithObjectsStatic->parameterTypes = {
             new Type(TypeKind::CLASS_NAME, "Lrtl/NSObject;") // массив объектов
@@ -1849,15 +1851,15 @@ void SemanticContext::initNSArrayClass() {
         nsArrayClass->addMethod(move(arrayWithObjectsStatic));
     }
 
-    // arrayByAddingObjectDynamic (Lrtl/NSObject;)Lrtl/NSArray;
+    // arrayByAddingObject (Lrtl/NSObject;)Lrtl/NSArray;
     {
         auto arrayByAddingObjectDynamic = make_unique<MethodInfo>(
-            "arrayByAddingObjectDynamic",
+            "arrayByAddingObject",
             Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
             false,
             nsArrayClass.get()
         );
-        arrayByAddingObjectDynamic->selector = "arrayByAddingObjectDynamic";
+        arrayByAddingObjectDynamic->selector = "arrayByAddingObject";
         arrayByAddingObjectDynamic->keywords = {};
         arrayByAddingObjectDynamic->parameterTypes = {
             new Type(TypeKind::CLASS_NAME, "rtl/NSObject")
@@ -1865,29 +1867,29 @@ void SemanticContext::initNSArrayClass() {
         nsArrayClass->addMethod(move(arrayByAddingObjectDynamic));
     }
 
-    // objectAtIndexDynamic (I)Lrtl/NSObject;
+    // objectAtIndex (I)Lrtl/NSObject;
     {
         auto objectAtIndexDynamic = make_unique<MethodInfo>(
-            "objectAtIndexDynamic",
+            "objectAtIndex",
             Type(TypeKind::CLASS_NAME, "rtl/NSObject"),
             false,
             nsArrayClass.get()
         );
-        objectAtIndexDynamic->selector = "objectAtIndexDynamic";
+        objectAtIndexDynamic->selector = "objectAtIndex";
         objectAtIndexDynamic->keywords = {};
         objectAtIndexDynamic->parameterTypes = { new Type(TypeKind::INT) };
         nsArrayClass->addMethod(move(objectAtIndexDynamic));
     }
 
-    // countDynamic ()I
+    // count ()I
     {
         auto countDynamic = make_unique<MethodInfo>(
-            "countDynamic",
+            "count",
             Type(TypeKind::INT),
             false,
             nsArrayClass.get()
         );
-        countDynamic->selector = "countDynamic";
+        countDynamic->selector = "count";
         countDynamic->keywords = {};
         countDynamic->parameterTypes = {};
         nsArrayClass->addMethod(move(countDynamic));
@@ -1921,15 +1923,15 @@ void SemanticContext::initNSNumberClass() {
         nsNumberClass->addMethod(move(constructor));
     }
 
-    // numberWithIntStatic (I)Lrtl/NSNumber;
+    // numberWithInt (I)Lrtl/NSNumber;
     {
         auto numberWithIntStatic = make_unique<MethodInfo>(
-            "numberWithIntStatic",
+            "numberWithInt",
             Type(TypeKind::CLASS_NAME, "rtl/NSNumber"),
             true,
             nsNumberClass.get()
         );
-        numberWithIntStatic->selector = "numberWithIntStatic";
+        numberWithIntStatic->selector = "numberWithInt";
         numberWithIntStatic->keywords = {};
         numberWithIntStatic->parameterTypes = { new Type(TypeKind::INT) };
         nsNumberClass->addMethod(move(numberWithIntStatic));
@@ -1938,26 +1940,26 @@ void SemanticContext::initNSNumberClass() {
     // numberWithFloatStatic (F)Lrtl/NSNumber;
     {
         auto numberWithFloatStatic = make_unique<MethodInfo>(
-            "numberWithFloatStatic",
+            "numberWithFloat",
             Type(TypeKind::CLASS_NAME, "rtl/NSNumber"),
             true,
             nsNumberClass.get()
         );
-        numberWithFloatStatic->selector = "numberWithFloatStatic";
+        numberWithFloatStatic->selector = "numberWithFloat";
         numberWithFloatStatic->keywords = {};
         numberWithFloatStatic->parameterTypes = { new Type(TypeKind::FLOAT) };
         nsNumberClass->addMethod(move(numberWithFloatStatic));
     }
 
-    // intValueDynamic ()I
+    // intValue ()I
     {
         auto intValueDynamic = make_unique<MethodInfo>(
-            "intValueDynamic",
+            "intValue",
             Type(TypeKind::INT),
             false,
             nsNumberClass.get()
         );
-        intValueDynamic->selector = "intValueDynamic";
+        intValueDynamic->selector = "intValue";
         intValueDynamic->keywords = {};
         intValueDynamic->parameterTypes = {};
         nsNumberClass->addMethod(move(intValueDynamic));
@@ -1966,12 +1968,12 @@ void SemanticContext::initNSNumberClass() {
     // floatValueDynamic ()F
     {
         auto floatValueDynamic = make_unique<MethodInfo>(
-            "floatValueDynamic",
+            "floatValue",
             Type(TypeKind::FLOAT),
             false,
             nsNumberClass.get()
         );
-        floatValueDynamic->selector = "floatValueDynamic";
+        floatValueDynamic->selector = "floatValue";
         floatValueDynamic->keywords = {};
         floatValueDynamic->parameterTypes = {};
         nsNumberClass->addMethod(move(floatValueDynamic));
@@ -1980,12 +1982,12 @@ void SemanticContext::initNSNumberClass() {
     // descriptionDynamic ()Lrtl/NSString;
     {
         auto descriptionDynamic = make_unique<MethodInfo>(
-            "descriptionDynamic",
+            "description",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             false,
             nsNumberClass.get()
         );
-        descriptionDynamic->selector = "descriptionDynamic";
+        descriptionDynamic->selector = "description";
         descriptionDynamic->keywords = {};
         descriptionDynamic->parameterTypes = {};
         nsNumberClass->addMethod(move(descriptionDynamic));
@@ -2013,7 +2015,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +printInt:(int)value
     {
         auto method = make_unique<MethodInfo>(
-            "printIntStatic",
+            "printInt",
             Type(TypeKind::VOID),
             true,
             ioClass.get()
@@ -2027,7 +2029,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +printFloat:(float)value
     {
         auto method = make_unique<MethodInfo>(
-            "printFloatStatic",
+            "printFloat",
             Type(TypeKind::VOID),
             true,
             ioClass.get()
@@ -2041,7 +2043,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +printChar:(char)value
     {
         auto method = make_unique<MethodInfo>(
-            "printCharStatic",
+            "printChar",
             Type(TypeKind::VOID),
             true,
             ioClass.get()
@@ -2055,7 +2057,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +printNSString:(NSString*)str
     {
         auto method = make_unique<MethodInfo>(
-            "printNSStringStatic",
+            "printNSString",
             Type(TypeKind::VOID),
             true,
             ioClass.get()
@@ -2069,7 +2071,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +printNSNumber:(NSNumber*)num
     {
         auto method = make_unique<MethodInfo>(
-            "printNSNumberStatic",
+            "printNSNumber",
             Type(TypeKind::VOID),
             true,
             ioClass.get()
@@ -2083,7 +2085,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +printNSArray:(NSArray*)arr
     {
         auto method = make_unique<MethodInfo>(
-            "printNSArrayStatic",
+            "printNSArray",
             Type(TypeKind::VOID),
             true,
             ioClass.get()
@@ -2097,7 +2099,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +printNSObject:(NSObject*)obj
     {
         auto method = make_unique<MethodInfo>(
-            "printNSObjectStatic",
+            "printNSObject",
             Type(TypeKind::VOID),
             true,
             ioClass.get()
@@ -2115,7 +2117,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +readInt
     {
         auto method = make_unique<MethodInfo>(
-            "readIntStatic",
+            "readInt",
             Type(TypeKind::INT),
             true,
             ioClass.get()
@@ -2129,7 +2131,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +readFloat
     {
         auto method = make_unique<MethodInfo>(
-            "readFloatStatic",
+            "readFloat",
             Type(TypeKind::FLOAT),
             true,
             ioClass.get()
@@ -2143,7 +2145,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +readChar
     {
         auto method = make_unique<MethodInfo>(
-            "readCharStatic",
+            "readChar",
             Type(TypeKind::CHAR),
             true,
             ioClass.get()
@@ -2157,7 +2159,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +readNSString
     {
         auto method = make_unique<MethodInfo>(
-            "readNSStringStatic",
+            "readNSString",
             Type(TypeKind::CLASS_NAME, "rtl/NSString"),
             true,
             ioClass.get()
@@ -2171,7 +2173,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +readNSNumberInt
     {
         auto method = make_unique<MethodInfo>(
-            "readNSNumberIntStatic",
+            "readNSNumberInt",
             Type(TypeKind::CLASS_NAME, "rtl/NSNumber"),
             true,
             ioClass.get()
@@ -2185,7 +2187,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +readNSNumberFloat
     {
         auto method = make_unique<MethodInfo>(
-            "readNSNumberFloatStatic",
+            "readNSNumberFloat",
             Type(TypeKind::CLASS_NAME, "rtl/NSNumber"),
             true,
             ioClass.get()
@@ -2199,7 +2201,7 @@ void SemanticContext::initInOutFuncsClass() {
     // +readNSArray
     {
         auto method = make_unique<MethodInfo>(
-            "readNSArrayStatic",
+            "readNSArray",
             Type(TypeKind::CLASS_NAME, "rtl/NSArray"),
             true,
             ioClass.get()
