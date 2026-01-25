@@ -13,7 +13,21 @@ int main() {
     [InOutFuncs printInt: d];
     [InOutFuncs printChar: '\n'];
 
-    [InOutFuncs printNSString: "hello"];
+    NSString *s = "hello";
+    NSString *t = s;
+    [InOutFuncs printNSString: s];
+    [InOutFuncs printChar: '\n'];
+    if (s == t) {
+        [InOutFuncs printInt: 1];
+    } else {
+        [InOutFuncs printInt: 0];
+    }
+    [InOutFuncs printChar: '\n'];
+    if (s && t) {
+        [InOutFuncs printInt: 1];
+    } else {
+        [InOutFuncs printInt: 0];
+    }
     [InOutFuncs printChar: '\n'];
 
     if (c > 10) {

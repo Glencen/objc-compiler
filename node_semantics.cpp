@@ -979,16 +979,21 @@ void ExprNode::analyzeAndSemantics(SemanticContext& context) {
     left->analyzeSemantics(context);
     right->analyzeSemantics(context);
     
-    // Проверяем, что операнды логического типа
+    // Разрешаем boolean или объектные типы (truthy: не nil)
     Type boolType(TypeKind::BOOL);
-    if (!left->getExprType() || !left->getExprType()->equal(&boolType)) {
-        throw semantic_exception("Left operand of logical AND must be boolean",
+    auto isObjectLike = [](const Type* t) {
+        return t && (t->dataType == TypeKind::CLASS_NAME || t->dataType == TypeKind::TYPE_ID);
+    };
+    if (!left->getExprType() ||
+        (!left->getExprType()->equal(&boolType) && !isObjectLike(left->getExprType()))) {
+        throw semantic_exception("Left operand of logical AND must be boolean or object",
             "ExprNode::analyzeAndSemantics", -1, -1,
             "Got type: " + left->getExprType()->toString());
     }
     
-    if (!right->getExprType() || !right->getExprType()->equal(&boolType)) {
-        throw semantic_exception("Right operand of logical AND must be boolean",
+    if (!right->getExprType() ||
+        (!right->getExprType()->equal(&boolType) && !isObjectLike(right->getExprType()))) {
+        throw semantic_exception("Right operand of logical AND must be boolean or object",
             "ExprNode::analyzeAndSemantics", -1, -1,
             "Got type: " + right->getExprType()->toString());
     }
@@ -1005,16 +1010,21 @@ void ExprNode::analyzeOrSemantics(SemanticContext& context) {
     left->analyzeSemantics(context);
     right->analyzeSemantics(context);
     
-    // Проверяем, что операнды логического типа
+    // Разрешаем boolean или объектные типы (truthy: не nil)
     Type boolType(TypeKind::BOOL);
-    if (!left->getExprType() || !left->getExprType()->equal(&boolType)) {
-        throw semantic_exception("Left operand of logical OR must be boolean",
+    auto isObjectLike = [](const Type* t) {
+        return t && (t->dataType == TypeKind::CLASS_NAME || t->dataType == TypeKind::TYPE_ID);
+    };
+    if (!left->getExprType() ||
+        (!left->getExprType()->equal(&boolType) && !isObjectLike(left->getExprType()))) {
+        throw semantic_exception("Left operand of logical OR must be boolean or object",
             "ExprNode::analyzeOrSemantics", -1, -1,
             "Got type: " + left->getExprType()->toString());
     }
     
-    if (!right->getExprType() || !right->getExprType()->equal(&boolType)) {
-        throw semantic_exception("Right operand of logical OR must be boolean",
+    if (!right->getExprType() ||
+        (!right->getExprType()->equal(&boolType) && !isObjectLike(right->getExprType()))) {
+        throw semantic_exception("Right operand of logical OR must be boolean or object",
             "ExprNode::analyzeOrSemantics", -1, -1,
             "Got type: " + right->getExprType()->toString());
     }

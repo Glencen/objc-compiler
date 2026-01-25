@@ -19,6 +19,21 @@ bool isIntLikeType(const Type* type) {
     return kind == TypeKind::INT;
 }
 
+bool isObjectLike(const Type* type) {
+    if (!type) return false;
+    return type->dataType == TypeKind::CLASS_NAME || type->dataType == TypeKind::TYPE_ID;
+}
+
+void emitJumpIfFalse(BytecodeContext& context, ExprNode* expr, BytecodeContext::Label* falseLabel) {
+    if (!expr) return;
+    expr->emitBytecode(context);
+    if (isObjectLike(expr->getExprType())) {
+        context.emitJump(0xc6, falseLabel); // ifnull
+    } else {
+        context.emitJump(0x99, falseLabel); // ifeq
+    }
+}
+
 std::string mapRuntimeClassName(const std::string& name) {
     if (name.find('/') != std::string::npos) {
         return name;
@@ -55,23 +70,31 @@ void emitConditionJumpFalse(BytecodeContext& context, ExprNode* condition, Bytec
     if (!condition || !falseLabel) return;
     ExprKind kind = condition->getKind();
     if (kind == ExprKind::NOT && condition->getOperand()) {
-        condition->getOperand()->emitBytecode(context);
-        context.emitJump(0x9a, falseLabel); // ifne
+        ExprNode* operand = condition->getOperand();
+        operand->emitBytecode(context);
+        if (isObjectLike(operand->getExprType())) {
+            context.emitJump(0xc7, falseLabel); // ifnonnull
+        } else {
+            context.emitJump(0x9a, falseLabel); // ifne
+        }
         return;
     }
     if (kind == ExprKind::AND && condition->getLeft() && condition->getRight()) {
-        condition->getLeft()->emitBytecode(context);
-        context.emitJump(0x99, falseLabel); // left == 0
-        condition->getRight()->emitBytecode(context);
-        context.emitJump(0x99, falseLabel); // right == 0
+        emitJumpIfFalse(context, condition->getLeft(), falseLabel);
+        emitJumpIfFalse(context, condition->getRight(), falseLabel);
         return;
     }
     if (kind == ExprKind::OR && condition->getLeft() && condition->getRight()) {
         auto* labelTrue = context.createLabel();
-        condition->getLeft()->emitBytecode(context);
-        context.emitJump(0x9a, labelTrue); // left != 0
-        condition->getRight()->emitBytecode(context);
-        context.emitJump(0x99, falseLabel); // right == 0
+        ExprNode* left = condition->getLeft();
+        ExprNode* right = condition->getRight();
+        left->emitBytecode(context);
+        if (isObjectLike(left->getExprType())) {
+            context.emitJump(0xc7, labelTrue); // ifnonnull
+        } else {
+            context.emitJump(0x9a, labelTrue); // ifne
+        }
+        emitJumpIfFalse(context, right, falseLabel);
         context.markLabel(labelTrue);
         return;
     }
@@ -83,8 +106,16 @@ void emitConditionJumpFalse(BytecodeContext& context, ExprNode* condition, Bytec
         if (left && right) {
             left->emitBytecode(context);
             right->emitBytecode(context);
+            bool leftObj = isObjectLike(left->getExprType());
+            bool rightObj = isObjectLike(right->getExprType());
             bool isFloat = isFloatType(left->getExprType()) || isFloatType(right->getExprType());
-            if (isFloat) {
+            if (leftObj || rightObj) {
+                uint8_t op = 0xa6; // if_acmpne
+                if (kind == ExprKind::NOT_EQUAL) {
+                    op = 0xa5; // if_acmpeq => false when equal
+                }
+                context.emitJump(op, falseLabel);
+            } else if (isFloat) {
                 context.emitFcmpl();
                 uint8_t op = 0x99; // ifeq
                 switch (kind) {
@@ -113,9 +144,12 @@ void emitConditionJumpFalse(BytecodeContext& context, ExprNode* condition, Bytec
             return;
         }
     }
-
     condition->emitBytecode(context);
-    context.emitJump(0x99, falseLabel); // ifeq
+    if (isObjectLike(condition->getExprType())) {
+        context.emitJump(0xc6, falseLabel); // ifnull
+    } else {
+        context.emitJump(0x99, falseLabel); // ifeq
+    }
 }
 
 bool emitPostIncDecAsStatement(BytecodeContext& context, ExprNode* expr) {
@@ -391,10 +425,20 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
             if (!left || !right) break;
             left->emitBytecode(context);
             right->emitBytecode(context);
+            bool leftObj = isObjectLike(left->getExprType());
+            bool rightObj = isObjectLike(right->getExprType());
             bool isFloat = isFloatType(left->getExprType()) || isFloatType(right->getExprType());
             auto* labelTrue = context.createLabel();
             auto* labelEnd = context.createLabel();
-            if (isFloat) {
+            if (leftObj || rightObj) {
+                uint8_t op = 0xa5; // if_acmpeq
+                switch (kind) {
+                    case ExprKind::EQUAL: op = 0xa5; break;
+                    case ExprKind::NOT_EQUAL: op = 0xa6; break;
+                    default: op = 0xa5; break;
+                }
+                context.emitJump(op, labelTrue);
+            } else if (isFloat) {
                 context.emitFcmpl();
                 uint8_t op = 0x99;
                 switch (kind) {
@@ -434,10 +478,8 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
             auto* labelFalse = context.createLabel();
             auto* labelEnd = context.createLabel();
             if (kind == ExprKind::AND) {
-                left->emitBytecode(context);
-                context.emitJump(0x99, labelFalse);
-                right->emitBytecode(context);
-                context.emitJump(0x99, labelFalse);
+                emitJumpIfFalse(context, left, labelFalse);
+                emitJumpIfFalse(context, right, labelFalse);
                 context.emitIConst(1);
                 context.emitJump(0xa7, labelEnd);
                 context.markLabel(labelFalse);
@@ -445,9 +487,17 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                 context.markLabel(labelEnd);
             } else {
                 left->emitBytecode(context);
-                context.emitJump(0x9a, labelTrue);
+                if (isObjectLike(left->getExprType())) {
+                    context.emitJump(0xc7, labelTrue); // ifnonnull
+                } else {
+                    context.emitJump(0x9a, labelTrue); // ifne
+                }
                 right->emitBytecode(context);
-                context.emitJump(0x9a, labelTrue);
+                if (isObjectLike(right->getExprType())) {
+                    context.emitJump(0xc7, labelTrue); // ifnonnull
+                } else {
+                    context.emitJump(0x9a, labelTrue); // ifne
+                }
                 context.emitIConst(0);
                 context.emitJump(0xa7, labelEnd);
                 context.markLabel(labelTrue);
