@@ -251,56 +251,9 @@ void ExprNode::analyzeSemantics(SemanticContext& context) {
             }
             break;
         }
-        case ExprKind::IDENTIFIER: {
-            if (!identifier) {
-                throw semantic_exception("Identifier expression must have an identifier",
-                    "ExprNode::analyzeSemantics", -1, -1);
-            }
-            
-            identifier->analyzeSemantics(context);
-            
-            string idName = identifier->getIdentifier();
-            
-            ClassInfo* classInfo = context.lookupClass(idName);
-            if (classInfo) {
-                exprType = new Type(TypeKind::CLASS_NAME, idName);
-                break;
-            }
-
-            LocalVarInfo* var = context.lookupLocalVar(idName);
-            if (var) {
-                exprType = new Type(var->getType());
-                break;
-            }
-            
-            MethodInfo* currentMethod = context.getCurrentMethod();
-            if (currentMethod) {
-                for (const auto& param : currentMethod->parameters) {
-                    if (param->name == idName) {
-                        exprType = new Type(param->getType());
-                        break;
-                    }
-                }
-            }
-
-            if (context.getCurrentClass() && context.getCurrentMethod() && 
-                !context.getCurrentMethod()->isClassMethod) {
-                // Для экземплярных методов проверяем поля класса
-                ClassInfo* currentClass = context.getCurrentClass();
-                auto fieldIt = currentClass->fields.find(idName);
-                if (fieldIt != currentClass->fields.end()) {
-                    exprType = new Type(fieldIt->second->getType());
-                    break;
-                }
-            }
-            
-            // Если не нашли, это может быть ошибка
-            if (!exprType) {
-                throw semantic_exception("Undeclared identifier '" + idName + "'",
-                    "ExprNode::analyzeSemantics", -1, -1);
-            }
+        case ExprKind::IDENTIFIER:
+            analyzeIdentifierSemantics(context);
             break;
-        }
         case ExprKind::OBJC_ARRAY_LITERAL:
             analyzeObjcArrayLiteralSemantics(context);
             break;
