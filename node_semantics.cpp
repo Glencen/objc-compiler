@@ -593,8 +593,6 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
         if (argList) {
             auto args = argList->getMsgArgList();
             if (args) {
-                bool firstKeywordProcessed = false;
-
                 for (MsgArgNode* argNode : *args) {
                     if (!argNode) {
                         throw semantic_exception("Invalid message argument node",
@@ -609,11 +607,6 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
                     string keyword = argNode->getIdentifier()->getIdentifier();
                     keywords.push_back(keyword);
                     selectorStr += keyword + ":";
-
-                    if (!firstKeywordProcessed) {
-                        methodName = keyword;
-                        firstKeywordProcessed = true;
-                    }
                     
                     if (!argNode->getArg()) {
                         throw semantic_exception("Message argument must have an expression",
@@ -622,6 +615,16 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
                     
                     argNode->getArg()->analyzeSemantics(context);
                     argTypes.push_back(argNode->getArg()->getExprType());
+                }
+                
+                if (!keywords.empty()) {
+                    methodName.clear();
+                    for (size_t i = 0; i < keywords.size(); i++) {
+                        methodName += keywords[i];
+                        if (i < keywords.size() - 1) {
+                            methodName += ":";
+                        }
+                    }
                 }
             }
         }
