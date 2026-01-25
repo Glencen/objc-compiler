@@ -559,11 +559,18 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
         receiverType = receiver->getExpr()->getExprType();
         if (receiver->getExpr()->getKind() == ExprKind::IDENTIFIER) {
             string idName = receiver->getExpr()->getIdentifier()->getIdentifier();
-            ClassInfo* possibleClass = context.lookupClass(idName);
-            if (possibleClass) {
-                receiverClass = possibleClass;
-                isStaticCall = true;
-                receiverType = new Type(TypeKind::CLASS_NAME, idName);
+            bool hasLocal = (context.lookupLocalVar(idName) != nullptr);
+            bool hasField = false;
+            if (!hasLocal && context.getCurrentClass()) {
+                hasField = (context.getCurrentClass()->lookupField(idName, true) != nullptr);
+            }
+            if (!hasLocal && !hasField) {
+                ClassInfo* possibleClass = context.lookupClass(idName);
+                if (possibleClass) {
+                    receiverClass = possibleClass;
+                    isStaticCall = true;
+                    receiverType = new Type(TypeKind::CLASS_NAME, possibleClass->name);
+                }
             }
         }
     } else if (receiver->getKind() == ReceiverKind::CLASS_NAME) {
@@ -1234,12 +1241,6 @@ void ExprNode::analyzeFunctionCallSemantics(SemanticContext& context) {
     }
     
     string funcName = funcId->getIdentifier();
-    FunctionInfo* func = context.lookupFunction(funcName);
-    
-    if (!func) {
-        throw semantic_exception("Undefined function '" + funcName + "'",
-            "ExprNode::analyzeFunctionCallSemantics", -1, -1);
-    }
     
     // Анализируем аргументы
     vector<const Type*> argTypes;
@@ -1256,27 +1257,43 @@ void ExprNode::analyzeFunctionCallSemantics(SemanticContext& context) {
             }
         }
     }
-    
-    // Проверяем количество аргументов
-    if (argTypes.size() != func->getParameterCount()) {
-        throw semantic_exception("Function '" + funcName + "' called with wrong number of arguments",
-            "ExprNode::analyzeFunctionCallSemantics", -1, -1,
-            "Expected: " + to_string(func->getParameterCount()) + 
-            ", Got: " + to_string(argTypes.size()));
+
+    vector<FunctionInfo*> overloads = context.getFunctionOverloads(funcName);
+    if (overloads.empty()) {
+        throw semantic_exception("Undefined function '" + funcName + "'",
+            "ExprNode::analyzeFunctionCallSemantics", -1, -1);
     }
     
-    // Проверяем типы аргументов
-    for (size_t i = 0; i < argTypes.size(); i++) {
-        const LocalVarInfo* param = func->getParameter(i);
-        if (param && !context.isAssignable(*argTypes[i], param->type)) {
-            throw semantic_exception("Type mismatch in function call argument " + to_string(i + 1),
-                "ExprNode::analyzeFunctionCallSemantics", -1, -1,
-                "Expected: " + param->type.toString() + 
-                ", Got: " + argTypes[i]->toString());
+    FunctionInfo* selected = nullptr;
+    for (FunctionInfo* candidate : overloads) {
+        if (!candidate) continue;
+        if (candidate->getParameterCount() != argTypes.size()) {
+            continue;
         }
+        bool match = true;
+        for (size_t i = 0; i < argTypes.size(); i++) {
+            const LocalVarInfo* param = candidate->getParameter(i);
+            if (param && !context.isAssignable(*argTypes[i], param->type)) {
+                match = false;
+                break;
+            }
+        }
+        if (!match) {
+            continue;
+        }
+        if (selected) {
+            throw semantic_exception("Ambiguous call to overloaded function '" + funcName + "'",
+                "ExprNode::analyzeFunctionCallSemantics", -1, -1);
+        }
+        selected = candidate;
     }
     
-    exprType = new Type(func->getReturnType());
+    if (!selected) {
+        throw semantic_exception("No matching overload for function '" + funcName + "'",
+            "ExprNode::analyzeFunctionCallSemantics", -1, -1);
+    }
+    
+    exprType = new Type(selected->getReturnType());
 }
 
 void ExprNode::analyzeDotSemantics(SemanticContext& context) {
