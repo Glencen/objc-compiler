@@ -403,7 +403,7 @@ const FieldInfo* ClassInfo::lookupField(const string& name, bool includeSuper) c
     return nullptr;
 }
 
-MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*>& argTypes, const vector<string>& keywords, bool includeSuper) {
+MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*>& argTypes, const vector<string>& keywords, bool includeSuper, bool isClassMethod) {
     auto it = methods.find(name);
     if (it != methods.end()) {
         for (auto& method : it->second) {
@@ -414,13 +414,13 @@ MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*
     }
     
     if (includeSuper && superclass) {
-        return superclass->lookupMethod(name, argTypes, keywords, true);
+        return superclass->lookupMethod(name, argTypes, keywords, true, isClassMethod);
     }
     
     return nullptr;
 }
 
-const MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*>& argTypes, const vector<string>& keywords, bool includeSuper) const {
+const MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*>& argTypes, const vector<string>& keywords, bool includeSuper, bool isClassMethod) const {
     auto it = methods.find(name);
     if (it != methods.end()) {
         for (auto& method : it->second) {
@@ -431,7 +431,7 @@ const MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const
     }
     
     if (includeSuper && superclass) {
-        return superclass->lookupMethod(name, argTypes, keywords, true);
+        return superclass->lookupMethod(name, argTypes, keywords, true, isClassMethod);
     }
     
     return nullptr;
@@ -447,28 +447,26 @@ void ClassInfo::addField(unique_ptr<FieldInfo> field) {
 void ClassInfo::addMethod(unique_ptr<MethodInfo> method) {
     if (!method) return;
     
-    // Проверяем, не переопределяет ли метод метод суперкласса
-    if (superclass) {
-        MethodInfo* superMethod = superclass->lookupMethod(method->name, method->parameterTypes, method->keywords, true);
-        if (superMethod) {
-            // Проверяем совместимость сигнатур
-            if (!method->getReturnType().equal(&superMethod->getReturnType())) {
-                throw semantic_exception("Method '" + method->name + "' return type mismatch with overridden method",
-                    "ClassInfo::addMethod", -1, -1);
-            }
-        }
-    }
-    
-    // Проверяем, нет ли уже метода с такой же сигнатурой в текущем классе
     auto& methodList = methods[method->name];
     for (auto& existingMethod : methodList) {
         if (existingMethod->matchesSignature(method->parameterTypes, method->keywords)) {
-            throw semantic_exception("Method with same signature already exists",
+            throw semantic_exception("Method with same signature already exists: " + method->name,
                 "ClassInfo::addMethod", -1, -1);
         }
     }
     
-    method->declaringClass = this;
+    if (superclass) {
+        MethodInfo* superMethod = superclass->lookupMethod(method->name, method->parameterTypes, method->keywords, true, method->isClassMethod);
+        if (superMethod) {
+            if (!method->getReturnType().equal(&superMethod->getReturnType())) {
+                throw semantic_exception("Method '" + method->name + "' return type mismatch with overridden method",
+                    "ClassInfo::addMethod", -1, -1,
+                    "Overridden: " + superMethod->getReturnType().toString() + 
+                    ", New: " + method->getReturnType().toString());
+            }
+        }
+    }
+    
     methodList.push_back(move(method));
 }
 
@@ -773,11 +771,12 @@ ClassInfo* SemanticContext::lookupClass(const string& name) const {
     return nullptr;
 }
 
-MethodInfo* SemanticContext::lookupMethod(const string& className, const string& methodName, const vector<const Type*>& argTypes, const vector<string>& keywords) const {
+MethodInfo* SemanticContext::lookupMethod(const string& className, const string& methodName, const vector<const Type*>& argTypes, 
+                                            const vector<string>& keywords, bool isClassMethod) const {
     auto cls = lookupClass(className);
     if (!cls) return nullptr;
 
-    return cls->lookupMethod(methodName, argTypes, keywords, true);
+    return cls->lookupMethod(methodName, argTypes, keywords, true, isClassMethod);
 }
 
 FieldInfo* SemanticContext::lookupField(const string& className, const string& fieldName) const {
@@ -1472,29 +1471,29 @@ void SemanticContext::initNSObjectClass() { // TODO: пересмотреть н
         nsObjectClass->addMethod(move(newStatic));
     }
     
-    // getClass ()Ljava/lang/Class;
+    // getClassDynamic ()Ljava/lang/Class;
     {
         auto getClassDynamic = make_unique<MethodInfo>(
-            "getClass",
+            "getClassDynamic",
             Type(TypeKind::CLASS_NAME, "java/lang/Class"),
             false,
             nsObjectClass.get()
         );
-        getClassDynamic->selector = "getClass";
+        getClassDynamic->selector = "getClassDynamic";
         getClassDynamic->keywords = {};
         getClassDynamic->parameterTypes = {};
         nsObjectClass->addMethod(move(getClassDynamic));
     }
     
-    // getClass ()Ljava/lang/Class;
+    // getClassStatic ()Ljava/lang/Class;
     {
         auto getClassStatic = make_unique<MethodInfo>(
-            "getClass",
+            "getClassStatic",
             Type(TypeKind::CLASS_NAME, "java/lang/Class"),
             true,
             nsObjectClass.get()
         );
-        getClassStatic->selector = "getClass";
+        getClassStatic->selector = "getClassStatic";
         getClassStatic->keywords = {};
         getClassStatic->parameterTypes = {};
         nsObjectClass->addMethod(move(getClassStatic));
