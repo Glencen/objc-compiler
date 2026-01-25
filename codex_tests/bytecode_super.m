@@ -14,7 +14,7 @@
 
 @implementation Derived
 - (int)value {
-    return [super value];
+    return [super value] + 1;
 }
 @end
 
