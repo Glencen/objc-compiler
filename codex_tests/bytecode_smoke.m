@@ -1,9 +1,16 @@
+int addTwice(int x) {
+    return x + x;
+}
+
 int main() {
     int a = 2;
     int b = 3;
     int c = a + b * 4;
+    int d = addTwice(c);
 
     [InOutFuncs printInt: c];
+    [InOutFuncs printChar: '\n'];
+    [InOutFuncs printInt: d];
     [InOutFuncs printChar: '\n'];
 
     if (c > 10) {
