@@ -441,6 +441,10 @@ void ExprNode::analyzeIdentifierSemantics(SemanticContext& context) {
                 throw semantic_exception("Field '" + idName + "' is not accessible",
                     "ExprNode::analyzeIdentifierSemantics", -1, -1);
             }
+            if (context.getCurrentMethod() && context.getCurrentMethod()->isClassMethod && field->isInstance) {
+                throw semantic_exception("Instance field '" + idName + "' cannot be accessed from class method",
+                    "ExprNode::analyzeIdentifierSemantics", -1, -1);
+            }
             exprType = new Type(field->type);
             isFieldAccess = true;
             className = field->declaringClass->name;
