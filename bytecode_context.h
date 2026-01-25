@@ -36,7 +36,12 @@ public:
     explicit BytecodeContext(const std::string& className, const std::string& outputPath);
 
     void beginClass(const std::string& className);
+    void beginClass(const std::string& className, const std::string& outputPath);
+    void setSuperClassName(const std::string& name);
+    std::string makeClassOutputPath(const std::string& className) const;
     void endClass();
+    void pushClassState();
+    void popClassState();
 
     MethodBuilder* beginMethod(const std::string& name, const std::string& descriptor, uint16_t accessFlags);
     void endMethod();
@@ -86,6 +91,7 @@ public:
     void emitInvokeSpecial(const std::string& owner, const std::string& name, const std::string& desc);
     void emitInvokeVirtual(const std::string& owner, const std::string& name, const std::string& desc);
     void emitInvokeStatic(const std::string& owner, const std::string& name, const std::string& desc);
+    void emitNewObject(const std::string& owner);
 
 private:
     struct CpEntry {
@@ -98,14 +104,25 @@ private:
         std::vector<MethodBuilder> methods;
     };
 
+    struct ClassState {
+        std::string className;
+        std::string superClassName;
+        std::string outputPath;
+        ClassBuilder classBuilder;
+        std::vector<CpEntry> constantPool;
+    };
+
     std::string className;
+    std::string superClassName;
     std::string outputPath;
+    std::string outputDir;
     ClassBuilder currentClass;
     MethodBuilder* currentMethod = nullptr;
     MethodInfo* currentMethodInfo = nullptr;
     bool currentMethodStatic = false;
 
     std::vector<CpEntry> constantPool;
+    std::vector<ClassState> classStack;
 
     int addUtf8(const std::string& value);
     int addClass(const std::string& className);

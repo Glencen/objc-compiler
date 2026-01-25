@@ -513,12 +513,12 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                     isStaticCall = true;
                 }
             } else if (receiver->getKind() == ReceiverKind::SUPER) {
-                receiverClass = semCtx.getCurrentClass();
+                receiverClass = semCtx.lookupClass(context.getClassName());
                 if (receiverClass && receiverClass->superclass) {
                     receiverClass = receiverClass->superclass;
                     receiverType = new Type(TypeKind::CLASS_NAME, receiverClass->name);
                     isSuperCall = true;
-                    isStaticCall = semCtx.getCurrentMethod() ? semCtx.getCurrentMethod()->isClassMethod : false;
+                    isStaticCall = context.isCurrentMethodStatic();
                 }
             }
 
@@ -593,6 +593,15 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                 if (getExprType()) {
                     returnType = *getExprType();
                 }
+            }
+
+            if (isStaticCall && methodName == "new" && argExprs.empty()) {
+                std::string allocOwner = receiverClass ? mapRuntimeClassName(receiverClass->name) : owner;
+                context.emitNewObject(allocOwner);
+                context.emitDup();
+                context.emitInvokeSpecial(allocOwner, "<init>", "()V");
+                exprType = new Type(TypeKind::CLASS_NAME, allocOwner);
+                break;
             }
 
             if (!isStaticCall) {
@@ -895,11 +904,83 @@ void MethodSelNode::emitBytecode(BytecodeContext& context) {}
 
 //--------------------------------------------------------------MethodDefNode--------------------------------------------------------------
 
-void MethodDefNode::emitBytecode(BytecodeContext& context) {}
+void MethodDefNode::emitBytecode(BytecodeContext& context) {
+    if (!type) return;
+    std::string methodName;
+    std::vector<MethodParamNode*> params;
+
+    if (identifier) {
+        methodName = identifier->getIdentifier();
+    } else if (methodSel && methodSel->getMethodParamList()) {
+        auto* list = methodSel->getMethodParamList();
+        for (auto* param : *list) {
+            if (param) {
+                params.push_back(param);
+            }
+        }
+        for (size_t i = 0; i < params.size(); i++) {
+            std::string keyword = params[i]->getSelectorIdentifier()
+                ? params[i]->getSelectorIdentifier()->getIdentifier()
+                : "";
+            methodName += keyword;
+            if (i < params.size() - 1) {
+                methodName += ":";
+            }
+        }
+    }
+
+    Type returnType = convertTypeNodeToType(type);
+    std::string descriptor = "(";
+    for (auto* param : params) {
+        if (!param || !param->getType()) continue;
+        Type paramType = convertTypeNodeToType(param->getType(), param->getArraySizes());
+        descriptor += paramType.getDescriptor();
+    }
+    descriptor += ")";
+    descriptor += returnType.getDescriptor();
+
+    uint16_t accessFlags = 0x0001;
+    if (isClassMethod()) {
+        accessFlags |= 0x0008;
+    }
+
+    context.beginMethod(mangleJvmMethodName(methodName), descriptor, accessFlags);
+    context.setCurrentMethodInfo(nullptr, isClassMethod());
+
+    for (auto* param : params) {
+        if (!param || !param->getParamIdentifier() || !param->getType()) continue;
+        std::string paramName = param->getParamIdentifier()->getIdentifier();
+        Type paramType = convertTypeNodeToType(param->getType(), param->getArraySizes());
+        context.defineLocal(paramName, paramType);
+    }
+
+    if (compoundStmt) {
+        compoundStmt->emitBytecode(context);
+    }
+
+    if (returnType.dataType == TypeKind::VOID) {
+        context.emitReturn(returnType);
+    } else {
+        emitDefaultValue(context, returnType);
+        context.emitReturn(returnType);
+    }
+    context.endMethod();
+}
 
 //--------------------------------------------------------------ImplementationDefListNode--------------------------------------------------------------
 
-void ImplementationDefListNode::emitBytecode(BytecodeContext& context) {}
+void ImplementationDefListNode::emitBytecode(BytecodeContext& context) {
+    if (classMethodDefs) {
+        for (auto* methodDef : *classMethodDefs) {
+            if (methodDef) methodDef->emitBytecode(context);
+        }
+    }
+    if (instanceMethodDefs) {
+        for (auto* methodDef : *instanceMethodDefs) {
+            if (methodDef) methodDef->emitBytecode(context);
+        }
+    }
+}
 
 //--------------------------------------------------------------MethodDeclNode--------------------------------------------------------------
 
@@ -947,7 +1028,20 @@ void InstanceVarsNode::emitBytecode(BytecodeContext& context) {}
 
 //--------------------------------------------------------------ImplementationNode--------------------------------------------------------------
 
-void ImplementationNode::emitBytecode(BytecodeContext& context) {}
+void ImplementationNode::emitBytecode(BytecodeContext& context) {
+    if (!className) return;
+    std::string classNameStr = className->getIdentifier();
+    std::string superName = superClassName ? superClassName->getIdentifier() : "rtl/NSObject";
+    context.pushClassState();
+    context.beginClass(classNameStr, context.makeClassOutputPath(classNameStr));
+    context.setSuperClassName(mapRuntimeClassName(superName));
+
+    if (implDefList) {
+        implDefList->emitBytecode(context);
+    }
+    context.endClass();
+    context.popClassState();
+}
 
 //--------------------------------------------------------------InterfaceNode--------------------------------------------------------------
 
@@ -961,6 +1055,9 @@ void ClassNameListNode::emitBytecode(BytecodeContext& context) {}
 
 void ExternalDeclNode::emitBytecode(BytecodeContext& context) {
     switch (kind) {
+        case ExternalDeclKind::IMPLEMENTATION:
+            if (implementation) implementation->emitBytecode(context);
+            break;
         case ExternalDeclKind::FUNC_DEF:
             if (funcDef) funcDef->emitBytecode(context);
             break;

@@ -1,5 +1,6 @@
 #include "bytecode_context.h"
 #include <cstring>
+#include <filesystem>
 
 namespace {
 constexpr uint16_t ACC_PUBLIC = 0x0001;
@@ -97,6 +98,7 @@ constexpr uint8_t OP_PUTFIELD = 0xb5;
 constexpr uint8_t OP_INVOKEVIRTUAL = 0xb6;
 constexpr uint8_t OP_INVOKESPECIAL = 0xb7;
 constexpr uint8_t OP_INVOKESTATIC = 0xb8;
+constexpr uint8_t OP_NEW = 0xbb;
 
 constexpr uint8_t OP_IRETURN = 0xac;
 constexpr uint8_t OP_FRETURN = 0xae;
@@ -105,12 +107,39 @@ constexpr uint8_t OP_RETURN = 0xb1;
 } // namespace
 
 BytecodeContext::BytecodeContext(const std::string& className, const std::string& outputPath)
-    : className(className), outputPath(outputPath) {
+    : className(className), superClassName("java/lang/Object"), outputPath(outputPath) {
+    outputDir = std::filesystem::path(outputPath).parent_path().string();
+    if (outputDir.empty()) {
+        outputDir = ".";
+    }
     beginClass(className);
 }
 
 void BytecodeContext::beginClass(const std::string& name) {
     currentClass.name = name;
+    className = name;
+    superClassName = "java/lang/Object";
+    currentClass.methods.clear();
+    currentMethod = nullptr;
+    constantPool.clear();
+}
+
+void BytecodeContext::beginClass(const std::string& name, const std::string& outPath) {
+    outputPath = outPath;
+    outputDir = std::filesystem::path(outputPath).parent_path().string();
+    if (outputDir.empty()) {
+        outputDir = ".";
+    }
+    beginClass(name);
+}
+
+void BytecodeContext::setSuperClassName(const std::string& name) {
+    superClassName = name;
+}
+
+std::string BytecodeContext::makeClassOutputPath(const std::string& name) const {
+    std::filesystem::path dir(outputDir.empty() ? "." : outputDir);
+    return (dir / (name + ".class")).string();
 }
 
 void BytecodeContext::endClass() {
@@ -534,6 +563,13 @@ void BytecodeContext::emitInvokeStatic(const std::string& owner, const std::stri
     updateStack(computeDescriptorReturnSlots(desc));
 }
 
+void BytecodeContext::emitNewObject(const std::string& owner) {
+    int idx = addClass(owner);
+    emitOpcode(OP_NEW);
+    emitU2(static_cast<uint16_t>(idx));
+    updateStack(1);
+}
+
 int BytecodeContext::addUtf8(const std::string& value) {
     CpEntry entry;
     entry.tag = 1;
@@ -735,7 +771,8 @@ void BytecodeContext::writeClassFile() {
         0x00, 0x00,
         OP_RETURN
     };
-    int initMethodRef = addMethodRef("java/lang/Object", "<init>", "()V");
+    const std::string initOwner = superClassName.empty() ? "java/lang/Object" : superClassName;
+    int initMethodRef = addMethodRef(initOwner, "<init>", "()V");
     initMethod.code[2] = static_cast<uint8_t>((initMethodRef >> 8) & 0xff);
     initMethod.code[3] = static_cast<uint8_t>(initMethodRef & 0xff);
     initMethod.maxStack = 1;
@@ -743,7 +780,7 @@ void BytecodeContext::writeClassFile() {
     methods.insert(methods.begin(), initMethod);
 
     int thisClassIndex = addClass(currentClass.name);
-    int superClassIndex = addClass("java/lang/Object");
+    int superClassIndex = addClass(superClassName.empty() ? "java/lang/Object" : superClassName);
     int codeUtf8Index = addUtf8("Code");
 
     std::vector<int> methodNameIndices;
@@ -812,4 +849,25 @@ void BytecodeContext::writeClassFile() {
 
     writeU2(0);
     out.close();
+}
+void BytecodeContext::pushClassState() {
+    ClassState state;
+    state.className = className;
+    state.superClassName = superClassName;
+    state.outputPath = outputPath;
+    state.classBuilder = currentClass;
+    state.constantPool = constantPool;
+    classStack.push_back(std::move(state));
+}
+
+void BytecodeContext::popClassState() {
+    if (classStack.empty()) return;
+    ClassState state = std::move(classStack.back());
+    classStack.pop_back();
+    className = state.className;
+    superClassName = state.superClassName;
+    outputPath = state.outputPath;
+    currentClass = std::move(state.classBuilder);
+    constantPool = std::move(state.constantPool);
+    currentMethod = nullptr;
 }
