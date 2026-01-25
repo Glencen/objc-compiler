@@ -377,16 +377,15 @@ void ExprNode::analyzeIdentifierSemantics(SemanticContext& context) {
     
     string idName = identifier->getIdentifier();
     
-    LocalVarInfo* localVar = context.lookupLocalVar(idName);
-    if (localVar) {
+    // 1) локальные переменные (включая параметры метода/функции)
+    if (LocalVarInfo* localVar = context.lookupLocalVar(idName)) {
         exprType = new Type(localVar->type);
         return;
     }
     
-    ClassInfo* currentClass = context.getCurrentClass();
-    if (currentClass) {
-        FieldInfo* field = currentClass->lookupField(idName, true);
-        if (field) {
+    // 2) поля класса (включая суперклассы)
+    if (ClassInfo* currentClass = context.getCurrentClass()) {
+        if (FieldInfo* field = currentClass->lookupField(idName, true)) {
             exprType = new Type(field->type);
             isFieldAccess = true;
             className = field->declaringClass->name;
@@ -394,14 +393,14 @@ void ExprNode::analyzeIdentifierSemantics(SemanticContext& context) {
         }
     }
     
-    FunctionInfo* func = context.lookupFunction(idName);
-    if (func) {
+    // 3) функции
+    if (FunctionInfo* func = context.lookupFunction(idName)) {
         exprType = new Type(func->type);
         return;
     }
     
-    ClassInfo* cls = context.lookupClass(idName);
-    if (cls) {
+    // 4) классы (как тип)
+    if (ClassInfo* cls = context.lookupClass(idName)) {
         exprType = new Type(TypeKind::CLASS_NAME, cls->name);
         return;
     }
