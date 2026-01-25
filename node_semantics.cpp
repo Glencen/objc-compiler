@@ -8,6 +8,9 @@ Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) { //
     string className = typeKind == TypeKind::CLASS_NAME ? typeNode->getClassName()->getClassName() : "";
     
     if (typeNode->isPrimitive()) {
+        if (!arraySizes.empty()) {
+            return Type(typeKind, arraySizes);
+        }
         return Type(typeKind);
     } else if (typeKind == TypeKind::CLASS_NAME) {
         if (!arraySizes.empty()) {
@@ -359,25 +362,37 @@ void ExprNode::analyzeLiteralSemantics(SemanticContext& context) {
         throw semantic_exception("Literal expression must have a value",
             "ExprNode::analyzeLiteralSemantics", -1, -1);
     }
-    
-    // Определяем тип литерала на основе его значения
-    // TODO: Вам нужно реализовать метод getLiteralType() в ValueNode или определить тип по содержимому литерала
-    string literalStr = literalValue->getIdentifier();
-    
-    // Простая эвристика для определения типа
-    if (literalStr == "true" || literalStr == "false") {
-        exprType = new Type(TypeKind::BOOL);
-    } else if (literalStr.find('.') != string::npos || 
-               literalStr.find('e') != string::npos ||
-               literalStr.find('E') != string::npos) {
-            // Возможно, float
+
+    switch (literalValue->getValueKind()) {
+        case ValueKind::INT_LIT:
+            exprType = new Type(TypeKind::INT);
+            break;
+        case ValueKind::FLOAT_LIT:
             exprType = new Type(TypeKind::FLOAT);
-    } else if (literalStr.size() == 3 && literalStr[0] == '\'' && literalStr[2] == '\'') {
-        exprType = new Type(TypeKind::CHAR);
-    } else if (literalStr[0] == '"') {
-        exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
-    } else {
-        exprType = new Type(TypeKind::INT);
+            break;
+        case ValueKind::BOOL_LIT:
+            exprType = new Type(TypeKind::BOOL);
+            break;
+        case ValueKind::CHAR_LIT:
+            exprType = new Type(TypeKind::CHAR);
+            break;
+        case ValueKind::STRING_LIT:
+            exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
+            break;
+        case ValueKind::OBJC_INT_LIT:
+        case ValueKind::OBJC_FLOAT_LIT:
+        case ValueKind::OBJC_BOOL_LIT:
+            exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSNumber");
+            break;
+        case ValueKind::OBJC_STRING_LIT:
+            exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
+            break;
+        case ValueKind::NIL:
+            exprType = new Type(TypeKind::TYPE_ID);
+            break;
+        default:
+            exprType = new Type(TypeKind::INT);
+            break;
     }
 }
 
@@ -1064,9 +1079,19 @@ void ExprNode::analyzeArrayAccessSemantics(SemanticContext& context) {
     operand->analyzeSemantics(context);
     index->analyzeSemantics(context);
     
-    // Проверяем, что операнд является массивом
-    if (!operand->getExprType() || !operand->getExprType()->isArray()) {
+    // Проверяем, что операнд является массивом или NSArray
+    if (!operand->getExprType()) {
         throw semantic_exception("Array access operand must be an array",
+            "ExprNode::analyzeArrayAccessSemantics", -1, -1,
+            "Got type: " + operand->getExprType()->toString());
+    }
+
+    bool isNsArray = (operand->getExprType()->dataType == TypeKind::CLASS_NAME) &&
+        (operand->getExprType()->className == "rtl/NSArray" ||
+         operand->getExprType()->className == "NSArray");
+
+    if (!operand->getExprType()->isArray() && !isNsArray) {
+        throw semantic_exception("Array access operand must be an array or NSArray",
             "ExprNode::analyzeArrayAccessSemantics", -1, -1,
             "Got type: " + operand->getExprType()->toString());
     }
@@ -1079,9 +1104,13 @@ void ExprNode::analyzeArrayAccessSemantics(SemanticContext& context) {
             "Got type: " + index->getExprType()->toString());
     }
     
-    // Тип результата - тип элемента массива
-    Type elemType(operand->getExprType()->dataType, operand->getExprType()->className);
-    exprType = new Type(elemType);
+    // Тип результата - тип элемента массива или NSObject для NSArray
+    if (isNsArray) {
+        exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
+    } else {
+        Type elemType(operand->getExprType()->dataType, operand->getExprType()->className);
+        exprType = new Type(elemType);
+    }
 }
 
 void ExprNode::analyzeFunctionCallSemantics(SemanticContext& context) {

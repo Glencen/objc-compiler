@@ -76,6 +76,7 @@ public:
     void emitStore(const Type& type, int index);
     void emitDup();
     void emitDupX1();
+    void emitDupX2();
     void emitPop();
     void emitBinaryInt(uint8_t opcode);
     void emitBinaryFloat(uint8_t opcode);
@@ -92,6 +93,11 @@ public:
     void emitInvokeVirtual(const std::string& owner, const std::string& name, const std::string& desc);
     void emitInvokeStatic(const std::string& owner, const std::string& name, const std::string& desc);
     void emitNewObject(const std::string& owner);
+    void emitANewArray(const std::string& className);
+    void emitAAStore();
+    void emitNewArray(TypeKind elementKind);
+    void emitArrayLoad(TypeKind elementKind);
+    void emitArrayStore(TypeKind elementKind);
 
 private:
     struct CpEntry {

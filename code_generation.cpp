@@ -34,6 +34,20 @@ void emitJumpIfFalse(BytecodeContext& context, ExprNode* expr, BytecodeContext::
     }
 }
 
+void emitBoxIfNeeded(BytecodeContext& context, const Type* type) {
+    if (!type) return;
+    if (type->dataType == TypeKind::CLASS_NAME || type->dataType == TypeKind::TYPE_ID) {
+        return;
+    }
+    if (type->dataType == TypeKind::FLOAT) {
+        context.emitInvokeStatic("rtl/NSNumber", "numberWithFloatStatic", "(F)Lrtl/NSNumber;");
+        return;
+    }
+    if (type->dataType == TypeKind::INT || type->dataType == TypeKind::BOOL || type->dataType == TypeKind::CHAR) {
+        context.emitInvokeStatic("rtl/NSNumber", "numberWithIntStatic", "(I)Lrtl/NSNumber;");
+    }
+}
+
 std::string mapRuntimeClassName(const std::string& name) {
     if (name.find('/') != std::string::npos) {
         return name;
@@ -177,6 +191,9 @@ Type convertTypeNodeToType(TypeNode* typeNode, const std::vector<int>& arraySize
     std::string className = typeKind == TypeKind::CLASS_NAME ? mapRuntimeClassName(typeNode->getClassName()->getClassName()) : "";
 
     if (typeNode->isPrimitive()) {
+        if (!arraySizes.empty()) {
+            return Type(typeKind, arraySizes);
+        }
         return Type(typeKind);
     }
     if (typeKind == TypeKind::CLASS_NAME) {
@@ -347,6 +364,26 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                 literalValue->emitBytecode(context);
             }
             break;
+        case ExprKind::OBJC_ARRAY_LITERAL: {
+            ExprListNode* list = getObjcArrayExprList();
+            std::vector<ExprNode*> elements;
+            if (list && list->getExprList()) {
+                for (auto* expr : *list->getExprList()) {
+                    if (expr) elements.push_back(expr);
+                }
+            }
+            context.emitIConst(static_cast<int>(elements.size()));
+            context.emitANewArray("rtl/NSObject");
+            for (size_t i = 0; i < elements.size(); ++i) {
+                context.emitDup();
+                context.emitIConst(static_cast<int>(i));
+                elements[i]->emitBytecode(context);
+                emitBoxIfNeeded(context, elements[i]->getExprType());
+                context.emitAAStore();
+            }
+            context.emitInvokeStatic("rtl/NSArray", "arrayWithObjectsStatic", "([Lrtl/NSObject;)Lrtl/NSArray;");
+            break;
+        }
         case ExprKind::NIL:
             context.emitAConstNull();
             break;
@@ -532,6 +569,35 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                         context.emitPutStatic(owner, name, desc);
                     }
                 }
+            }
+            if (left->getKind() == ExprKind::ARRAY_ACCESS) {
+                ExprNode* arr = left->getOperand();
+                ExprNode* idx = left->getIndex();
+                if (arr && idx) {
+                    arr->emitBytecode(context);
+                    idx->emitBytecode(context);
+                    right->emitBytecode(context);
+                    const Type* arrType = arr->getExprType();
+                    if (arrType && arrType->isArray()) {
+                        context.emitDupX2();
+                        context.emitArrayStore(arrType->dataType);
+                    }
+                }
+                break;
+            }
+            break;
+        }
+        case ExprKind::ARRAY_ACCESS: {
+            if (!operand || !index) break;
+            operand->emitBytecode(context);
+            index->emitBytecode(context);
+            const Type* opType = operand->getExprType();
+            if (opType && opType->dataType == TypeKind::CLASS_NAME &&
+                (opType->className == "rtl/NSArray" || opType->className == "NSArray")) {
+                context.emitInvokeVirtual("rtl/NSArray", "objectAtIndexDynamic", "(I)Lrtl/NSObject;");
+                exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
+            } else if (opType && opType->isArray()) {
+                context.emitArrayLoad(opType->dataType);
             }
             break;
         }
@@ -725,9 +791,35 @@ void DeclNode::emitBytecode(BytecodeContext& context) {
             if (!decl || !decl->getIdentifier()) continue;
             std::string name = decl->getIdentifier()->getIdentifier();
             Type varType = baseType;
+            std::vector<int> sizes;
+            if (auto* arraySizes = decl->getArraySizes()) {
+                sizes.assign(arraySizes->size(), 0);
+            }
+            if (!sizes.empty()) {
+                varType = convertTypeNodeToType(type, sizes);
+            }
             int localIndex = context.defineLocal(name, varType);
             InitializerNode* init = initDecl->getInitializer();
-            if (init && init->getKind() == InitializerKind::EXPR && init->getExpr()) {
+            if (varType.isArray() && (!init || init->getKind() != InitializerKind::EXPR || !init->getExpr())) {
+                ExprNode* sizeExpr = nullptr;
+                if (auto* arraySizes = decl->getArraySizes()) {
+                    if (!arraySizes->empty()) sizeExpr = arraySizes->front();
+                }
+                if (sizeExpr) {
+                    sizeExpr->emitBytecode(context);
+                } else {
+                    context.emitIConst(0);
+                }
+                if (varType.dataType == TypeKind::CLASS_NAME) {
+                    std::string elemClass = mapRuntimeClassName(varType.className);
+                    context.emitANewArray(elemClass);
+                } else if (varType.dataType == TypeKind::TYPE_ID) {
+                    context.emitANewArray("java/lang/Object");
+                } else {
+                    context.emitNewArray(varType.dataType);
+                }
+                context.emitStore(varType, localIndex);
+            } else if (init && init->getKind() == InitializerKind::EXPR && init->getExpr()) {
                 init->getExpr()->emitBytecode(context);
                 context.emitStore(varType, localIndex);
             } else {

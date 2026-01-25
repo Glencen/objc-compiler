@@ -57,9 +57,16 @@ constexpr uint8_t OP_ASTORE_0 = 0x4b;
 constexpr uint8_t OP_ASTORE_1 = 0x4c;
 constexpr uint8_t OP_ASTORE_2 = 0x4d;
 constexpr uint8_t OP_ASTORE_3 = 0x4e;
+constexpr uint8_t OP_AASTORE = 0x53;
+constexpr uint8_t OP_IASTORE = 0x4f;
+constexpr uint8_t OP_FASTORE = 0x51;
+constexpr uint8_t OP_IALOAD = 0x2e;
+constexpr uint8_t OP_FALOAD = 0x30;
+constexpr uint8_t OP_AALOAD = 0x32;
 
 constexpr uint8_t OP_DUP = 0x59;
 constexpr uint8_t OP_DUP_X1 = 0x5a;
+constexpr uint8_t OP_DUP_X2 = 0x5b;
 constexpr uint8_t OP_POP = 0x57;
 
 constexpr uint8_t OP_IADD = 0x60;
@@ -99,6 +106,8 @@ constexpr uint8_t OP_INVOKEVIRTUAL = 0xb6;
 constexpr uint8_t OP_INVOKESPECIAL = 0xb7;
 constexpr uint8_t OP_INVOKESTATIC = 0xb8;
 constexpr uint8_t OP_NEW = 0xbb;
+constexpr uint8_t OP_NEWARRAY = 0xbc;
+constexpr uint8_t OP_ANEWARRAY = 0xbd;
 
 constexpr uint8_t OP_IRETURN = 0xac;
 constexpr uint8_t OP_FRETURN = 0xae;
@@ -384,6 +393,16 @@ void BytecodeContext::emitLdcString(const std::string& value) {
 
 void BytecodeContext::emitLoad(const Type& type, int index) {
     TypeKind kind = normalizeToJvmPrimitive(type.dataType);
+    if (type.isArray()) {
+        if (index <= 3) {
+            emitOpcode(static_cast<uint8_t>(OP_ALOAD_0 + index));
+        } else {
+            emitOpcode(OP_ALOAD);
+            emitU1(static_cast<uint8_t>(index));
+        }
+        updateStack(1);
+        return;
+    }
     if (kind == TypeKind::FLOAT) {
         if (index <= 3) {
             emitOpcode(static_cast<uint8_t>(OP_FLOAD_0 + index));
@@ -415,6 +434,16 @@ void BytecodeContext::emitLoad(const Type& type, int index) {
 
 void BytecodeContext::emitStore(const Type& type, int index) {
     TypeKind kind = normalizeToJvmPrimitive(type.dataType);
+    if (type.isArray()) {
+        if (index <= 3) {
+            emitOpcode(static_cast<uint8_t>(OP_ASTORE_0 + index));
+        } else {
+            emitOpcode(OP_ASTORE);
+            emitU1(static_cast<uint8_t>(index));
+        }
+        updateStack(-1);
+        return;
+    }
     if (kind == TypeKind::FLOAT) {
         if (index <= 3) {
             emitOpcode(static_cast<uint8_t>(OP_FSTORE_0 + index));
@@ -451,6 +480,11 @@ void BytecodeContext::emitDup() {
 
 void BytecodeContext::emitDupX1() {
     emitOpcode(OP_DUP_X1);
+    updateStack(1);
+}
+
+void BytecodeContext::emitDupX2() {
+    emitOpcode(OP_DUP_X2);
     updateStack(1);
 }
 
@@ -568,6 +602,64 @@ void BytecodeContext::emitNewObject(const std::string& owner) {
     emitOpcode(OP_NEW);
     emitU2(static_cast<uint16_t>(idx));
     updateStack(1);
+}
+
+void BytecodeContext::emitANewArray(const std::string& className) {
+    int idx = addClass(className);
+    emitOpcode(OP_ANEWARRAY);
+    emitU2(static_cast<uint16_t>(idx));
+    updateStack(0);
+}
+
+void BytecodeContext::emitAAStore() {
+    emitOpcode(OP_AASTORE);
+    updateStack(-3);
+}
+
+void BytecodeContext::emitNewArray(TypeKind elementKind) {
+    uint8_t atype = 10; // int
+    switch (elementKind) {
+        case TypeKind::BOOL: atype = 4; break;
+        case TypeKind::CHAR: atype = 5; break;
+        case TypeKind::FLOAT: atype = 6; break;
+        case TypeKind::INT: atype = 10; break;
+        default: atype = 10; break;
+    }
+    emitOpcode(OP_NEWARRAY);
+    emitU1(atype);
+    updateStack(0);
+}
+
+void BytecodeContext::emitArrayLoad(TypeKind elementKind) {
+    switch (elementKind) {
+        case TypeKind::FLOAT:
+            emitOpcode(OP_FALOAD);
+            break;
+        case TypeKind::CLASS_NAME:
+        case TypeKind::TYPE_ID:
+            emitOpcode(OP_AALOAD);
+            break;
+        default:
+            emitOpcode(OP_IALOAD);
+            break;
+    }
+    updateStack(-1);
+}
+
+void BytecodeContext::emitArrayStore(TypeKind elementKind) {
+    switch (elementKind) {
+        case TypeKind::FLOAT:
+            emitOpcode(OP_FASTORE);
+            break;
+        case TypeKind::CLASS_NAME:
+        case TypeKind::TYPE_ID:
+            emitOpcode(OP_AASTORE);
+            break;
+        default:
+            emitOpcode(OP_IASTORE);
+            break;
+    }
+    updateStack(-3);
 }
 
 int BytecodeContext::addUtf8(const std::string& value) {
