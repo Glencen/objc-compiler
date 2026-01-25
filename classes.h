@@ -15,6 +15,7 @@ class SemanticContext;
 class FunctionInfo;
 class MethodInfo;
 class ClassInfo;
+class BytecodeContext;
 
 using namespace std;
 
@@ -44,6 +45,7 @@ public:
     unsigned int getId() const {return id;};
 
     virtual void analyzeSemantics(SemanticContext& context) = 0;
+    virtual void emitBytecode(BytecodeContext& context) = 0;
 
     virtual string getDotLabel() const = 0;
     virtual string toDot() const = 0;
@@ -85,6 +87,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -114,6 +118,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -134,6 +140,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -152,6 +160,8 @@ public:
     list<MsgArgNode*>* getMsgArgList() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -173,6 +183,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -192,6 +204,8 @@ public:
     list<ExprNode*>* getExprList() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -266,6 +280,8 @@ public:
     void processObjcMessage(ConstantsTable* constantTable, LocalVariablesTable* localVariables, ClassesTableElement* classTableElement, bool isInstance);
     void checkTypeCompatibility(Type* leftType, Type* rightType, const string& operation);
 
+    void emitBytecode(BytecodeContext& context) override;
+
     ExprKind getKind() const;
     ValueNode* getIdentifier() const;
     ValueNode* getLiteral() const;
@@ -339,6 +355,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -358,6 +376,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -375,6 +395,8 @@ public:
     DeclaratorListNode* getDeclaratorList() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -395,6 +417,8 @@ public:
     list<StmtNode*>* getStmtList() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -450,6 +474,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -479,6 +505,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -505,6 +533,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -526,6 +556,8 @@ public:
     list<ParamDeclNode*>* getParamList() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -552,6 +584,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -573,6 +607,8 @@ public:
     ParamListNode* getParamList() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -603,6 +639,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -624,6 +662,8 @@ public:
     list<MethodParamNode*>* getMethodParamList() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -654,6 +694,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -683,6 +725,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -710,6 +754,8 @@ public:
     
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -733,6 +779,8 @@ public:
     ValueNode* getName() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -758,6 +806,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -779,6 +829,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -798,6 +850,8 @@ public:
     InitializerListNode* getInitializerList() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -819,6 +873,8 @@ public:
     list<ExprNode*>* getArraySizes() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -842,6 +898,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -863,6 +921,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -881,6 +941,8 @@ public:
     InitDeclNode* getInitDecl() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -902,6 +964,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -919,6 +983,8 @@ public:
     InstanceVarsDeclListNode* getInstanceVarsDeclList() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -946,6 +1012,8 @@ public:
     void checkAllMethodsImplemented(ClassInfo* cls, SemanticContext& context);
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -975,6 +1043,8 @@ public:
     void processProperties(SemanticContext& context);
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -995,6 +1065,8 @@ public:
     list<ValueNode*>* getClassFwDeclList() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
@@ -1022,6 +1094,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -1046,6 +1120,8 @@ public:
 
     void analyzeSemantics(SemanticContext& context) override;
 
+    void emitBytecode(BytecodeContext& context) override;
+
     string getDotLabel() const override;
     string toDot() const override;
 
@@ -1062,6 +1138,8 @@ public:
     ExternalDeclListNode* getExternalDeclList() const;
 
     void analyzeSemantics(SemanticContext& context) override;
+
+    void emitBytecode(BytecodeContext& context) override;
 
     string getDotLabel() const override;
     string toDot() const override;
