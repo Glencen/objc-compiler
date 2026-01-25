@@ -68,6 +68,35 @@ uint16_t mapAccessToFlags(AccessModifier access) {
     }
 }
 
+Type mapRuntimeType(const Type& type) {
+    Type mapped = type;
+    if (mapped.dataType == TypeKind::CLASS_NAME) {
+        mapped.className = mapRuntimeClassName(mapped.className);
+    }
+    return mapped;
+}
+
+std::string buildMethodNameFromDef(MethodDefNode* methodDef) {
+    if (!methodDef) return "";
+    if (methodDef->getIdentifier()) {
+        return methodDef->getIdentifier()->getIdentifier();
+    }
+    MethodSelNode* sel = methodDef->getMethodSel();
+    if (!sel || !sel->getMethodParamList()) return "";
+    std::string methodName;
+    auto* list = sel->getMethodParamList();
+    for (auto* param : *list) {
+        if (!param || !param->getSelectorIdentifier()) continue;
+        methodName += param->getSelectorIdentifier()->getIdentifier();
+        methodName += ":";
+    }
+    if (!methodName.empty() && methodName.back() == ':') {
+        methodName.pop_back();
+        methodName += ":";
+    }
+    return methodName;
+}
+
 std::string mangleJvmMethodName(const std::string& name) {
     std::string result = name;
     for (auto& ch : result) {
@@ -210,6 +239,12 @@ Type convertTypeNodeToType(TypeNode* typeNode, const std::vector<int>& arraySize
             return Type(TypeKind::CLASS_NAME, className, arraySizes);
         }
         return Type(TypeKind::CLASS_NAME, className);
+    }
+    if (typeKind == TypeKind::TYPE_ID) {
+        if (!arraySizes.empty()) {
+            return Type(TypeKind::TYPE_ID, arraySizes);
+        }
+        return Type(TypeKind::TYPE_ID);
     }
     if (!arraySizes.empty()) {
         return Type(typeKind, arraySizes);
@@ -741,6 +776,23 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
             Type returnType(TypeKind::TYPE_ID);
             if (method) {
                 finalArgTypes = method->parameterTypes;
+                bool needsFallback = finalArgTypes.empty();
+                for (const auto* t : finalArgTypes) {
+                    if (!t) {
+                        needsFallback = true;
+                        break;
+                    }
+                }
+                if (needsFallback) {
+                    finalArgTypes.clear();
+                    for (size_t i = 0; i < method->getParameterCount(); ++i) {
+                        const LocalVarInfo* param = method->getParameter(i);
+                        if (param) finalArgTypes.push_back(&param->type);
+                    }
+                    if (finalArgTypes.empty() && !argTypes.empty()) {
+                        finalArgTypes = argTypes;
+                    }
+                }
                 returnType = method->getReturnType();
                 exprType = new Type(returnType);
             } else {
@@ -773,7 +825,18 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                 }
             }
 
-            std::string descriptor = buildMethodDescriptor(finalArgTypes, returnType);
+            std::vector<Type> mappedArgs;
+            std::vector<const Type*> mappedArgPtrs;
+            mappedArgs.reserve(finalArgTypes.size());
+            mappedArgPtrs.reserve(finalArgTypes.size());
+            for (const auto* t : finalArgTypes) {
+                if (t) {
+                    mappedArgs.push_back(mapRuntimeType(*t));
+                    mappedArgPtrs.push_back(&mappedArgs.back());
+                }
+            }
+            Type mappedReturn = mapRuntimeType(returnType);
+            std::string descriptor = buildMethodDescriptor(mappedArgPtrs, mappedReturn);
             std::string jvmMethodName = mangleJvmMethodName(methodName);
             if (owner.rfind("rtl/", 0) == 0 && method) {
                 jvmMethodName = mapRtlMethodName(owner, jvmMethodName, isStaticCall);
@@ -1233,15 +1296,79 @@ void ImplementationNode::emitBytecode(BytecodeContext& context) {
     if (cls) {
         for (const auto& [fieldName, field] : cls->fields) {
             if (!field) continue;
-            Type fieldType = field->type;
-            if (fieldType.dataType == TypeKind::CLASS_NAME) {
-                fieldType.className = mapRuntimeClassName(fieldType.className);
-            }
+            Type fieldType = mapRuntimeType(field->type);
             uint16_t flags = mapAccessToFlags(field->accessModifier);
             if (!field->isInstance) {
                 flags |= 0x0008;
             }
             context.addField(fieldName, fieldType.getDescriptor(), flags);
+        }
+    }
+
+    std::unordered_set<std::string> implementedInstanceMethods;
+    if (implDefList && implDefList->getInstanceMethodDefs()) {
+        for (auto* methodDef : *implDefList->getInstanceMethodDefs()) {
+            implementedInstanceMethods.insert(buildMethodNameFromDef(methodDef));
+        }
+    }
+
+    if (cls && !cls->propertyIvarMapping.empty()) {
+        std::unordered_map<std::string, std::pair<Type, bool>> propertyMeta;
+
+        if (cls->interface && cls->interface->getInterfaceDeclList()) {
+            auto* props = cls->interface->getInterfaceDeclList()->getProperties();
+            if (props) {
+                for (auto* prop : *props) {
+                    if (!prop || !prop->getName() || !prop->getType()) continue;
+                    std::string name = prop->getName()->getIdentifier();
+                    Type t = mapRuntimeType(convertTypeNodeToType(prop->getType()));
+                    bool readonly = prop->getAttribute() == Attribute::READONLY;
+                    propertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+                }
+            }
+        }
+
+        if (implDefList && implDefList->getproperties()) {
+            for (auto* prop : *implDefList->getproperties()) {
+                if (!prop || !prop->getName() || !prop->getType()) continue;
+                std::string name = prop->getName()->getIdentifier();
+                Type t = mapRuntimeType(convertTypeNodeToType(prop->getType()));
+                bool readonly = prop->getAttribute() == Attribute::READONLY;
+                propertyMeta.insert_or_assign(name, std::make_pair(t, readonly));
+            }
+        }
+
+        for (const auto& [propName, ivarName] : cls->propertyIvarMapping) {
+            auto metaIt = propertyMeta.find(propName);
+            if (metaIt == propertyMeta.end()) continue;
+            const Type propType = metaIt->second.first;
+            const bool isReadonly = metaIt->second.second;
+
+            std::string getterName = semCtx.generateGetterName(propName);
+            if (implementedInstanceMethods.find(getterName) == implementedInstanceMethods.end()) {
+                std::string desc = "()" + propType.getDescriptor();
+                context.beginMethod(mangleJvmMethodName(getterName), desc, 0x0001);
+                context.setCurrentMethodInfo(nullptr, false);
+                context.emitLoad(Type(TypeKind::CLASS_NAME, classNameStr), 0);
+                context.emitGetField(classNameStr, ivarName, propType.getDescriptor());
+                context.emitReturn(propType);
+                context.endMethod();
+            }
+
+            if (!isReadonly) {
+                std::string setterName = semCtx.generateSetterName(propName);
+                if (implementedInstanceMethods.find(setterName) == implementedInstanceMethods.end()) {
+                    std::string desc = "(" + propType.getDescriptor() + ")V";
+                    context.beginMethod(mangleJvmMethodName(setterName), desc, 0x0001);
+                    context.setCurrentMethodInfo(nullptr, false);
+                    context.defineLocal("value", propType);
+                    context.emitLoad(Type(TypeKind::CLASS_NAME, classNameStr), 0);
+                    context.emitLoad(propType, 1);
+                    context.emitPutField(classNameStr, ivarName, propType.getDescriptor());
+                    context.emitReturn(Type(TypeKind::VOID));
+                    context.endMethod();
+                }
+            }
         }
     }
 

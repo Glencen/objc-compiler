@@ -18,6 +18,11 @@ Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) { //
         } else {
             return Type(TypeKind::CLASS_NAME, className);
         }
+    } else if (typeKind == TypeKind::TYPE_ID) {
+        if (!arraySizes.empty()) {
+            return Type(TypeKind::TYPE_ID, arraySizes);
+        }
+        return Type(TypeKind::TYPE_ID);
     } else if (!arraySizes.empty()) {
         return Type(typeKind, arraySizes);
     }
@@ -3111,7 +3116,9 @@ void ImplementationNode::processProperties(SemanticContext& context) {
         // Проверяем/создаем сеттер (если свойство не readonly)
         if (!isReadonly) {
             string setterName = context.generateSetterName(propertyName);
-            MethodInfo* setter = cls->lookupMethod(setterName, {}, {}, false, false);
+            vector<const Type*> argTypes = {&propertyType};
+            vector<string> keywords = {setterName};
+            MethodInfo* setter = cls->lookupMethod(setterName, argTypes, keywords, false, false);
             
             if (setter) {
                 // Сеттер уже существует, проверяем совместимость
@@ -3140,11 +3147,11 @@ void ImplementationNode::processProperties(SemanticContext& context) {
                 // Создаем сеттер
                 Type voidType(TypeKind::VOID);
                 auto newSetter = make_unique<MethodInfo>(setterName, voidType, false, cls);
-                newSetter->keywords = {setterName.substr(3)}; // Убираем "set" и делаем lowercase
+                newSetter->keywords = {setterName};
                 
                 // Добавляем параметр
                 auto param = make_unique<LocalVarInfo>("value", propertyType, true, newSetter.get());
-                newSetter->parameterTypes.push_back(&propertyType);
+                newSetter->parameterTypes.push_back(&param->type);
                 newSetter->addParameter(move(param));
                 
                 cls->addMethod(move(newSetter));
@@ -3261,13 +3268,17 @@ void InterfaceNode::processProperties(SemanticContext& context) {
         // Создаем сеттер для не-readonly свойств
         if (!isReadonly) {
             string setterName = context.generateSetterName(propertyName);
-            if (!cls->lookupMethod(setterName, {}, {}, false, false)) {
+            vector<const Type*> argTypes = {&propertyType};
+            vector<string> keywords = {setterName};
+            if (!cls->lookupMethod(setterName, argTypes, keywords, false, false)) {
                 Type voidType(TypeKind::VOID);
                 auto setter = make_unique<MethodInfo>(setterName, voidType, false, cls);
                 
                 // Устанавливаем параметр для сеттера
                 auto param = make_unique<LocalVarInfo>("value", propertyType, true, setter.get());
+                setter->parameterTypes.push_back(&param->type);
                 setter->addParameter(move(param));
+                setter->keywords = {setterName};
                 
                 // TODO: Установить selector и keywords для Objective-C
                 // setter->selector = "set" + propertyName + ":";

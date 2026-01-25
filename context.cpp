@@ -1234,13 +1234,12 @@ string SemanticContext::generateGetterName(const string& fieldName) const {
 }
 
 string SemanticContext::generateSetterName(const string& fieldName) const {
-    // Преобразуем "fieldName" в "setFieldName:"
+    // Преобразуем "fieldName" в "setFieldName"
     string setter = "set";
     if (!fieldName.empty()) {
         setter += static_cast<char>(toupper(fieldName[0]));
         setter += fieldName.substr(1);
     }
-    setter += ":";
     return setter;
 }
 
