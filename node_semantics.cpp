@@ -452,10 +452,10 @@ void ExprNode::analyzeIdentifierSemantics(SemanticContext& context) {
         }
     }
     
-    // 3) функции
-    if (FunctionInfo* func = context.lookupFunction(idName)) {
-        exprType = new Type(func->type);
-        return;
+    // 3) функции (имя функции без вызова недопустимо)
+    if (context.lookupFunction(idName)) {
+        throw semantic_exception("Function name '" + idName + "' used without call",
+            "ExprNode::analyzeIdentifierSemantics", -1, -1);
     }
     
     // 4) классы (как тип)
