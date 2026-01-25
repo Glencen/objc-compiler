@@ -12,3 +12,5 @@
 objc-lexer.cpp
 objc-parser.cpp
 objc-parser.hpp
+*.class
+*.log
