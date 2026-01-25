@@ -264,7 +264,7 @@ bool MethodInfo::matchesSignature(const vector<const Type*>& argTypes, const vec
     }
     
     for (size_t i = 0; i < keywords.size(); i++) {
-        if (keywords[i] != this->keywords[i]) {
+        if (!keywords[i].empty() && !this->keywords[i].empty() && keywords[i] != this->keywords[i]) {
             return false;
         }
     }
@@ -1848,7 +1848,7 @@ void SemanticContext::initNSArrayClass() {
             nsArrayClass.get()
         );
         arrayWithArrayStatic->selector = "arrayWithArray";
-        arrayWithArrayStatic->keywords = {};
+        arrayWithArrayStatic->keywords = {""};
         arrayWithArrayStatic->parameterTypes = {
             new Type(TypeKind::CLASS_NAME, "rtl/NSArray")
         };
@@ -1864,7 +1864,7 @@ void SemanticContext::initNSArrayClass() {
             nsArrayClass.get()
         );
         arrayWithObjectsStatic->selector = "arrayWithObjects";
-        arrayWithObjectsStatic->keywords = {};
+        arrayWithObjectsStatic->keywords = {""};
         arrayWithObjectsStatic->parameterTypes = {
             new Type(TypeKind::CLASS_NAME, "Lrtl/NSObject;") // массив объектов
         };
@@ -1880,7 +1880,7 @@ void SemanticContext::initNSArrayClass() {
             nsArrayClass.get()
         );
         arrayByAddingObjectDynamic->selector = "arrayByAddingObject";
-        arrayByAddingObjectDynamic->keywords = {};
+        arrayByAddingObjectDynamic->keywords = {""};
         arrayByAddingObjectDynamic->parameterTypes = {
             new Type(TypeKind::CLASS_NAME, "rtl/NSObject")
         };
@@ -1896,7 +1896,7 @@ void SemanticContext::initNSArrayClass() {
             nsArrayClass.get()
         );
         objectAtIndexDynamic->selector = "objectAtIndex";
-        objectAtIndexDynamic->keywords = {};
+        objectAtIndexDynamic->keywords = {""};
         objectAtIndexDynamic->parameterTypes = { new Type(TypeKind::INT) };
         nsArrayClass->addMethod(move(objectAtIndexDynamic));
     }
@@ -2127,6 +2127,20 @@ void SemanticContext::initInOutFuncsClass() {
         method->selector = "printNSObject:";
         method->keywords = {"printNSObject"};
         method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSObject") };
+        ioClass->addMethod(move(method));
+    }
+
+    // +printInt:withInt:
+    {
+        auto method = make_unique<MethodInfo>(
+            "printInt:withInt",
+            Type(TypeKind::VOID),
+            true,
+            ioClass.get()
+        );
+        method->selector = "printInt:withInt:";
+        method->keywords = {"printInt", "withInt"};
+        method->parameterTypes = { new Type(TypeKind::INT), new Type(TypeKind::INT) };
         ioClass->addMethod(move(method));
     }
 

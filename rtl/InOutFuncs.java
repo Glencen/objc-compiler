@@ -46,6 +46,11 @@ public class InOutFuncs {
         System.out.print(obj.toString());
     }
 
+    public static void printInt$withInt(int a, int b) {
+        printInt(a);
+        printInt(b);
+    }
+
     // ------------------- Read Methods -------------------
 
     public static int readInt() {

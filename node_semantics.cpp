@@ -14,6 +14,9 @@ Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) { //
     }
     
     if (typeNode->isPrimitive()) {
+        if (!arraySizes.empty()) {
+            return Type(typeKind, arraySizes);
+        }
         return Type(typeKind);
     } else if (typeKind == TypeKind::CLASS_NAME) {
         if (!arraySizes.empty()) {
@@ -420,25 +423,37 @@ void ExprNode::analyzeLiteralSemantics(SemanticContext& context) {
         throw semantic_exception("Literal expression must have a value",
             "ExprNode::analyzeLiteralSemantics", -1, -1);
     }
-    
-    // Определяем тип литерала на основе его значения
-    // TODO: Вам нужно реализовать метод getLiteralType() в ValueNode или определить тип по содержимому литерала
-    string literalStr = literalValue->getIdentifier();
-    
-    // Простая эвристика для определения типа
-    if (literalStr == "true" || literalStr == "false") {
-        exprType = new Type(TypeKind::BOOL);
-    } else if (literalStr.find('.') != string::npos || 
-               literalStr.find('e') != string::npos ||
-               literalStr.find('E') != string::npos) {
-            // Возможно, float
+
+    switch (literalValue->getValueKind()) {
+        case ValueKind::INT_LIT:
+            exprType = new Type(TypeKind::INT);
+            break;
+        case ValueKind::FLOAT_LIT:
             exprType = new Type(TypeKind::FLOAT);
-    } else if (literalStr.size() == 3 && literalStr[0] == '\'' && literalStr[2] == '\'') {
-        exprType = new Type(TypeKind::CHAR);
-    } else if (literalStr[0] == '"') {
-        exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
-    } else {
-        exprType = new Type(TypeKind::INT);
+            break;
+        case ValueKind::BOOL_LIT:
+            exprType = new Type(TypeKind::BOOL);
+            break;
+        case ValueKind::CHAR_LIT:
+            exprType = new Type(TypeKind::CHAR);
+            break;
+        case ValueKind::STRING_LIT:
+            exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
+            break;
+        case ValueKind::OBJC_INT_LIT:
+        case ValueKind::OBJC_FLOAT_LIT:
+        case ValueKind::OBJC_BOOL_LIT:
+            exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSNumber");
+            break;
+        case ValueKind::OBJC_STRING_LIT:
+            exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
+            break;
+        case ValueKind::NIL:
+            exprType = new Type(TypeKind::TYPE_ID);
+            break;
+        default:
+            exprType = new Type(TypeKind::INT);
+            break;
     }
 }
 
@@ -590,7 +605,34 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
 
     MethodInfo* method = nullptr;
     if (receiverClass) {
-        method = receiverClass->lookupMethod(methodName, argTypes, keywords, true, isStaticCall);
+        // Отладочная информация
+        // cerr << "DEBUG: Looking for method '" << selectorStr << "'" << endl;
+        // cerr << "  Receiver class: " << receiverClass->name << endl;
+        // cerr << "  Is static call: " << (isStaticCall ? "yes" : "no") << endl;
+        // cerr << "  Keywords: ";
+        // for (const auto& kw : keywords) cerr << "'" << kw << "' ";
+        // cerr << endl;
+        // cerr << "  Arg types count: " << argTypes.size() << endl;
+        
+        // // Выводим ВСЕ методы класса (и статические, и экземпляра)
+        // cerr << "  All methods in " << receiverClass->name << ":" << endl;
+        // for (const auto& methodPair : receiverClass->methods) {
+        //     for (const auto& m : methodPair.second) {
+        //         cerr << "    - '" << methodPair.first << "' (" 
+        //              << (m->isClassMethod ? "CLASS" : "INSTANCE") << ")" << endl;
+        //         cerr << "      Keywords: ";
+        //         for (const auto& kw : m->keywords) cerr << "'" << kw << "' ";
+        //         cerr << endl;
+        //     }
+        // }
+        
+        if (isSuperCall) {
+            method = receiverClass->lookupMethod(
+                methodName, argTypes, keywords, true, isStaticCall);
+        } else {
+            method = receiverClass->lookupMethod(
+                methodName, argTypes, keywords, true, isStaticCall);
+        }
     }
     
     if (method) {
@@ -1001,16 +1043,21 @@ void ExprNode::analyzeAndSemantics(SemanticContext& context) {
     left->analyzeSemantics(context);
     right->analyzeSemantics(context);
     
-    // Проверяем, что операнды логического типа
+    // Разрешаем boolean или объектные типы (truthy: не nil)
     Type boolType(TypeKind::BOOL);
-    if (!left->getExprType() || !left->getExprType()->equal(&boolType)) {
-        throw semantic_exception("Left operand of logical AND must be boolean",
+    auto isObjectLike = [](const Type* t) {
+        return t && (t->dataType == TypeKind::CLASS_NAME || t->dataType == TypeKind::TYPE_ID);
+    };
+    if (!left->getExprType() ||
+        (!left->getExprType()->equal(&boolType) && !isObjectLike(left->getExprType()))) {
+        throw semantic_exception("Left operand of logical AND must be boolean or object",
             "ExprNode::analyzeAndSemantics", -1, -1,
             "Got type: " + left->getExprType()->toString());
     }
     
-    if (!right->getExprType() || !right->getExprType()->equal(&boolType)) {
-        throw semantic_exception("Right operand of logical AND must be boolean",
+    if (!right->getExprType() ||
+        (!right->getExprType()->equal(&boolType) && !isObjectLike(right->getExprType()))) {
+        throw semantic_exception("Right operand of logical AND must be boolean or object",
             "ExprNode::analyzeAndSemantics", -1, -1,
             "Got type: " + right->getExprType()->toString());
     }
@@ -1027,16 +1074,21 @@ void ExprNode::analyzeOrSemantics(SemanticContext& context) {
     left->analyzeSemantics(context);
     right->analyzeSemantics(context);
     
-    // Проверяем, что операнды логического типа
+    // Разрешаем boolean или объектные типы (truthy: не nil)
     Type boolType(TypeKind::BOOL);
-    if (!left->getExprType() || !left->getExprType()->equal(&boolType)) {
-        throw semantic_exception("Left operand of logical OR must be boolean",
+    auto isObjectLike = [](const Type* t) {
+        return t && (t->dataType == TypeKind::CLASS_NAME || t->dataType == TypeKind::TYPE_ID);
+    };
+    if (!left->getExprType() ||
+        (!left->getExprType()->equal(&boolType) && !isObjectLike(left->getExprType()))) {
+        throw semantic_exception("Left operand of logical OR must be boolean or object",
             "ExprNode::analyzeOrSemantics", -1, -1,
             "Got type: " + left->getExprType()->toString());
     }
     
-    if (!right->getExprType() || !right->getExprType()->equal(&boolType)) {
-        throw semantic_exception("Right operand of logical OR must be boolean",
+    if (!right->getExprType() ||
+        (!right->getExprType()->equal(&boolType) && !isObjectLike(right->getExprType()))) {
+        throw semantic_exception("Right operand of logical OR must be boolean or object",
             "ExprNode::analyzeOrSemantics", -1, -1,
             "Got type: " + right->getExprType()->toString());
     }
@@ -1076,9 +1128,19 @@ void ExprNode::analyzeArrayAccessSemantics(SemanticContext& context) {
     operand->analyzeSemantics(context);
     index->analyzeSemantics(context);
     
-    // Проверяем, что операнд является массивом
-    if (!operand->getExprType() || !operand->getExprType()->isArray()) {
+    // Проверяем, что операнд является массивом или NSArray
+    if (!operand->getExprType()) {
         throw semantic_exception("Array access operand must be an array",
+            "ExprNode::analyzeArrayAccessSemantics", -1, -1,
+            "Got type: " + operand->getExprType()->toString());
+    }
+
+    bool isNsArray = (operand->getExprType()->dataType == TypeKind::CLASS_NAME) &&
+        (operand->getExprType()->className == "rtl/NSArray" ||
+         operand->getExprType()->className == "NSArray");
+
+    if (!operand->getExprType()->isArray() && !isNsArray) {
+        throw semantic_exception("Array access operand must be an array or NSArray",
             "ExprNode::analyzeArrayAccessSemantics", -1, -1,
             "Got type: " + operand->getExprType()->toString());
     }
@@ -1091,9 +1153,13 @@ void ExprNode::analyzeArrayAccessSemantics(SemanticContext& context) {
             "Got type: " + index->getExprType()->toString());
     }
     
-    // Тип результата - тип элемента массива
-    Type elemType(operand->getExprType()->dataType, operand->getExprType()->className);
-    exprType = new Type(elemType);
+    // Тип результата - тип элемента массива или NSObject для NSArray
+    if (isNsArray) {
+        exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSObject");
+    } else {
+        Type elemType(operand->getExprType()->dataType, operand->getExprType()->className);
+        exprType = new Type(elemType);
+    }
 }
 
 void ExprNode::analyzeFunctionCallSemantics(SemanticContext& context) {
@@ -1149,17 +1215,40 @@ void ExprNode::analyzeFunctionCallSemantics(SemanticContext& context) {
 }
 
 void ExprNode::analyzeDotSemantics(SemanticContext& context) {
-    // TODO: Реализовать анализ операции доступа через точку (структуры/классы)
     if (!left || !right) {
         throw semantic_exception("Dot operator must have left and right operands",
             "ExprNode::analyzeDotSemantics", -1, -1);
     }
     
     left->analyzeSemantics(context);
-    right->analyzeSemantics(context);
-    
-    // Пока устанавливаем тип левого операнда
-    exprType = new Type(*left->getExprType());
+
+    Type* leftType = left->getExprType();
+    if (!leftType || leftType->dataType != TypeKind::CLASS_NAME) {
+        throw semantic_exception("Dot operator left operand must be an object",
+            "ExprNode::analyzeDotSemantics", -1, -1,
+            "Got type: " + (leftType ? leftType->toString() : "null"));
+    }
+    if (!right || right->getKind() != ExprKind::IDENTIFIER) {
+        throw semantic_exception("Dot operator right operand must be an identifier",
+            "ExprNode::analyzeDotSemantics", -1, -1);
+    }
+
+    string fieldName = right->getIdentifier()->getIdentifier();
+    ClassInfo* cls = context.lookupClass(leftType->className);
+    if (!cls) {
+        throw semantic_exception("Class '" + leftType->className + "' not found",
+            "ExprNode::analyzeDotSemantics", -1, -1);
+    }
+    FieldInfo* field = cls->lookupField(fieldName, true);
+    if (!field) {
+        throw semantic_exception("Ivar '" + fieldName + "' not found in class '" +
+            cls->name + "' or its ancestors",
+            "ExprNode::analyzeDotSemantics", -1, -1);
+    }
+
+    exprType = new Type(field->type);
+    isFieldAccess = true;
+    className = field->declaringClass->name;
 }
 
 void ExprNode::analyzeArrowSemantics(SemanticContext& context) {
@@ -2236,7 +2325,7 @@ void MethodDefNode::analyzeSemantics(SemanticContext& context) {
         // Простой метод без параметров
         methodName = identifier->getIdentifier();
         selector = methodName;
-        keywords = {};
+        keywords.clear();
     } else if (methodSel) {
         // Метод с селектором
         methodSel->analyzeSemantics(context);
@@ -2555,7 +2644,7 @@ void MethodDeclNode::analyzeSemantics(SemanticContext& context) {
         // Простой метод без параметров
         methodName = identifier->getIdentifier();
         selector = methodName;
-        keywords = {};
+        keywords.clear();
     } else if (methodSel) {
         // Метод с селектором
         methodSel->analyzeSemantics(context);
@@ -2902,8 +2991,17 @@ void InstanceVarDeclNode::analyzeSemantics(SemanticContext& context) {
     
     // Обрабатываем инициализатор (если есть)
     if (initDecl->getInitializer()) {
-        // TODO: Проверить совместимость типа инициализатора с типом поля
-        // field->initialValue = ...; // Сохранить инициализатор для генерации кода
+        InitializerNode* initializer = initDecl->getInitializer();
+        if (initializer->getKind() == InitializerKind::EXPR && initializer->getExpr()) {
+            ExprNode* initExpr = initializer->getExpr();
+            if (initExpr->getExprType() && !context.isAssignable(*initExpr->getExprType(), varType)) {
+                throw semantic_exception("Instance variable initializer type mismatch",
+                    "InstanceVarDeclNode::analyzeSemantics", -1, -1,
+                    "Expected: " + varType.toString() +
+                    ", Got: " + initExpr->getExprType()->toString());
+            }
+            field->initialValue = initExpr;
+        }
     }
     
     // Добавляем поле в класс
@@ -3048,13 +3146,13 @@ void ImplementationNode::processProperties(SemanticContext& context) {
                     "ImplementationNode::processProperties", -1, -1,
                     "Property: " + propertyName);
             }
-            } else {
-                // Создаем геттер
-                auto newGetter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
-                newGetter->selector = getterName;
-                newGetter->keywords = {};
-                cls->addMethod(move(newGetter));
-            }
+        } else {
+            // Создаем геттер
+            auto newGetter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
+            newGetter->selector = getterName;
+            newGetter->keywords.clear();
+            cls->addMethod(move(newGetter));
+        }
         
         // Проверяем/создаем сеттер (если свойство не readonly)
         if (!isReadonly) {
