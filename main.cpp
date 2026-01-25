@@ -6,6 +6,7 @@
 #include "objc-parser.hpp"
 #include "classes.h"
 #include "context.h"
+#include "bytecode_context.h"
 #include "output_utils.h"
 
 namespace fs = std::filesystem;
@@ -158,6 +159,18 @@ int main(int argc, char* argv[])
             DEBUG_LOG("DEBUG: Finished new AST file generation");
             
             std::cout << "\nAST after semantics written to: " << ast_after_file << std::endl;
+
+            fs::path inputPath(inputFile);
+            std::string className = inputPath.stem().string();
+            std::string class_file = (inputPath.parent_path() / (className + ".class")).string();
+            try {
+                BytecodeContext bytecodeContext(className, class_file);
+                root->emitBytecode(bytecodeContext);
+                std::cout << "\nBytecode written to: " << class_file << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "\nError during bytecode generation: " << e.what() << std::endl;
+                safeExit(1);
+            }
 
             std::cout << "\nProcessing completed successfully!" << std::endl;
             
