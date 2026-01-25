@@ -407,6 +407,9 @@ MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const Type*
     auto it = methods.find(name);
     if (it != methods.end()) {
         for (auto& method : it->second) {
+            if (method->isClassMethod != isClassMethod) {
+                continue;
+            }
             if (method->matchesSignature(argTypes, keywords)) {
                 return method.get();
             }
@@ -424,6 +427,9 @@ const MethodInfo* ClassInfo::lookupMethod(const string& name, const vector<const
     auto it = methods.find(name);
     if (it != methods.end()) {
         for (auto& method : it->second) {
+            if (method->isClassMethod != isClassMethod) {
+                continue;
+            }
             if (method->matchesSignature(argTypes, keywords)) {
                 return method.get();
             }
@@ -449,7 +455,8 @@ void ClassInfo::addMethod(unique_ptr<MethodInfo> method) {
     
     auto& methodList = methods[method->name];
     for (auto& existingMethod : methodList) {
-        if (existingMethod->matchesSignature(method->parameterTypes, method->keywords)) {
+        if (existingMethod->isClassMethod == method->isClassMethod &&
+            existingMethod->matchesSignature(method->parameterTypes, method->keywords)) {
             throw semantic_exception("Method with same signature already exists: " + method->name,
                 "ClassInfo::addMethod", -1, -1);
         }
@@ -1373,8 +1380,6 @@ void SemanticContext::initSemanticContext() {
     initNSArrayClass();
     initNSNumberClass();
     initInOutFuncsClass();
-    dumpSymbolTable();
-
     resolveInheritance();
     enterScope();
 }
@@ -2020,7 +2025,7 @@ void SemanticContext::initInOutFuncsClass() {
             ioClass.get()
         );
         method->selector = "printInt:";
-        method->keywords = {""};
+        method->keywords = {"printInt"};
         method->parameterTypes = { new Type(TypeKind::INT) };
         ioClass->addMethod(move(method));
     }
@@ -2034,7 +2039,7 @@ void SemanticContext::initInOutFuncsClass() {
             ioClass.get()
         );
         method->selector = "printFloat:";
-        method->keywords = {""};
+        method->keywords = {"printFloat"};
         method->parameterTypes = { new Type(TypeKind::FLOAT) };
         ioClass->addMethod(move(method));
     }
@@ -2048,7 +2053,7 @@ void SemanticContext::initInOutFuncsClass() {
             ioClass.get()
         );
         method->selector = "printChar:";
-        method->keywords = {""};
+        method->keywords = {"printChar"};
         method->parameterTypes = { new Type(TypeKind::CHAR) };
         ioClass->addMethod(move(method));
     }
@@ -2062,7 +2067,7 @@ void SemanticContext::initInOutFuncsClass() {
             ioClass.get()
         );
         method->selector = "printNSString:";
-        method->keywords = {""};
+        method->keywords = {"printNSString"};
         method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
         ioClass->addMethod(move(method));
     }
@@ -2076,7 +2081,7 @@ void SemanticContext::initInOutFuncsClass() {
             ioClass.get()
         );
         method->selector = "printNSNumber:";
-        method->keywords = {""};
+        method->keywords = {"printNSNumber"};
         method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSNumber") };
         ioClass->addMethod(move(method));
     }
@@ -2090,7 +2095,7 @@ void SemanticContext::initInOutFuncsClass() {
             ioClass.get()
         );
         method->selector = "printNSArray:";
-        method->keywords = {""};
+        method->keywords = {"printNSArray"};
         method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSArray") };
         ioClass->addMethod(move(method));
     }
@@ -2104,7 +2109,7 @@ void SemanticContext::initInOutFuncsClass() {
             ioClass.get()
         );
         method->selector = "printNSObject:";
-        method->keywords = {""};
+        method->keywords = {"printNSObject"};
         method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSObject") };
         ioClass->addMethod(move(method));
     }

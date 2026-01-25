@@ -431,13 +431,10 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
     
     if (receiver->getKind() == ReceiverKind::EXPR && receiver->getExpr()) {
         receiverType = receiver->getExpr()->getExprType();
-        // Если receiver - идентификатор класса (например, InOutFuncs),
-        // это может быть статический вызов
         if (receiver->getExpr()->getKind() == ExprKind::IDENTIFIER) {
             string idName = receiver->getExpr()->getIdentifier()->getIdentifier();
             ClassInfo* possibleClass = context.lookupClass(idName);
             if (possibleClass) {
-                // Это вызов статического метода: [ClassName method]
                 receiverClass = possibleClass;
                 isStaticCall = true;
                 receiverType = new Type(TypeKind::CLASS_NAME, idName);
@@ -466,7 +463,6 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
         isStaticCall = context.getCurrentMethod() ? context.getCurrentMethod()->isClassMethod : false;
     }
     
-    // Если receiverType еще не определен, пытаемся определить по типу выражения
     if (!receiverType && receiver->getKind() == ReceiverKind::EXPR && receiver->getExpr()) {
         receiverType = receiver->getExpr()->getExprType();
     }
@@ -476,12 +472,10 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
             "ExprNode::analyzeMessageSemantics", -1, -1);
     }
     
-    // Если receiverClass еще не определен, пытаемся получить его
     if (!receiverClass && receiverType->dataType == TypeKind::CLASS_NAME) {
         receiverClass = context.lookupClass(receiverType->className);
     }
     
-    // Собираем информацию о селекторе
     vector<string> keywords;
     vector<const Type*> argTypes;
     string selectorStr;
@@ -490,8 +484,7 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
     if (selector->getKind() == MsgSelectorKind::SIMPLE_SEL) {
         string idName = selector->getIdentifier()->getIdentifier();
         methodName = idName;
-        selectorStr = idName + ":";
-        keywords.push_back(idName);
+        selectorStr = idName;
     } else if (selector->getKind() == MsgSelectorKind::ARGUMENT_LIST) {
         MsgArgListNode* argList = selector->getMsgArgList();
         if (argList) {
@@ -533,36 +526,7 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
 
     MethodInfo* method = nullptr;
     if (receiverClass) {
-        // Отладочная информация
-        // cerr << "DEBUG: Looking for method '" << selectorStr << "'" << endl;
-        // cerr << "  Receiver class: " << receiverClass->name << endl;
-        // cerr << "  Is static call: " << (isStaticCall ? "yes" : "no") << endl;
-        // cerr << "  Keywords: ";
-        // for (const auto& kw : keywords) cerr << "'" << kw << "' ";
-        // cerr << endl;
-        // cerr << "  Arg types count: " << argTypes.size() << endl;
-        
-        // // Выводим ВСЕ методы класса (и статические, и экземпляра)
-        // cerr << "  All methods in " << receiverClass->name << ":" << endl;
-        // for (const auto& methodPair : receiverClass->methods) {
-        //     for (const auto& m : methodPair.second) {
-        //         cerr << "    - '" << methodPair.first << "' (" 
-        //              << (m->isClassMethod ? "CLASS" : "INSTANCE") << ")" << endl;
-        //         cerr << "      Keywords: ";
-        //         for (const auto& kw : m->keywords) cerr << "'" << kw << "' ";
-        //         cerr << endl;
-        //     }
-        // }
-        
-        if (isSuperCall) {
-            if (receiverClass->superclass) {
-                method = receiverClass->superclass->lookupMethod(
-                    methodName, argTypes, keywords, true, isStaticCall);
-            }
-        } else {
-            method = receiverClass->lookupMethod(
-                methodName, argTypes, keywords, true, isStaticCall);
-        }
+        method = receiverClass->lookupMethod(methodName, argTypes, keywords, true, isStaticCall);
     }
     
     if (method) {
@@ -570,17 +534,9 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
         isMethodCall = true;
         className = method->declaringClass->name;
         methodRefConstantId = -1;
-        
-        // cerr << "DEBUG: Found method '" << selectorStr 
-        //      << "' with return type: " << method->getReturnType().toString() << endl;
     } else {
         exprType = new Type(TypeKind::TYPE_ID);
         isMethodCall = true;
-        
-        // cerr << "ERROR: Method with selector '" << selectorStr
-        //      << "' not found in class '" << receiverClass->name << "'" << endl;
-        // cerr << "  Looking for: " << (isStaticCall ? "CLASS" : "INSTANCE") << " method" << endl;
-        // cerr << "  Available methods with this selector:" << endl;
         
         if (receiverClass) {
             auto it = receiverClass->methods.find(methodName);
@@ -598,7 +554,6 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
         }
     }
     
-    // Очищаем временно созданный receiverType
     if (receiver->getKind() == ReceiverKind::CLASS_NAME || 
         (receiver->getKind() == ReceiverKind::EXPR && 
          receiver->getExpr() && 
@@ -2200,7 +2155,7 @@ void MethodDefNode::analyzeSemantics(SemanticContext& context) {
         // Простой метод без параметров
         methodName = identifier->getIdentifier();
         selector = methodName;
-        keywords = {""};
+        keywords = {};
     } else if (methodSel) {
         // Метод с селектором
         methodSel->analyzeSemantics(context);
@@ -2502,7 +2457,7 @@ void MethodDeclNode::analyzeSemantics(SemanticContext& context) {
         // Простой метод без параметров
         methodName = identifier->getIdentifier();
         selector = methodName;
-        keywords = {""}; // Пустое ключевое слово для метода без параметров
+        keywords = {};
     } else if (methodSel) {
         // Метод с селектором
         methodSel->analyzeSemantics(context);
@@ -3036,7 +2991,7 @@ void ImplementationNode::processProperties(SemanticContext& context) {
             // Создаем геттер
             auto newGetter = make_unique<MethodInfo>(getterName, propertyType, false, cls);
             newGetter->selector = getterName;
-            newGetter->keywords = {""};
+            newGetter->keywords = {};
             cls->addMethod(move(newGetter));
         }
         
@@ -3122,6 +3077,9 @@ void ImplementationNode::analyzeSemantics(SemanticContext& context) {
                 "ImplementationNode::analyzeSemantics", -1, -1,
                 "Interface: " + (cls->superclass ? cls->superclass->name : "none") +
                 ", Implementation: " + superclassNameStr);
+        }
+        if (!cls->superclass) {
+            cls->setSuperclass(superclass);
         }
     }
     
@@ -3230,6 +3188,20 @@ void InterfaceNode::analyzeSemantics(SemanticContext& context) {
         auto newClass = make_unique<ClassInfo>(classNameStr, superclass);
         cls = newClass.get();
         context.addClass(move(newClass));
+    } else if (!superclassNameStr.empty()) {
+        ClassInfo* superclass = context.lookupClass(superclassNameStr);
+        if (!superclass) {
+            throw class_exception("Undefined super class '" + superclassNameStr + "'",
+                "InterfaceNode::analyzeSemantics", -1, -1, "Class: " + classNameStr + "'");
+        }
+        if (cls->superclass && cls->superclass->name != superclassNameStr) {
+            throw class_exception("Superclass mismatch in interface",
+                "InterfaceNode::analyzeSemantics", -1, -1,
+                "Existing: " + cls->superclass->name + ", New: " + superclassNameStr);
+        }
+        if (!cls->superclass) {
+            cls->setSuperclass(superclass);
+        }
     }
     cls->markAsInterface();
     cls->setInterface(this);
