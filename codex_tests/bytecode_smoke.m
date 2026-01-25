@@ -13,6 +13,9 @@ int main() {
     [InOutFuncs printInt: d];
     [InOutFuncs printChar: '\n'];
 
+    [InOutFuncs printNSString: "hello"];
+    [InOutFuncs printChar: '\n'];
+
     if (c > 10) {
         [InOutFuncs printInt: 1];
     } else {

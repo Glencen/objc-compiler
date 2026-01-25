@@ -96,6 +96,11 @@ public class NSString extends NSObject {
     }
 
     @Override
+    public String toString() {
+        return string;
+    }
+
+    @Override
     public boolean isEqualDynamic(NSObject other) {
         if (!(other instanceof NSString)) return false;
         NSString strObj = (NSString) other;
