@@ -535,10 +535,13 @@ void ExprNode::analyzeBoxedExprSemantics(SemanticContext& context) {
     }
     
     boxedExpr->analyzeSemantics(context);
-    
-    // Тип коробочного выражения зависит от типа внутреннего выражения
-    // TODO: Реализовать правильное определение типа
-    exprType = new Type(TypeKind::CLASS_NAME, "java/lang/Object");
+
+    // Обычные скобки не меняют тип выражения.
+    if (boxedExpr->getExprType()) {
+        exprType = new Type(*boxedExpr->getExprType());
+    } else {
+        exprType = new Type(TypeKind::NONE);
+    }
 }
 
 void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
@@ -693,6 +696,13 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
     }
     
     if (method) {
+        if (isStaticCall && receiverClass && methodName == "alloc") {
+            exprType = new Type(TypeKind::CLASS_NAME, receiverClass->name);
+            isMethodCall = true;
+            className = receiverClass->name;
+            methodRefConstantId = -1;
+            return;
+        }
         if (!canAccessMethod(context, method)) {
             throw semantic_exception("Method '" + selectorStr + "' is not accessible",
                 "ExprNode::analyzeMessageSemantics", -1, -1);
@@ -1323,6 +1333,19 @@ void ExprNode::analyzeDotSemantics(SemanticContext& context) {
     }
     FieldInfo* field = cls->lookupField(fieldName, true);
     if (!field) {
+        // Try property getter (dot syntax for @property)
+        std::string getterName = context.generateGetterName(fieldName);
+        MethodInfo* getter = cls->lookupMethod(getterName, {}, {}, true, false);
+        if (getter) {
+            if (!canAccessMethod(context, getter)) {
+                throw semantic_exception("Property getter '" + getterName + "' is not accessible",
+                    "ExprNode::analyzeDotSemantics", -1, -1);
+            }
+            exprType = new Type(getter->getReturnType());
+            isMethodCall = true;
+            className = getter->declaringClass ? getter->declaringClass->name : cls->name;
+            return;
+        }
         throw semantic_exception("Ivar '" + fieldName + "' not found in class '" +
             cls->name + "' or its ancestors",
             "ExprNode::analyzeDotSemantics", -1, -1);

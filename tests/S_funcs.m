@@ -5,17 +5,20 @@
 @implementation MyObject
 @end
 
-void changeByValue(int a, float b, bool flag, NSString *str, NSMutableArray *arr, MyObject *obj) {
+void changeByValue(int a, float b, bool flag, NSString *str, NSArray *arr, MyObject *obj) {
     a = 42;
     b = 3.14;
-    flag = NO;
+    flag = false;
     str = @"changed";
-    [arr replaceObjectAtIndex:0 withObject:@99];
     obj.value = 99;
-    
-    NSLog(@"Inside changeByValue:");
-    NSLog(@"int: %d, float: %f, bool: %d, string: %@, array[0]: %@, object.value: %d",
-          a, b, flag, str, [arr objectAtIndex:0], obj.value);
+
+    [InOutFuncs printNSString: @"Inside changeByValue:\n"]; 
+    [InOutFuncs printNSString: @"int: "]; [InOutFuncs printInt: a]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"float: "]; [InOutFuncs printFloat: b]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"bool: "]; [InOutFuncs printInt: flag]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"string: "]; [InOutFuncs printNSString: str]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"array0: "]; [InOutFuncs printNSObject: [arr objectAtIndex: 0]]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"object.value: "]; [InOutFuncs printInt: obj.value]; [InOutFuncs printChar: '\n'];
 }
 
 int main() {
@@ -23,19 +26,27 @@ int main() {
     float b = 1.5;
     bool flag = true;
     NSString *str = @"original";
-    NSMutableArray *arr = @[@1, @2, nil];
+    NSArray *arr = @[@1, @2];
     MyObject *obj = [MyObject new];
     obj.value = 1;
-    
-    NSLog(@"Initial values:");
-    NSLog(@"int: %d, float: %f, bool: %d, string: %@, array[0]: %@, object.value: %d",
-          a, b, flag, str, [arr objectAtIndex:0], obj.value);
-    
+
+    [InOutFuncs printNSString: @"Initial values:\n"]; 
+    [InOutFuncs printNSString: @"int: "]; [InOutFuncs printInt: a]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"float: "]; [InOutFuncs printFloat: b]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"bool: "]; [InOutFuncs printInt: flag]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"string: "]; [InOutFuncs printNSString: str]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"array0: "]; [InOutFuncs printNSObject: [arr objectAtIndex: 0]]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"object.value: "]; [InOutFuncs printInt: obj.value]; [InOutFuncs printChar: '\n'];
+
     changeByValue(a, b, flag, str, arr, obj);
-    
-    NSLog(@"After changeByValue:");
-    NSLog(@"int: %d, float: %f, bool: %d, string: %@, array[0]: %@, object.value: %d",
-          a, b, flag, str, [arr objectAtIndex:0], obj.value);
-    
+
+    [InOutFuncs printNSString: @"After changeByValue:\n"]; 
+    [InOutFuncs printNSString: @"int: "]; [InOutFuncs printInt: a]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"float: "]; [InOutFuncs printFloat: b]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"bool: "]; [InOutFuncs printInt: flag]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"string: "]; [InOutFuncs printNSString: str]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"array0: "]; [InOutFuncs printNSObject: [arr objectAtIndex: 0]]; [InOutFuncs printChar: '\n'];
+    [InOutFuncs printNSString: @"object.value: "]; [InOutFuncs printInt: obj.value]; [InOutFuncs printChar: '\n'];
+
     return 0;
 }

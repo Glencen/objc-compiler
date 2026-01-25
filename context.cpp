@@ -971,8 +971,22 @@ bool SemanticContext::isAssignable(const Type& from, const Type& to) const { //T
     }
     
     if (from.dataType == TypeKind::CLASS_NAME && to.dataType == TypeKind::CLASS_NAME) {
-        auto fromClass = lookupClass(from.className);
-        auto toClass = lookupClass(to.className);
+        auto normalizeName = [this](const std::string& name) -> std::string {
+            if (name.find('/') != std::string::npos) return name;
+            std::string rtlName = "rtl/" + name;
+            if (lookupClass(rtlName)) return rtlName;
+            return name;
+        };
+
+        std::string fromName = normalizeName(from.className);
+        std::string toName = normalizeName(to.className);
+
+        if (fromName == toName) {
+            return true;
+        }
+
+        auto fromClass = lookupClass(fromName);
+        auto toClass = lookupClass(toName);
         
         if (fromClass && toClass) {
             return fromClass->isSubclassOf(toClass); // Только вверх по иерархии
@@ -1807,6 +1821,20 @@ void SemanticContext::initNSStringClass() {
             nsStringClass.get()
         );
         method->selector = "stringByAppendingString";
+        method->keywords = {""};
+        method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
+        nsStringClass->addMethod(move(method));
+    }
+
+    // - (bool)isEqualToString:(NSString*)other
+    {
+        auto method = make_unique<MethodInfo>(
+            "isEqualToString",
+            Type(TypeKind::BOOL),
+            false,
+            nsStringClass.get()
+        );
+        method->selector = "isEqualToString";
         method->keywords = {""};
         method->parameterTypes = { new Type(TypeKind::CLASS_NAME, "rtl/NSString") };
         nsStringClass->addMethod(move(method));

@@ -11,7 +11,11 @@
 
 @implementation Parent
 - (void)showFields {
-    NSLog(@"Parent: public=%d protected=%d", publicField, protectedField);
+    [InOutFuncs printNSString: @"Parent: public="]; 
+    [InOutFuncs printInt: publicField];
+    [InOutFuncs printNSString: @" protected="]; 
+    [InOutFuncs printInt: protectedField];
+    [InOutFuncs printChar: '\n'];
 }
 @end
 
@@ -21,16 +25,18 @@
 
 @implementation Child
 - (void)showFields {
-    NSLog(@"Child: public=%d protected=%d", publicField, protectedField);
+    [InOutFuncs printNSString: @"Child: public="]; 
+    [InOutFuncs printInt: publicField];
+    [InOutFuncs printNSString: @" protected="]; 
+    [InOutFuncs printInt: protectedField];
+    [InOutFuncs printChar: '\n'];
     [super showFields];
 }
 @end
 
 int main() {
-   
     Child *c = [[Child alloc] init];
-    c->publicField = 1; 
+    c->publicField = 1;
     [c showFields];
-    
     return 0;
 }
