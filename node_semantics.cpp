@@ -1,6 +1,24 @@
 #include "context.h"
 #include <unordered_map>
 
+static bool canAccessField(const SemanticContext& context, const FieldInfo* field) {
+    if (!field) return false;
+    if (!field->declaringClass) return true;
+
+    ClassInfo* currentClass = context.getCurrentClass();
+    switch (field->accessModifier) {
+        case AccessModifier::PUBLIC:
+            return true;
+        case AccessModifier::PRIVATE:
+            return currentClass && currentClass == field->declaringClass;
+        case AccessModifier::PROTECTED:
+            return currentClass && (currentClass == field->declaringClass ||
+                                    currentClass->isSubclassOf(field->declaringClass));
+        default:
+            return true;
+    }
+}
+
 Type convertTypeNodeToType(TypeNode* typeNode, vector<int> arraySizes = {}) { // TODO: куда впихнуть TYPE_ID ???
     if (!typeNode) return Type(TypeKind::NONE);
     
@@ -339,6 +357,10 @@ void ExprNode::analyzeIdentifierSemantics(SemanticContext& context) {
     if (currentClass) {
         FieldInfo* field = currentClass->lookupField(idName, true);
         if (field) {
+            if (!canAccessField(context, field)) {
+                throw semantic_exception("Field '" + idName + "' is not accessible",
+                    "ExprNode::analyzeIdentifierSemantics", -1, -1);
+            }
             exprType = new Type(field->type);
             isFieldAccess = true;
             className = field->declaringClass->name;
@@ -1212,6 +1234,10 @@ void ExprNode::analyzeDotSemantics(SemanticContext& context) {
             cls->name + "' or its ancestors",
             "ExprNode::analyzeDotSemantics", -1, -1);
     }
+    if (!canAccessField(context, field)) {
+        throw semantic_exception("Field '" + fieldName + "' is not accessible",
+            "ExprNode::analyzeDotSemantics", -1, -1);
+    }
 
     exprType = new Type(field->type);
     isFieldAccess = true;
@@ -1254,6 +1280,10 @@ void ExprNode::analyzeArrowSemantics(SemanticContext& context) {
     if (!field) {
         throw semantic_exception("Ivar '" + ivarName + "' not found in class '" + 
             cls->name + "' or its ancestors",
+            "ExprNode::analyzeArrowSemantics", -1, -1);
+    }
+    if (!canAccessField(context, field)) {
+        throw semantic_exception("Field '" + ivarName + "' is not accessible",
             "ExprNode::analyzeArrowSemantics", -1, -1);
     }
     
