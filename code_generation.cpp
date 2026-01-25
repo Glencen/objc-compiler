@@ -814,6 +814,15 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                 }
             }
 
+            if (isStaticCall && methodName == "alloc" && argExprs.empty()) {
+                std::string allocOwner = receiverClass ? mapRuntimeClassName(receiverClass->name) : owner;
+                context.emitNewObject(allocOwner);
+                context.emitDup();
+                context.emitInvokeSpecial(allocOwner, "<init>", "()V");
+                exprType = new Type(TypeKind::CLASS_NAME, allocOwner);
+                break;
+            }
+
             if (isStaticCall && methodName == "new" && argExprs.empty()) {
                 std::string allocOwner = receiverClass ? mapRuntimeClassName(receiverClass->name) : owner;
                 context.emitNewObject(allocOwner);
@@ -823,11 +832,44 @@ void ExprNode::emitBytecode(BytecodeContext& context) {
                 break;
             }
 
+            if (!isStaticCall && methodName == "init" && argExprs.empty()) {
+                bool skipInit = false;
+                if (receiver->getKind() == ReceiverKind::EXPR && receiver->getExpr()) {
+                    ExprNode* recvExpr = receiver->getExpr();
+                    if (recvExpr->getKind() == ExprKind::MESSAGE) {
+                        MsgSelectorNode* recvSel = recvExpr->getSelector();
+                        if (recvSel && recvSel->getKind() == MsgSelectorKind::SIMPLE_SEL &&
+                            recvSel->getIdentifier()) {
+                            std::string recvName = recvSel->getIdentifier()->getIdentifier();
+                            if (recvName == "alloc" || recvName == "new") {
+                                skipInit = true;
+                            }
+                        }
+                    }
+                }
+                if (skipInit) {
+                    if (receiver->getKind() == ReceiverKind::EXPR && receiver->getExpr()) {
+                        receiver->getExpr()->emitBytecode(context);
+                    }
+                    if (receiverClass) {
+                        exprType = new Type(TypeKind::CLASS_NAME, mapRuntimeClassName(receiverClass->name));
+                    } else {
+                        exprType = new Type(TypeKind::CLASS_NAME, owner);
+                    }
+                    break;
+                }
+            }
+
             if (!isStaticCall) {
                 if (receiver->getKind() == ReceiverKind::SUPER) {
                     context.emitLoad(Type(TypeKind::CLASS_NAME, context.getClassName()), 0);
                 } else if (receiver->getKind() == ReceiverKind::EXPR && receiver->getExpr()) {
                     receiver->getExpr()->emitBytecode(context);
+                }
+                if (method && !owner.empty() && !isSuperCall) {
+                    // Cast to the method owner to satisfy JVM verifier
+                    // (e.g., NSArray returns NSObject, but we call BaseClass methods).
+                    context.emitCheckCast(owner);
                 }
             }
 

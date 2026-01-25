@@ -623,6 +623,13 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
     }
     
     if (method) {
+        if (isStaticCall && receiverClass && methodName == "alloc") {
+            exprType = new Type(TypeKind::CLASS_NAME, receiverClass->name);
+            isMethodCall = true;
+            className = receiverClass->name;
+            methodRefConstantId = -1;
+            return;
+        }
         if (!canAccessMethod(context, method)) {
             throw semantic_exception("Method '" + selectorStr + "' is not accessible",
                 "ExprNode::analyzeMessageSemantics", -1, -1);

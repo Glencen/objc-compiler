@@ -100,6 +100,7 @@ public:
     void emitInvokeVirtual(const std::string& owner, const std::string& name, const std::string& desc);
     void emitInvokeStatic(const std::string& owner, const std::string& name, const std::string& desc);
     void emitNewObject(const std::string& owner);
+    void emitCheckCast(const std::string& className);
     void emitANewArray(const std::string& className);
     void emitMultiANewArray(const std::string& descriptor, uint8_t dims);
     void emitAAStore();
