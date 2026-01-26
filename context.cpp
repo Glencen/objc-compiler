@@ -951,6 +951,12 @@ bool SemanticContext::isAssignable(const Type& from, const Type& to) const { //T
         (to.dataType == TypeKind::CLASS_NAME)) {
         return true;
     }
+
+    // id can be assigned to/from any class type
+    if ((from.dataType == TypeKind::TYPE_ID && to.dataType == TypeKind::CLASS_NAME) ||
+        (from.dataType == TypeKind::CLASS_NAME && to.dataType == TypeKind::TYPE_ID)) {
+        return true;
+    }
     
     // автоматические числовые преобразования (расширяющие)
     if (from.isNumeric() && to.isNumeric()) {
@@ -1023,6 +1029,12 @@ bool SemanticContext::isConvertible(const Type& from, const Type& to) const { //
     // TYPE_ID <-> CLASS_NAME
     if ((from.dataType == TypeKind::TYPE_ID && to.dataType == TypeKind::CLASS_NAME) ||
         (from.dataType == TypeKind::CLASS_NAME && to.dataType == TypeKind::TYPE_ID)) {
+        return true;
+    }
+
+    // Objects/id to bool (for conditions)
+    if (to.dataType == TypeKind::BOOL &&
+        (from.dataType == TypeKind::CLASS_NAME || from.dataType == TypeKind::TYPE_ID)) {
         return true;
     }
     

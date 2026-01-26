@@ -281,6 +281,7 @@ void ExprNode::analyzeSemantics(SemanticContext& context) {
                     exprType = new Type(TypeKind::CHAR);
                     break;
                     
+                case ValueKind::STRING_LIT:
                 case ValueKind::OBJC_STRING_LIT: {
                     // Для строк Objective-C создаем тип NSString
                     exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSString");
@@ -289,6 +290,12 @@ void ExprNode::analyzeSemantics(SemanticContext& context) {
                     
                 case ValueKind::BOOL_LIT:
                     exprType = new Type(TypeKind::BOOL);
+                    break;
+                    
+                case ValueKind::OBJC_INT_LIT:
+                case ValueKind::OBJC_FLOAT_LIT:
+                case ValueKind::OBJC_BOOL_LIT:
+                    exprType = new Type(TypeKind::CLASS_NAME, "rtl/NSNumber");
                     break;
                     
                 case ValueKind::NIL:
@@ -426,6 +433,10 @@ void ExprNode::analyzeIdentifierSemantics(SemanticContext& context) {
     }
     
     string idName = identifier->getIdentifier();
+    if (idName == "YES" || idName == "NO") {
+        exprType = new Type(TypeKind::BOOL);
+        return;
+    }
     
     // 1) локальные переменные (включая параметры метода/функции)
     if (LocalVarInfo* localVar = context.lookupLocalVar(idName)) {
@@ -559,7 +570,15 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
     ClassInfo* receiverClass = nullptr;
     
     if (receiver->getKind() == ReceiverKind::EXPR && receiver->getExpr()) {
-        receiverType = receiver->getExpr()->getExprType();
+        if (receiver->getExpr()->getKind() == ExprKind::SELF) {
+            receiverClass = context.getCurrentClass();
+            if (receiverClass) {
+                receiverType = new Type(TypeKind::CLASS_NAME, receiverClass->name);
+            }
+            isStaticCall = false;
+        } else {
+            receiverType = receiver->getExpr()->getExprType();
+        }
         if (receiver->getExpr()->getKind() == ExprKind::IDENTIFIER) {
             string idName = receiver->getExpr()->getIdentifier()->getIdentifier();
             bool hasLocal = (context.lookupLocalVar(idName) != nullptr);
@@ -686,12 +705,36 @@ void ExprNode::analyzeMessageSemantics(SemanticContext& context) {
         //     }
         // }
         
-        if (isSuperCall) {
-            method = receiverClass->lookupMethod(
-                methodName, argTypes, keywords, true, isStaticCall);
-        } else {
-            method = receiverClass->lookupMethod(
-                methodName, argTypes, keywords, true, isStaticCall);
+        method = receiverClass->lookupMethod(
+            methodName, argTypes, keywords, true, isStaticCall);
+    }
+    
+    if (!method && receiverClass) {
+        auto it = receiverClass->methods.find(methodName);
+        if (it != receiverClass->methods.end()) {
+            for (const auto& candidate : it->second) {
+                if (!candidate || candidate->isClassMethod != isStaticCall) {
+                    continue;
+                }
+                if (candidate->keywords != keywords) {
+                    continue;
+                }
+                if (candidate->parameterTypes.size() != argTypes.size()) {
+                    continue;
+                }
+                bool ok = true;
+                for (size_t i = 0; i < argTypes.size(); i++) {
+                    if (!candidate->parameterTypes[i] ||
+                        !context.isAssignable(*argTypes[i], *candidate->parameterTypes[i])) {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (ok) {
+                    method = candidate.get();
+                    break;
+                }
+            }
         }
     }
     
@@ -776,10 +819,10 @@ void ExprNode::analyzeNotSemantics(SemanticContext& context) {
     
     operand->analyzeSemantics(context);
     
-    // Проверяем, что операнд логического типа
-    Type boolType(TypeKind::BOOL);
-    if (!operand->getExprType() || !operand->getExprType()->equal(&boolType)) {
-        throw semantic_exception("Not operator operand must be boolean",
+    // Разрешаем bool и числовые типы (как в C/Objective-C)
+    if (!operand->getExprType() || 
+        !(operand->getExprType()->isNumeric() || operand->getExprType()->dataType == TypeKind::CHAR)) {
+        throw semantic_exception("Not operator operand must be boolean or numeric",
             "ExprNode::analyzeNotSemantics", -1, -1,
             "Got type: " + operand->getExprType()->toString());
     }
@@ -1180,7 +1223,16 @@ void ExprNode::analyzeAssignSemantics(SemanticContext& context) {
     // TODO: Проверить, что left является l-value (идентификатор, доступ к полю, доступ к массиву)
     
     // Проверяем совместимость типов
-    if (!context.isAssignable(*right->getExprType(), *left->getExprType())) {
+    bool assignable = context.isAssignable(*right->getExprType(), *left->getExprType());
+    if (!assignable && left->getKind() == ExprKind::SELF &&
+        right->getExprType() && right->getExprType()->dataType == TypeKind::CLASS_NAME) {
+        ClassInfo* leftClass = context.getCurrentClass();
+        ClassInfo* rightClass = context.lookupClass(right->getExprType()->className);
+        if (leftClass && rightClass && leftClass->isSubclassOf(rightClass)) {
+            assignable = true;
+        }
+    }
+    if (!assignable) {
         throw semantic_exception("Type mismatch in assignment",
             "ExprNode::analyzeAssignSemantics", -1, -1,
             "Left: " + left->getExprType()->toString() + 
@@ -1251,6 +1303,13 @@ void ExprNode::analyzeFunctionCallSemantics(SemanticContext& context) {
     }
     
     string funcName = funcId->getIdentifier();
+    if (funcName == "NSLog") {
+        if (args) {
+            args->analyzeSemantics(context);
+        }
+        exprType = new Type(TypeKind::VOID);
+        return;
+    }
     
     // Анализируем аргументы
     vector<const Type*> argTypes;
@@ -2176,7 +2235,8 @@ void FuncDefNode::analyzeSemantics(SemanticContext& context) {
                 for (auto* paramDecl : *params) {
                     paramDecl->analyzeSemantics(context);
                     
-                    Type paramType = convertTypeNodeToType(paramDecl->getType());
+                    vector<int> arraySizes = paramDecl->getArraySizes();
+                    Type paramType = convertTypeNodeToType(paramDecl->getType(), arraySizes);
                     const LocalVarInfo* existingParam = existingFunc->getParameter(i);
                     
                     if (!existingParam) {
@@ -2215,7 +2275,8 @@ void FuncDefNode::analyzeSemantics(SemanticContext& context) {
                 for (auto* paramDecl : *params) {
                     paramDecl->analyzeSemantics(context);
                     
-                    Type paramType = convertTypeNodeToType(paramDecl->getType());
+                    vector<int> arraySizes = paramDecl->getArraySizes();
+                    Type paramType = convertTypeNodeToType(paramDecl->getType(), arraySizes);
                     
                     auto paramInfo = make_unique<LocalVarInfo>(
                         paramDecl->getIdentifier()->getIdentifier(),
@@ -2305,7 +2366,8 @@ void FuncDeclNode::analyzeSemantics(SemanticContext& context) {
             for (auto* paramDecl : *params) {
                 paramDecl->analyzeSemantics(context);
                 
-                Type paramType = convertTypeNodeToType(paramDecl->getType());
+                vector<int> arraySizes = paramDecl->getArraySizes();
+                Type paramType = convertTypeNodeToType(paramDecl->getType(), arraySizes);
                 
                 auto paramInfo = make_unique<LocalVarInfo>(
                     paramDecl->getIdentifier()->getIdentifier(),
@@ -2459,7 +2521,8 @@ void MethodDefNode::analyzeSemantics(SemanticContext& context) {
                     }
                     
                     // Тип параметра
-                    Type paramType = convertTypeNodeToType(param->getType());
+                    vector<int> arraySizes = param->getArraySizes();
+                    Type paramType = convertTypeNodeToType(param->getType(), arraySizes);
                     paramTypes.push_back(new Type(paramType));
                     
                     // Информация о параметре
@@ -2785,7 +2848,8 @@ void MethodDeclNode::analyzeSemantics(SemanticContext& context) {
                     }
                     
                     // Добавляем тип параметра
-                    Type paramType = convertTypeNodeToType(param->getType());
+                    vector<int> arraySizes = param->getArraySizes();
+                    Type paramType = convertTypeNodeToType(param->getType(), arraySizes);
                     paramTypes.push_back(new Type(paramType));
                     
                     // Создаем информацию о параметре
@@ -3356,8 +3420,20 @@ void ImplementationNode::analyzeSemantics(SemanticContext& context) {
     // Находим класс
     ClassInfo* cls = context.lookupClass(classNameStr);
     if (!cls) {
-        throw class_exception("Class '" + classNameStr + "' not declared in interface",
-            "ImplementationNode::analyzeSemantics", -1, -1);
+        ClassInfo* superclass = nullptr;
+        if (!superclassNameStr.empty()) {
+            superclass = context.lookupClass(superclassNameStr);
+            if (!superclass) {
+                throw class_exception("Undefined super class '" + superclassNameStr + "'",
+                    "ImplementationNode::analyzeSemantics", -1, -1,
+                    "Class: " + classNameStr);
+            }
+        } else {
+            superclass = context.lookupClass("rtl/NSObject");
+        }
+        auto newClass = make_unique<ClassInfo>(classNameStr, superclass);
+        cls = newClass.get();
+        context.addClass(move(newClass));
     }
     
     cls->markAsImplementation();
