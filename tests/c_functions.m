@@ -1,4 +1,4 @@
-void factorial(int n)
+int factorial(int n)
 {
     if (n <= 1)
         return 1;
@@ -16,6 +16,14 @@ float average(float a, float b)
 bool trueReturn(int n)
 {
     return true;
+}
+
+void printRange(int start, int end)
+{
+    for (int i = start; i <= end; i++)
+    {
+        NSLog(@"%d", i);
+    }
 }
 
 

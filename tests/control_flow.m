@@ -1,5 +1,9 @@
 int main()
 {
+    int a = 0;
+    int b = 0;
+    id array = nil;
+
     for (int i = 0; i < 3; i++)
     {
         NSLog(@"%d", i);
